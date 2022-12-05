@@ -214,8 +214,9 @@ def analyze_rtt(
     # Most unreachable
     with open(data_dir + "/top_10_most_unreachable.txt", "w+") as f_out:
         most_unreachable_list = []
-        for src in range(len(ground_stations)):
-            for dst in range(src + 1, len(ground_stations)):
+        for (src_node_id,dst_node_id,_) in list_comms:
+                src = src_node_id - len(satellites)
+                dst = dst_node_id - len(satellites)
                 most_unreachable_list.append((unreachable_per_pair[(src, dst)], src, dst))
         most_unreachable_list = sorted(most_unreachable_list, reverse=True)
         f_out.write("MOST UNREACHABLE DELTA TOP-10 WITHOUT DUPLICATE NODES\n")
