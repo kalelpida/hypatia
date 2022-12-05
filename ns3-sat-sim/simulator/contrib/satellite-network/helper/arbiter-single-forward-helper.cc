@@ -18,6 +18,7 @@
  */
 
 #include "arbiter-single-forward-helper.h"
+#include <string>
 
 namespace ns3 {
 
@@ -137,7 +138,7 @@ void ArbiterSingleForwardHelper::UpdateForwardingState(int64_t t) {
                     Ptr<NetDevice> device0 = m_nodes.Get(current_node_id)->GetObject<Ipv4>()->GetNetDevice(1 + my_if_id)->GetObject<PointToPointLaserNetDevice>()->GetChannel()->GetDevice(0);
                     Ptr<NetDevice> device1 = m_nodes.Get(current_node_id)->GetObject<Ipv4>()->GetNetDevice(1 + my_if_id)->GetObject<PointToPointLaserNetDevice>()->GetChannel()->GetDevice(1);
                     Ptr<NetDevice> other_device = device0->GetNode()->GetId() == current_node_id ? device1 : device0;
-                    NS_ABORT_MSG_IF(other_device->GetNode()->GetId() != next_hop_node_id, "Next hop node id across does not match");
+                    NS_ABORT_MSG_IF(other_device->GetNode()->GetId() != next_hop_node_id, line+"Next hop node id across does not match devrait être"+std::to_string(other_device->GetNode()->GetId()));
                     NS_ABORT_MSG_IF(other_device->GetIfIndex() != 1 + next_if_id, "Next hop interface id across does not match");
                 }
 

@@ -257,7 +257,7 @@ namespace ns3 {
         std::string line;
         int counter = 0;
         while (std::getline(fs, line)) {
-            std::vector<std::string> res = split_string(line, " ", 2);
+            std::vector<std::string> res = split_string(line, " ", 3);
 
             // Retrieve satellite identifiers
             int32_t sat0_id = parse_positive_int64(res.at(0));

@@ -63,6 +63,17 @@ def distance_m_between_satellites(sat1, sat2, epoch_str, date_str):
     # This gives us side c, the distance between the two satellites
     return math.sqrt(sat1.range ** 2 + sat2.range ** 2 - (2 * sat1.range * sat2.range * math.cos(angle_radians)))
 
+def is_connected_to_adjacent(sat, seuil=75):
+    """ 
+    Tells if the satellite can communicate with adjacent satellites
+
+    :param sat:     the satellite
+    :param seuil:   the threshold beyond which the adjacent planes are considered too near to allow communication.
+
+    :return: if the satellite latitude is too high
+    """
+    return abs(sat.M%180-90) > 90-seuil
+
 
 def distance_m_ground_station_to_satellite(ground_station, satellite, epoch_str, date_str):
     """
