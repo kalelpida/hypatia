@@ -6,7 +6,7 @@ For each simulation, calculates the sum of the results of all commodities.
 import os
 chemin_tcp="/logs_ns3/tcp_flows.csv"
 chemin_udp="/logs_ns3/udp_bursts_incoming.csv","/logs_ns3/udp_bursts_outgoing.csv"
-dossiers=sorted([runsdoss for doss in os.listdir("runs") if os.path.isdir(runsdoss:="runs/"+doss) and '26s' in doss])
+dossiers=sorted([runsdoss for doss in os.listdir("runs") if os.path.isdir(runsdoss:="runs/"+doss)])
 for doss in dossiers:
 	qte,nbpkt,i=0,0,0
 	if "udp" in doss:

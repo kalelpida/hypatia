@@ -31,7 +31,7 @@ local_shell = exputil.LocalShell()
 #local_shell.remove_force_recursive("data")
 
 # Schedule
-random.seed(11)
+random.seed(2)
 random.randint(0, 100000000)  # Legacy reasons
 seed_from_to = random.randint(0, 100000000)
 
@@ -61,9 +61,14 @@ list_from_to = networkload.generate_from_to_reciprocated_random_pairing(list(a),
 #setting up commodities
 reference_rate = 1 # target sending rate in Mb/s
 list_proportion  =[random.choice(range(70,130))/100 for _ in range(len(list_from_to))]
-tcp_list_flow_size_byte=[int(elt*reference_rate*int(params[1])*(1e6/8)) for elt in list_proportion]#tcp : sending rate * randomization * simu_duration * coeff_Mb_to_bytes
+#list_proportion  = [1 for _ in range(len(list_from_to))]
+tcp_list_flow_size_byte=[int(elt*2*reference_rate*int(params[1])*(1e6/8)) for elt in list_proportion]#tcp : randomization * sending rate  * simu_duration * coeff_Mb_to_bytes
+#tcp_list_flow_size_byte=[int(reference_rate*int(params[1])*(1e6/8))]#tcp : sending rate  * simu_duration * coeff_Mb_to_bytes
 udp_list_flow_size_proportion=[elt*reference_rate for elt in list_proportion]#udp : sending rate * randomization, in Mb/s
 
+#setting up different start times
+coeff_decalage=1500/reference_rate*1e3/len(list_from_to) # MTU-packet time / nb_commodites in ns
+list_start_time = [i*coeff_decalage for i in range(len(list_from_to))]
 
 for config in [
     # Rate in Mbit/s, duration in seconds, ISL network device queue size pkt for TCP, GSL network device queue size pkt for TCP
@@ -92,7 +97,7 @@ for config in [
     duration_s = config[1]
 
     # Both protocols
-    for protocol_chosen in ["tcp", "udp"]:
+    for protocol_chosen in ["udp", "tcp"]:
 
         # TCP NewReno needs at least the BDP in queue size to fulfill bandwidth
         if protocol_chosen == "tcp":
@@ -122,9 +127,9 @@ for config in [
                 "templates/template_config_ns3_" + protocol_chosen + "2.properties",
                 run_dir + "/config_ns3.properties"
             )
-            
+            sat_net_dir="../../../../satellite_networks_state/gen_data/{}_{}_{}_{}".format(params[0].lstrip('main_').rstrip('.py'),params[3],params[4],params[5])
             local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                              "[SAT-NET-DIR]", sat_net_dir:="../../../../satellite_networks_state/gen_data/{}_{}_{}_{}".format(params[0].lstrip('main_').rstrip('.py'),params[3],params[4],params[5]))
+                                              "[SAT-NET-DIR]", sat_net_dir)
             local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                               "[SAT-NET-ROUTES-DIR]", sat_net_dir+"/dynamic_state_{}ms_for_{}s".format(params[2],params[1]))
             local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
@@ -145,7 +150,7 @@ for config in [
         local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                               "[GSL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_gsl_pkt))
         #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
-        commodities_set='set(' + ', '.join(f'{x[0]}->{x[1]}' for x in list_from_to) + ')'
+        commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in list_from_to) + ')'
         local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                               "[SET-OF-COMMODITY-PAIRS]", commodities_set)
         
@@ -163,7 +168,7 @@ for config in [
                 len(list_from_to),
                 list_from_to,
                 tcp_list_flow_size_byte,
-                [0] * len(list_from_to)
+                list_start_time
             )
 
         # udp_burst_schedule.csv
@@ -176,7 +181,7 @@ for config in [
                             list_from_to[i][0],
                             list_from_to[i][1],
                             udp_list_flow_size_proportion[i],
-                            0,
+                            i*coeff_decalage,
                             1000000000000
                         )
                     )

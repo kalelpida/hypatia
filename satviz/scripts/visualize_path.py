@@ -23,6 +23,8 @@
 import math
 import ephem
 import pandas as pd
+import sys
+import re
 
 try:
     from . import util
@@ -101,18 +103,25 @@ bottomFile = "../static_html/bottom.html"
 city_detail_file = "../../paper/satellite_networks_state/input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_1000.basic.txt"
 
 # Time in ms for which visualization will be generated
-GEN_TIME=10000  #ms
+GEN_TIME=3000  #ms
 
 # Input file; Generated during simulation
 # Note the file_name consists of the 2 city IDs being offset by the size of the constellation
 # City IDs are available in the city_detail_file.
 # If city ID is X (for Paris X = 24) and constellation is Starlink_550 (1584 satellites),
 # then offset ID is 1584 + 24 = 1608.
-path_file = "../../papier2/satgenpy_analysis/data/telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls/5000ms_for_10s/manual/data/networkx_path_372_to_411.txt"
+path_file = "../../papier2/sauvegardes/svgde_paths_hypatia_graine2_pas2s_for_8s/data10Mbps/telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls3m/2000ms_for_8s/manual/data/networkx_path_381_to_376.txt"
+if len(sys.argv) > 1:
+	path_file=sys.argv[1]
+	print(path_file)
+	
 
 # Output directory for creating visualization html files
 OUT_DIR = "../viz_output/"
-OUT_HTML_FILE = OUT_DIR + NAME + "_path"
+debit = "_10Mbps" * ("10Mbps" in path_file) + "_2Mbps" * ("2Mbps" in path_file)
+algo, = re.search("over(_isls[^/]*)/", path_file).groups()
+
+OUT_HTML_FILE = OUT_DIR + NAME + debit + algo + "_path" 
 
 sat_objs = []
 city_details = {}

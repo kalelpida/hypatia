@@ -6,56 +6,84 @@ print
 import os
 import os, sys
 import matplotlib.pyplot as plt
+from matplotlib import colormaps #names of colormaps
 import numpy as np
+import pickle
+
+DOSSIER='.'
+DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
+DOSSIER_A_INCLURE=['']
+if len(sys.argv)==2:
+	DOSSIER=sys.argv[1].strip('/')
 
 FIC_RES="fichier_resultats_pings"
 RECIPROQUE=False #""" considérer les chemins A->B et B->A comme la même mesure """
-dico={'isls':{},'isls2':{},'isls2b':{},'isls2c':{}, 'isls2d':{}, 'isls2e':{}}
+
+LISTE_COULEURS=['Oranges','Purples']*3#,'Greens', 'Blues', 'RdBu', 'PiYG']
+
+dico={}#algo:{} for algo in ALGOS}
+
 
 
 def nom_algo(algo):
 	if algo=='isls':
-		return 'Shortest path'
-	if algo=='isls2':
-		return 'UMCF'
-	return algo  
-
-
-def add_dico(cle, n1, n2, t, debitISL, val):
-	if (n1,n2, t) in dico[cle]:
-		if debitISL in dico[cle][(n1,n2,t)]:
-			dico[cle][(n1,n2,t)][debitISL].append(val)
-		else:
-			dico[cle][(n1,n2,t)][debitISL]=[val]
+		return 'SP/1-nearest'
+	elif algo=='isls2':
+		return 'UMCF/1-nearest'
+	if algo=='isls3':
+		return 'SP/3-nearest'
+	elif algo=='isls4':
+		return 'UMCF/3-nearest'
 	else:
-		dico[cle][(n1,n2,t)]={debitISL:[val]}
+		return algo
+
+
+def add_dico(*args):
+	n=len(args)
+	assert n>2
+	dic=dico
+	for k in range(n-2):
+		if args[k] not in dic:
+			dic[args[k]]={}
+		dic=dic[args[k]]
+	if args[n-2] not in dic:
+		dic[args[n-2]]=[]
+	dic[args[n-2]].append(args[-1])
+	
 
 #cmap=plt.get_cmap('rainbow')
 #dico_couleurs={cle:cmap(i/len(dico)) for i,cle in enumerate(dico.keys())}
 
 
-def retrouveLogsBrutRecursif(chemin_initial=".",exclure={'tcp'}):#,'2022-05-06'}):
+def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
+	print(f"étude de : {chemin_initial}")
 	trouves=[]
 	aChercher=[chemin_initial]
 	while aChercher:
 		nom=aChercher.pop()
-		if "logs_ns3" in nom:
+		if "logs_ns3" in nom and all([motif in nom for motif in DOSSIER_A_INCLURE]):
 			trouves.append(nom)
 		else:
 			for glob in os.listdir(nom):
 				x=os.path.join(nom,glob)  
-				if os.path.isdir(x) and all([not motif in x for motif in exclure]):
+				if os.path.isdir(x) and all([not motif in x for motif in DOSSIER_A_EXCLURE]):
 					aChercher.append(x)
 	return trouves
 
 
 def repartiteurLogBrut(dossier, reciproque=RECIPROQUE):
 	chemin_pingmesh="pingmesh.csv"
-	algos=('isls2d', 'isls2e', 'isls2b', 'isls2c', 'isls2', 'isls')
-	for algo in algos:
-		if algo in dossier:
-			cle=algo
-			break 
+	import re
+	res_algo=re.search('_(isls[^/-]*)',dossier)# cherche les chaines de caractères contenant isls, après _ et avant /
+	if res_algo is None:
+		return
+	cle,=res_algo.groups()
+	res_nomgraine=re.search('svgde_[^/]*20\d{2}-\d{2}-\d{2}-\d{4}_(\d+)',dossier)#nom typique: blabla1/svgde_[infos?]date_graine/blabla2
+	if res_nomgraine is None:
+		return
+	graine,=res_nomgraine.groups()
+	if cle not in dico:
+		dico[cle]={}
 	y=os.path.join(dossier,"udp_bursts_outgoing.csv")
 	x=os.path.join(dossier,chemin_pingmesh)
 	################# get commodities for current simulation
@@ -82,136 +110,91 @@ def repartiteurLogBrut(dossier, reciproque=RECIPROQUE):
 			from_node_id, to_node_id, j, sendRequestTimestamps, replyTimestamps, receiveReplyTimestamps, \
                         latency_to_there_ns, latency_from_there_ns, rtt_ns = eval(','.join(data_split[:-1]))
 			
-			n1,n2=from_node_id, to_node_id
 			# select ping pairs. To study only pings on commodities,
 			# the test should be like "if (n1,n2) not in commodites: continue""
-			if (n1,n2) not in commodites:# and cle!="isls":
+			if (from_node_id, to_node_id) not in commodites:
 				continue
 			
 			if reciproque:
-				n1,n2=min(n1,n2),max(n1,n2)
-				add_dico(cle, n1, n2, round(sendRequestTimestamps*1e-9), debitISL, latency_to_there_ns*1e-9)
-				add_dico(cle, n1, n2, round(replyTimestamps*1e-9), debitISL, latency_from_there_ns*1e-9)
+				add_dico(cle, debitISL, graine, min(from_node_id, to_node_id), rtt_ns*1e-9)
 			else:
-				add_dico(cle, n1, n2, round(sendRequestTimestamps*1e-9), debitISL, latency_to_there_ns*1e-9)
-				add_dico(cle, n2, n1, round(replyTimestamps*1e-9), debitISL, latency_from_there_ns*1e-9)
-
-
-#Etude par commodités
-def enregistreur_logs(reciproque=RECIPROQUE):
-	for algo,dic in dico.items():
-		lignes=[]
-		ratios={}
-		nb_mesures={}
-		lignes.append('src/dst  [débitISL: moyenne, mesures, ecart-type] ..\n')
-		for srcdst,di in dic.items():
-			caracs=''
-			for isl,vals in di.items():
-				caracs+=f'\t  {isl}: {np.mean(vals):.2f}, {len(vals)}, {np.std(vals):.2f}'
-				if not isl in nb_mesures:
-					nb_mesures[isl]=0
-					ratios[isl]=[]
-				ratios[isl].append(np.mean(vals))
-				nb_mesures[isl]+=len(vals)
-			lignes.append('{},{} {}\n'.format(*srcdst,caracs))
-		if reciproque:
-			methode='aller-retour'
-		else:
-			methode='simple'
-		caracs=''
-		for isl in sorted(ratios.keys(),key=lambda x:int(x)):
-			vals=ratios[isl]
-			caracs+=f'\t  {isl}Mb/s: moyenne des rapports {np.mean(vals):.2f}, écart-type de {np.std(vals):.2f} pour {len(vals)} mesures répétées {nb_mesures[isl]/len(vals):.1f} fois chacune\n'
-			
-		lignes.insert(0, f"global: {len(dic)} débits {methode} mesurés\n"
-						f"{caracs}")
-
-		with open("{}_{}.txt".format(FIC_RES,algo),"w") as f:
-			f.writelines(lignes)
-		print(algo)
-		print(lignes[0])
+				add_dico(cle, debitISL, graine, from_node_id, latency_to_there_ns*1e-9)
+				add_dico(cle, debitISL, graine, to_node_id, latency_from_there_ns*1e-9)
+	
 
 
 #Etude par sources
 def affiche_logs_sources(reciproque=RECIPROQUE):
-	fig, this_ax = plt.subplots()
+	#fig, this_ax = plt.subplots()
+	nbaxis=len(dico)//2
+	fig, axs = plt.subplots(nbaxis, sharex=True, sharey=True, figsize=(10, 10))
 	#fig.suptitle("Comparison of the median pings per source")
-	assert RECIPROQUE==False
-	cmaps = [plt.get_cmap('Oranges'), plt.get_cmap('Purples')]
-	for i_algo,(algo,dic) in enumerate([elt for elt in dico.items() if elt[0]=='isls' or elt[0]=='isls2']):
-		lignes=[]
-		ratios={}
-		nb_mesures={}
-		quantiles=[0.05,0.5]
-		lignes.append('src  [débitISL: mesures, moy, ecart-type ] ..\n')
-		#lignes.append(f'src  [débitISL: mesures, quantiles {quantiles}] ..\n')
-		sources={}
+	cmaps = [plt.get_cmap(nom) for nom in LISTE_COULEURS] 
+	for i_algo,(algo,dic) in enumerate(sorted([elt for elt in dico.items()])):
 
-		""" to study statistics on time evolution
-		for srcdst in dic.keys():
-			if (src:=srcdst[0]) not in sources:
-				sources[src]={}
-			t=srcdst[2]
-			for isl,vals in dic[srcdst].items():
-				if isl not in sources[src]:
-					sources[src][isl]={}
-				if t not in sources[src][isl]:
-					sources[src][isl][t]=[]
-				for val in vals:
-					sources[src][isl][t].append(val)
-		for src, d in sources.items():
-			for isl, sd in d.items():
-				temp_l=[]
-				for t, l in sd.items():
-					print(f"{src}, {isl}, {t}, {round(np.mean(l),3)}, {round(np.std(l),3)}, {len(l)}")
-					temp_l.append(np.median(l))
-				d[isl]=temp_l"""
-		for srcdst in dic.keys():
-			if (src:=srcdst[0]) not in sources:
-				sources[src]={}
-			for isl,vals in dic[srcdst].items():
-				if isl not in sources[src]:
-					sources[src][isl]=[]
-				for val in vals:
-					sources[src][isl].append(val)
+		colors=cmaps[i_algo//nbaxis](np.linspace(1,0,len(dic),endpoint=False))
+		for nb, isl in enumerate(sorted(dic, key= lambda val:int(val))):
+			#this_ax.step(range(len(y[isl])),sorted(y[isl]), where='mid', color=colors[nb], marker=("2" if algo=='isls' else " "), label=f"{nom_algo(algo)}@ISL {isl}Mb/s")
+			#this_ax.legend()
+			#récupérer les mesures pour chaque graine, 
+			#trier les mesures par distance
+			#compléter les RTTs manquants comme des échecs
+			mesures_par_graines=[]
+			for graine, di in dic[isl].items():
+				mesures_triees=[]
+				for src,mes in di.items():
+					mesures_triees.append(np.median(mes))
+				mesures_par_graines.append(sorted(mesures_triees))
 
-		x,y=[],{}
-		for src in sorted(sources):
-			caracs=''
-			for isl in sources[src]:	
-				vals=sources[src][isl]	
-				#caracs+=('\t  {}: {}, '+','.join(['{:.2f}']*len(quantiles))).format(isl,len(vals),*np.quantile(vals,quantiles))
-				caracs+=('\t  {}: {}, '+','.join(['{:.2f}']*len(quantiles))).format(isl,len(vals),np.mean(vals), np.std(vals))
-				if not isl in y:
-					y[isl]=[]
-				y[isl].append(np.median(vals))
-				#print(algo, len(vals))
-			lignes.append('{} {}\n'.format(src,caracs))
-			x.append(src)
-		
-		colors=cmaps[i_algo](np.linspace(1,0,len(y),endpoint=False))
-		for nb,isl in enumerate(sorted(y, key= lambda val:int(val))):
-			this_ax.step(range(len(y[isl])),sorted(y[isl]), where='mid', color=colors[nb], marker=("2" if algo=='isls' else " "), label=f"{nom_algo(algo)}@ISL {isl}Mb/s")
-			#axs[i_algo%2,i_algo//2].step(x, y[isl], where='mid', label=isl)
+			n=max(len(mpg) for mpg in mesures_par_graines)
+			for liste in mesures_par_graines:
+				while len(liste)<n:
+					liste.append(0)
+			
+			# pour chaque graine, choisir la médiane des valeurs
+			valeurs=np.array(mesures_par_graines)
 
-		this_ax.legend()
-		with open("{}_{}_sources.txt".format(FIC_RES,algo),"w") as f:
-			f.writelines(lignes)	
-	fig.text(0.5, 0.01, 'sorted source stations', ha='center')
-	fig.text(0.01, 0.5, 'median measured latency', va='center', rotation='vertical')	
-	fig.tight_layout()
+
+			axs[i_algo%nbaxis].step(range(valeurs.shape[1]), [np.median(valeurs[:, i]) for i in range(valeurs.shape[1])], where='mid', color=colors[nb], label=f"{nom_algo(algo)}@ISL {isl}Mb/s")
+			axs[i_algo%nbaxis].legend()
+			#axs[i_algo%2,i_algo//2].step(x, y[isl], where='mid', color=colors[nb], label=isl)
+
+
+	fig.text(0.5, 0.01, 'sorted source stations', ha='center', fontsize=12)
+	fig.text(0.01, 0.5, 'median measured latency (s)', va='center', rotation='vertical', fontsize=12)	
+	fig.tight_layout(pad=3)
 	
-	nomfic="comparisonv4b"
-	if len(sys.argv) > 1:
-		nomfic+=' '.join(sys.argv[1:])
-	#plt.savefig(nomfic+".png")
+	nomfic="comparisonv4"+''.join(DOSSIER_A_INCLURE)
+	plt.savefig(DOSSIER+'/'+nomfic+".png")
 	plt.show()	
 
 
 dossiers=retrouveLogsBrutRecursif()
-for i,dos in enumerate(dossiers):
-	print(f"repartition données: {i}/{len(dossiers)}")
-	repartiteurLogBrut(dos)
+cleSVGDE='-'.join(sorted(DOSSIER_A_EXCLURE, reverse=True)+['|ç|',DOSSIER,'|à|']+sorted(DOSSIER_A_INCLURE))
+try:
+	with open("etudes4.pickle", 'rb') as f:
+		lessvgdes=pickle.load(f)
+	dos_svgdes, dico=lessvgdes.get(cleSVGDE)
+	assert dos_svgdes == dossiers
+	assert dico
+except Exception:
+	for i,dos in enumerate(dossiers):
+		print(f"repartition données: {i}/{len(dossiers)}")
+		repartiteurLogBrut(dos)
+	if 'lessvgdes' not in dir():# if lessvgdes is not defined
+		lessvgdes={}
+	lessvgdes[cleSVGDE]=(dossiers,dico)
+	with open("etudes4.pickle", 'wb') as f:
+		pickle.dump(lessvgdes, f)
+	
+
+#ALGOS=['isls2', 'isls4', 'isls3', 'isls5', 'isls6', 'isls']#sorted(['isls']+[f'isls{i}' for i in range(2,7)], key = lambda x: len(x), reverse=True)#('isls2d', 'isls2e', 'isls2b', 'isls2c', 'isls2', 'isls')
+ALGOS=list(dico.keys())
+print(f"algos: {ALGOS}")
+if len(LISTE_COULEURS)<len(ALGOS):
+	LISTE_COULEURS=np.random.choice(colormaps, len(ALGOS), replace=False)
+
+
 #enregistreur_logs()
 affiche_logs_sources()
 

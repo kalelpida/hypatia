@@ -8,30 +8,48 @@ import os, sys
 import matplotlib.pyplot as plt
 import numpy as np
 
+DOSSIER='svgde_global'
+DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
+DOSSIER_A_INCLURE=['']
+if len(sys.argv)==2:
+	DOSSIER=sys.argv[1].strip('/')
+	print(f"étude de : {DOSSIER}")
+
+
 FIC_RES="fichier_resultats"
 RECIPROQUE=False #""" considérer les chemins A->B et B->A comme la même mesure """
-dico={'isls':{},'isls2':{},'isls2b':{},'isls2c':{}, 'isls2d':{}, 'isls2e':{}}
+dico={}#'isls':{},'isls2':{},'isls2b':{},'isls2c':{}, 'isls2d':{}, 'isls2e':{}}
+
+
+LISTE_COULEURS=['Oranges','Purples']*3#,'Greens', 'Blues', 'RdBu', 'PiYG']
+
+
 def nom_algo(algo):
 	if algo=='isls':
-		return 'Shortest path'
-	if algo=='isls2':
-		return 'UMCF'
-	return algo  
+		return 'SP/1-nearest'
+	elif algo=='isls2':
+		return 'UMCF/1-nearest'
+	if algo=='isls3':
+		return 'SP/3-nearest'
+	elif algo=='isls4':
+		return 'UMCF/3-nearest'
+	else:
+		return algo
 #cmap=plt.get_cmap('rainbow')
 #dico_couleurs={cle:cmap(i/len(dico)) for i,cle in enumerate(dico.keys())}
 
 
-def retrouveLogsBrutRecursif(chemin_initial=".",exclure={'tcp'}):#,'2022-05-06'}):
+def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
 	trouves=[]
 	aChercher=[chemin_initial]
 	while aChercher:
 		nom=aChercher.pop()
-		if "logs_ns3" in nom:
+		if "logs_ns3" in nom  and all([motif in nom for motif in DOSSIER_A_INCLURE]):
 			trouves.append(nom)
 		else:
 			for glob in os.listdir(nom):
 				x=os.path.join(nom,glob)  
-				if os.path.isdir(x) and all([not motif in x for motif in exclure]):
+				if os.path.isdir(x)  and all([not motif in x for motif in DOSSIER_A_EXCLURE]):
 					aChercher.append(x)
 	return trouves
 
@@ -39,15 +57,16 @@ def retrouveLogsBrutRecursif(chemin_initial=".",exclure={'tcp'}):#,'2022-05-06'}
 
 def repartiteurLogBrut(dossier, reciproque=RECIPROQUE):
 	chemin_udp="udp_bursts_incoming.csv","udp_bursts_outgoing.csv"
-	algos=('isls2d', 'isls2e', 'isls2b', 'isls2c', 'isls2', 'isls')
-	for algo in algos:
-		if algo in dossier:
-			cle=algo
-			break 
+	import re
+	result=re.search('_(isls[^/-]*)',dossier)# cherche les chaines de caractères contenant isls, après _ et avant /
+	assert len(result.groups())==1
+	cle,=result.groups()
+	if cle not in dico:
+		dico[cle]={}
 	x=os.path.join(dossier,chemin_udp[0])
 	y=os.path.join(dossier,chemin_udp[1])
 	if not (os.path.isfile(x) and os.path.isfile(y)):
-		print(x,dossier,"pas de donnees")
+		print(dossier,"pas de donnees")
 		return
 	debitISL=dossier.split("pairing_")[1].split('_')[0]
 	with open(x, "r") as infic,\
@@ -102,20 +121,25 @@ def enregistreur_logs(reciproque=RECIPROQUE):
 
 		with open("{}_{}.txt".format(FIC_RES,algo),"w") as f:
 			f.writelines(lignes)
-		print(algo)
-		print(lignes[0])
+
 
 #Etude par sources
 def affiche_logs_sources(reciproque=RECIPROQUE):
-	placement=(2,1)
-	fig, axs = plt.subplots(*placement, sharex=True, sharey=True)
+	kCOMP=2
+	nombre_algos=len(dico)//kCOMP
+
+	for i in range(int(nombre_algos**0.5), 0, -1):
+		if nombre_algos%i==0:
+			placement=(nombre_algos//i,i)
+			break
+	fig, axs = plt.subplots(*placement, sharex=True, sharey=True, figsize=(5*kCOMP*placement[1], 5*placement[0]))
 	axs=np.reshape(axs,placement)
 	fig.suptitle("Comparison of the median throughput ratios per source")
+	cmaps = [plt.get_cmap(nom) for nom in LISTE_COULEURS] 
 	assert RECIPROQUE==False
-	for i_algo,(algo,dic) in enumerate([elt for elt in dico.items() if elt[0]=='isls' or elt[0]=='isls2']):
+	for i_algo,(algo,dic) in enumerate(sorted(dico.items())):#[elt for elt in dico.items() if elt[0]=='isls' or elt[0]=='isls2']):
+		
 		lignes=[]
-		ratios={}
-		nb_mesures={}
 		quantiles=[0.05,0.5]
 		lignes.append(f'src  [débitISL: mesures, quantiles {quantiles}] ..\n')
 		sources={}
@@ -128,6 +152,7 @@ def affiche_logs_sources(reciproque=RECIPROQUE):
 					sources[src][isl]=[]
 				sources[src][isl].append(np.mean(vals))
 		x,y=[],{}
+		colors=cmaps[(i_algo//placement[0])%kCOMP](np.linspace(1,0,len(dic[srcdst]),endpoint=False))
 		for src in sorted(sources):
 			caracs=''
 			for isl in sources[src]:	
@@ -136,24 +161,22 @@ def affiche_logs_sources(reciproque=RECIPROQUE):
 				if not isl in y:
 					y[isl]=[]
 				y[isl].append(np.median(vals))
-				print(algo, len(vals))
 			lignes.append('{} {}\n'.format(src,caracs))
 			x.append(src)
-		for isl in sorted(y):
-			axs[i_algo%2,i_algo//2].step(range(len(y[isl])),sorted(y[isl]), where='mid', label=f"{isl}Mb/s")
+		for numcolor,isl in enumerate(sorted(y)):
+			axs[i_algo%placement[0],i_algo//placement[0]//kCOMP].step(range(len(y[isl])),sorted(y[isl]), where='mid', color=colors[numcolor], label=f'{nom_algo(algo)}-'*(kCOMP>1)+f"{isl}Mb/s")
 			#axs[i_algo%2,i_algo//2].step(x, y[isl], where='mid', label=isl)
-		axs[i_algo%2,i_algo//2].set_title(f'{nom_algo(algo)} algorithm')
-		axs[i_algo%2,i_algo//2].legend()
+		if kCOMP==1:
+			axs[i_algo%placement[0],i_algo//placement[0]//kCOMP].set_title(f'{nom_algo(algo)} algorithm')
+		axs[i_algo%placement[0],i_algo//placement[0]//kCOMP].legend()
 		#with open("{}_{}_sources.txt".format(FIC_RES,algo),"w") as f:
 		#	f.writelines(lignes)	
-	fig.text(0.5, 0.01, 'sorted source stations', ha='center')
-	fig.text(0.01, 0.5, 'ratio received/sent', va='center', rotation='vertical')	
-	fig.tight_layout()
+	fig.text(0.5, 0.01, 'sorted source stations', ha='center', fontsize=12)
+	fig.text(0.01, 0.5, 'ratio received/sent', va='center', rotation='vertical', fontsize=12)	
+	fig.tight_layout(pad=3)
 	
-	nomfic="comparisonv3"
-	if len(sys.argv) > 1:
-		nomfic+=' '.join(sys.argv[1:])
-	plt.savefig(nomfic+".png")
+	nomfic="comparisonv3"+''.join(DOSSIER_A_INCLURE)
+	plt.savefig(DOSSIER+'/'+nomfic+".png")
 	plt.show()	
 
 

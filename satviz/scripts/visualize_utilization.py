@@ -175,7 +175,7 @@ def generate_link_util_at_time():
                 green_weight = 255
                 red_weight = 255 - round(255 * (0.5 - utilization) / 0.5)
             hex_col = '%02x%02x%02x' % (red_weight, green_weight, 0)
-            print(sat1, sat2, utilization, hex_col)
+            #print(sat1, sat2, utilization, hex_col)
             viz_string += "viewer.entities.add({name : '', polyline: { positions: Cesium.Cartesian3.fromDegreesArrayHeights([" \
                           + str(math.degrees(sat_objs[sat1]["sat_obj"].sublong)) + "," \
                           + str(math.degrees(sat_objs[sat1]["sat_obj"].sublat)) + "," \
