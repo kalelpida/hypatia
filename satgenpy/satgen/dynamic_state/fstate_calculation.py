@@ -413,7 +413,7 @@ def calculate_fstate_shortest_path_without_gs_relaying3(
     # Finally return result
     return fstate
 
-def firstSatHeuristic(num_satellites, commodity_list, ground_station_satellites_in_range_candidates):
+def firstSatHeuristic(num_satellites, nb_plan, nb_sat_plan, commodity_list, ground_station_satellites_in_range_candidates):
         """Create a list (gnd, satId, distance)"""
         liste=[]
         set_done_gid=set()
@@ -422,12 +422,28 @@ def firstSatHeuristic(num_satellites, commodity_list, ground_station_satellites_
                 continue
             if (not ground_station_satellites_in_range_candidates[dst_gid-num_satellites]) or (not ground_station_satellites_in_range_candidates[src_gid-num_satellites]):
                 continue
-            dist_satgs_dst, chosen_dst_sat = sorted(ground_station_satellites_in_range_candidates[dst_gid-num_satellites])[0]
+            possible_dst_sats= sorted(ground_station_satellites_in_range_candidates[dst_gid-num_satellites])[:KPPROCHES]
             possible_src_sats = sorted(ground_station_satellites_in_range_candidates[src_gid-num_satellites])[:KPPROCHES]
-            #idea : close satellites should have close IDs
-            _, chosen_src_sat, dist_satgs_src = sorted([((chosen_dst_sat-src_sat)%num_satellites, src_sat, dist_satgs) for (src_sat, dist_satgs) in possible_src_sats])[0]
-            liste.append((src_gid,chosen_src_sat, dist_satgs_src))
-            liste.append((dst_gid,chosen_dst_sat, dist_satgs_dst))
+            
+            #idea : chose the closest pair of satellites (in # of hops between planes and in planes)
+            sats_possibles_extremites=[]
+            for distsrc, satsrc in possible_src_sats:
+                for distdst, satdst in possible_dst_sats:
+                    colsrc,lgsrc=satsrc//nb_sat_plan, satsrc%nb_sat_plan
+                    coldst,lgdst=satdst//nb_sat_plan, satdst%nb_sat_plan
+                    colm, colM = sorted((colsrc, coldst))
+                    lgm, lgM = sorted((lgsrc, lgdst))
+                    distcol=min(colM-colm, colm+nb_plan-colM)
+                    distlgn=min(lgM-lgm, lgm+nb_sat_plan-lgM)
+                    #o sats_possibles_extremites.append((distcol,distlgn, satsrc, distsrc, satdst, distdst))
+                    sats_possibles_extremites.append((distcol+distlgn, satsrc, distsrc, satdst, distdst))
+            _, chosen_src_sat, dist_satgs_src, chosen_dst_sat, dist_satgs_dst = sorted(sats_possibles_extremites)[0]
+            """
+            #idea : close sats have close IDs
+            _, chosen_src_sat, dist_satgs_src, chosen_dst_sat, dist_satgs_dst = sorted([(min((satsrc-satdst)%num_satellites, (satsrc+num_satellites-satdst)%num_satellites), satsrc, distsrc, satdst, distdst) for (distdst, satdst) in possible_dst_sats for (distsrc, satsrc) in possible_src_sats ])[0]
+            """
+            liste.append((src_gid, chosen_src_sat, dist_satgs_src))
+            liste.append((dst_gid, chosen_dst_sat, dist_satgs_dst))
             set_done_gid.add(src_gid)
             set_done_gid.add(dst_gid)
         return liste
@@ -470,11 +486,14 @@ def calculate_fstate_shortest_path_without_gs_relaying4(
     # the ground station can only be connected to one satellite. 
     # This will not be a problem here because a ground station only communicates with only one other station.
     # /!\ 
-    
-    firstLinks= firstSatHeuristic(num_satellites, commodity_list, ground_station_satellites_in_range_candidates)
+    voisinsZero = sorted(sat_net_graph_only_satellites_with_isls[0].keys())
+    nb_sat_plan = voisinsZero[2]
+    assert len(voisinsZero) == 4 and num_satellites%nb_sat_plan==0
+    nb_plans=num_satellites//nb_sat_plan
+    firstLinks= firstSatHeuristic(num_satellites, nb_plans, nb_sat_plan, commodity_list, ground_station_satellites_in_range_candidates)
     for ground, sat, dist in firstLinks:
         total_net_graph.add_edge(ground, sat, weight=dist)
-
+    
     #compute optimal path
     if version=='a':
         list_paths = calcul_paths(total_net_graph, prev_fstate, commodity_list, debitISL, "SRR_arc_node_one_timestep")

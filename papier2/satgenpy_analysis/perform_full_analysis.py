@@ -48,7 +48,7 @@ commands_to_run = []
 params=sys.argv[1:]
 print("Generating commands for manually selected endpoints pair (printing of routes and RTT over time)...")
 if len(params)>1:
-	nom_fic = '_'.join([params[0].lstrip('main_').rstrip('.py')]+params[3:-1])#main_kuiper_630.py 200 50 isls_none ground_stations_paris_moscow_grid algorithm_free_one_only_gs_relays ${num_threads}
+	nom_fic = '_'.join([params[0].removeprefix('main_').removesuffix('.py')]+params[3:-1])#main_kuiper_630.py 200 50 isls_none ground_stations_paris_moscow_grid algorithm_free_one_only_gs_relays ${num_threads}
 	pas=params[2]
 	duree=params[1]
 	with open("../satellite_networks_state/commodites.temp", "r") as f:
