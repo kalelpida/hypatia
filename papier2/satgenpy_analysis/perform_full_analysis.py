@@ -24,6 +24,7 @@ import exputil
 import time
 import sys
 import os
+import yaml
 
 local_shell = exputil.LocalShell()
 max_num_processes = 6
@@ -45,28 +46,31 @@ if not "command_logs" in [obj for obj in os.listdir('data') if os.path.isdir(obj
 commands_to_run = []
 
 # Manual
-params=sys.argv[1:]
+config_fic = sys.argv[1]
+with open(config_fic, 'r') as f:
+    dico=yaml.load(f, Loader=yaml.Loader)
+duree=dico['duree']
+pas=dico['pas']
+cstl=dico['constellation']
+nom_fic='_'.join([cstl, dico['isls'], dico['sol'], dico['algo']])
 print("Generating commands for manually selected endpoints pair (printing of routes and RTT over time)...")
-if len(params)>1:
-	nom_fic = '_'.join([params[0].removeprefix('main_').removesuffix('.py')]+params[3:-1])#main_kuiper_630.py 200 50 isls_none ground_stations_paris_moscow_grid algorithm_free_one_only_gs_relays ${num_threads}
-	pas=params[2]
-	duree=params[1]
-	with open("../satellite_networks_state/commodites.temp", "r") as f:
-		list_comms=eval(f.readline())
-	for (src,dst,_) in list_comms:
-		nompartiel_log = "_".join([params[0].lstrip('main_').rstrip('.py'),str(src),"to",str(dst)])+".log"
-		commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_routes_and_rtt "
-						"../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-						"{} "
-						" {} {} {} {} "
-						"> ../papier2/satgenpy_analysis/data/command_logs/manual_{} 2>&1".format(nom_fic,pas,duree,src,dst,nompartiel_log))
-		commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_graphical_routes_and_rtt "
-						"../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-						"{} "
-						" {} {} {} {} "
-						"> ../papier2/satgenpy_analysis/data/command_logs/manual_graphical_{} 2>&1".format(nom_fic,pas,duree,src,dst,nompartiel_log))
 
+with open("../satellite_networks_state/commodites.temp", "r") as f:
+    list_comms=eval(f.readline())
+for (src,dst,_) in list_comms:
+    nompartiel_log = "_".join([cstl,str(src),"to",str(dst)])+".log"
+    commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_routes_and_rtt "
+                    "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
+                    "{} "
+                    " {} {} {} {} "
+                    "> ../papier2/satgenpy_analysis/data/command_logs/manual_{} 2>&1".format(nom_fic,pas,duree,src,dst,nompartiel_log))
+    commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_graphical_routes_and_rtt "
+                    "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
+                    "{} "
+                    " {} {} {} {} "
+                    "> ../papier2/satgenpy_analysis/data/command_logs/manual_graphical_{} 2>&1".format(nom_fic,pas,duree,src,dst,nompartiel_log))
 
+"""
 else:
 	#Moskva-(Moscow) to Dallas-Fort-Worth with only ISLs on Telesat
 	commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_routes_and_rtt "
@@ -79,19 +83,7 @@ else:
 		                   "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2 "
 		                   " 5000 20 363 381 "
 		                   "> ../papier2/satgenpy_analysis/data/command_logs/manual_graphical_telesat_isls_372_to_411.log 2>&1")
-
-	#Moskva-(Moscow) to Dallas-Fort-Worth with only ISLs on Telesat
-	commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_routes_and_rtt "
-		                   "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-		                   "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2 "
-		                   " 5000 20 372 411 "
-		                   "> ../papier2/satgenpy_analysis/data/command_logs/manual_telesat_isls_372_to_411.log 2>&1")
-	commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_graphical_routes_and_rtt "
-		                   "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-		                   "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2 "
-		                   " 5000 20 372 411 "
-		                   "> ../papier2/satgenpy_analysis/data/command_logs/manual_graphical_telesat_isls_372_to_411.log 2>&1")
-
+"""
 # Constellation comparison
 print("Generating commands for constellation comparison...")
 for satgenpy_generated_constellation in [
@@ -100,7 +92,7 @@ for satgenpy_generated_constellation in [
     "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2b",
     "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2c"
 ]:
-    for duration_s in [26]:
+    for duration_s in []:
         list_update_interval_ms = [2000]
 
         # Path

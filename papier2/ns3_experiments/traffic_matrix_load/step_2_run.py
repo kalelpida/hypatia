@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import exputil
-import sys
+import sys, yaml
 local_shell = exputil.LocalShell()
 
 # Clear old runs
@@ -30,16 +30,21 @@ local_shell = exputil.LocalShell()
 # Get workload identifier from argument
 num_machines = 1
 args = sys.argv[1:]
-if len(args) != 4 or int(args[0]) < 0 or int(args[0]) >= num_machines:
+if int(args[0]) < 0 or int(args[0]) >= num_machines:
     raise ValueError("Need to have have first argument in range [0, %d) to pick workload" % num_machines)
 workload_id = int(args[0])
+config_file = args[1]
+with open(config_file, 'r') as f:
+	    dico_params=yaml.load(f, Loader=yaml.Loader)
+
+graine=dico_params.pop('graine')
+data_rate_megabit_per_s=dico_params.get('debit_isl')
+duration_s=dico_params.get('duree')
+algo = dico_params.get('algo')
 
 # One-by-one run all experiments (such that they don't interfere with each other)
 unique_id = 0
 
-# Retrieve values from the config
-data_rate_megabit_per_s = float(args[1])
-duration_s = float(args[2])
 
 for protocol_chosen in ["udp"]:#["tcp", "udp"]:
 
@@ -47,7 +52,7 @@ for protocol_chosen in ["udp"]:#["tcp", "udp"]:
 
 		# Prepare run directory
 		run_dir = "runs/run_loaded_tm_pairing_%d_Mbps_for_%ds_with_%s_%s" % (
-			data_rate_megabit_per_s, duration_s, protocol_chosen, args[3]
+			data_rate_megabit_per_s, duration_s, protocol_chosen, algo
 		)
 		logs_ns3_dir = run_dir + "/logs_ns3"
 		local_shell.remove_force_recursive(logs_ns3_dir)

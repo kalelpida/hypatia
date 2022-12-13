@@ -62,6 +62,7 @@ namespace ns3 {
     UdpBurstApplication::UdpBurstApplication() {
         NS_LOG_FUNCTION(this);
         m_next_internal_burst_idx = 0;
+        Packet::EnablePrinting();
     }
 
     UdpBurstApplication::~UdpBurstApplication() {

@@ -24,21 +24,30 @@ import exputil
 import networkload
 import random
 import sys
+import yaml
 local_shell = exputil.LocalShell()
 
 #local_shell.remove_force_recursive("runs")
 #local_shell.remove_force_recursive("pdf")
 #local_shell.remove_force_recursive("data")
 
+# get parameters (set by hypatia/papier2/paper2.sh)
+# expected parameters: debitISL constellation_file duration[s] timestep[ms] isls? Ground_stations? algorithm number_of_threads
+config_file="../../config/courante.yaml" #sys.argv[1]
+with open(config_file, 'r') as f:
+    dico_params=yaml.load(f, Loader=yaml.Loader)
+
+graine=dico_params.pop('graine')
+debitISL=dico_params.pop('debit_isl')
+liste_params=('constellation', 'duree', 'pas', 'isls', 'sol', 'algo', 'threads')
+params=[str(dico_params[cle]) for cle in liste_params]
+
 # Schedule
-random.seed(2)
+random.seed(graine)
 random.randint(0, 100000000)  # Legacy reasons
 seed_from_to = random.randint(0, 100000000)
 
-# get parameters (set by hypatia/papier2/paper2.sh)
-# expected parameters: debitISL constellation_file duration[s] timestep[ms] isls? Ground_stations? algorithm number_of_threads
-debitISL=int(sys.argv[1])
-params=sys.argv[2:]
+
 
 
 #set the ground station nodes
@@ -52,6 +61,8 @@ elif "kuiper_630" in params[0] and "100" in params[4]:
     a = set(range(1156, 1256))
 elif "telesat_1015" in params[0] and "100" in params[4]:
     a = set(range(351,451))
+elif "tas_700" in params[0] and "100" in params[4]:
+    a = set(range(756,856))
 else:
     print("erreur parametres non reconnus, editer step_1_generate_runs2 et/ou generate_for_paper")
     exit(1)
@@ -127,7 +138,7 @@ for config in [
                 "templates/template_config_ns3_" + protocol_chosen + "2.properties",
                 run_dir + "/config_ns3.properties"
             )
-            sat_net_dir="../../../../satellite_networks_state/gen_data/{}_{}_{}_{}".format(params[0].lstrip('main_').rstrip('.py'),params[3],params[4],params[5])
+            sat_net_dir="../../../../satellite_networks_state/gen_data/{}_{}_{}_{}".format(params[0].removeprefix('main_').removesuffix('.py'),params[3],params[4],params[5])
             local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                               "[SAT-NET-DIR]", sat_net_dir)
             local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
@@ -188,11 +199,3 @@ for config in [
 
 #write the commodity list in an easy place for path generation with mcnf
 local_shell.write_file("../../satellite_networks_state/commodites.temp", list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion)))
-
-#generate network graph
-
-local_shell.perfect_exec(
-    "cd ../../satellite_networks_state; "
-    "./generate_for_paper.sh " + ' '.join(params),
-    output_redirect=exputil.OutputRedirect.CONSOLE
-)

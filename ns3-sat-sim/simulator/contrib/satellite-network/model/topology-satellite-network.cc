@@ -20,7 +20,20 @@
  */
 
 #include "topology-satellite-network.h"
+#include <regex>
+#include "ns3/id-seq-header.h"
 
+namespace ns3 {
+static void
+RxDrop(Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p)
+{
+    //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
+    IdSeqHeader h;
+    //p->PeekHeader(h, sizeof(IdSeqHeader));
+    *stream->GetStream() << Simulator::Now().GetSeconds() << "\t " << p->ToString() << std::endl;
+    //"\t id:" << h.GetId() << "\t seq:" << h.GetSeq() << std::endl;
+}
+}
 namespace ns3 {
 
     NS_OBJECT_ENSURE_REGISTERED (TopologySatelliteNetwork);
@@ -256,12 +269,19 @@ namespace ns3 {
         // Read ISL pair from each line
         std::string line;
         int counter = 0;
+
+        std::smatch match;
+        AsciiTraceHelper asciiTraceHelper;
+        const std::regex nodeIDs("(\\d+) (\\d+)");
+        const std::regex recvErrRate("recvErrRate:(\\d*[.]\\d*)");
+        const std::regex trackLinkDrops("trackLinkDrops");
         while (std::getline(fs, line)) {
-            std::vector<std::string> res = split_string(line, " ", 2);
 
             // Retrieve satellite identifiers
-            int32_t sat0_id = parse_positive_int64(res.at(0));
-            int32_t sat1_id = parse_positive_int64(res.at(1));
+            NS_ABORT_MSG_UNLESS(std::regex_search(line, match, nodeIDs), "Error parsing satellite ISL. Abort");
+            int32_t sat0_id = parse_positive_int64(match[1].str());
+            int32_t sat1_id = parse_positive_int64(match[2].str());
+            
             Ptr<Satellite> sat0 = m_satellites.at(sat0_id);
             Ptr<Satellite> sat1 = m_satellites.at(sat1_id);
 
@@ -270,6 +290,23 @@ namespace ns3 {
             c.Add(m_satelliteNodes.Get(sat0_id));
             c.Add(m_satelliteNodes.Get(sat1_id));
             NetDeviceContainer netDevices = p2p_laser_helper.Install(c);
+
+            // Error Model
+            if (std::regex_search(line, match, recvErrRate)){
+                Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
+                em->SetAttribute("ErrorRate", DoubleValue(std::atof(match[1].str().c_str())));
+                em->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
+                netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+                netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+            }
+
+            // Tracking
+            if (std::regex_search(line, match, trackLinkDrops)){
+                std::string filename = m_basicSimulation->GetLogsDir() +format_string("/link_%" PRIu64 "-%" PRIu64 ".drops", sat0_id, sat1_id);
+                Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (filename);
+                netDevices.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&RxDrop, stream));
+                netDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&RxDrop, stream));
+            }
 
             // Install traffic control helper
             tch_isl.Install(netDevices.Get(0));

@@ -45,3 +45,28 @@ def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_st
                     cartesian[2]
                 )
             )
+
+def extend_stations_and_users(filename_ground_gateways_basic_in, filename_users_in, Nb, filename_ground_out):
+    ground_stations = read_ground_stations_basic(filename_ground_gateways_basic_in)
+    #get ground,
+    #create commodities
+    #save both
+    with open(filename_ground_out, "w+") as f_out:
+        for ground_station in ground_stations:
+            cartesian = geodetic2cartesian(
+                float(ground_station["latitude_degrees_str"]),
+                float(ground_station["longitude_degrees_str"]),
+                ground_station["elevation_m_float"]
+            )
+            f_out.write(
+                "%d,%s,%f,%f,%f,%f,%f,%f\n" % (
+                    ground_station["gid"],
+                    ground_station["name"],
+                    float(ground_station["latitude_degrees_str"]),
+                    float(ground_station["longitude_degrees_str"]),
+                    ground_station["elevation_m_float"],
+                    cartesian[0],
+                    cartesian[1],
+                    cartesian[2]
+                )
+            )
