@@ -6,6 +6,7 @@ experiences: #classer par ordre
   isls: [ isls_plus_grid ]
   deteriorISL: [ { sel: topUtil10, errRate: 0.1 } ]
   sol: [ users_and_main_stations ]
+  nb-UEs-sol: [ 10 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [4 ]
   debit_isl: [ 10]
@@ -14,8 +15,9 @@ experiences: #classer par ordre
 info-sauvegarde:
   strdate: '%Y-%m-%d-%H%M'
   destdir: "sauvegardes/svgde_{strdate}_{graine}"
-  sources: 
-    ns3_experiments/traffic_matrix_load/runs: run.*
-    #satgenpy_analysis: data 
+  sources:
+    satgenpy_analysis/data: "{constellation}_{isls}_{sol}_{algo}"
+    "satellite_networks_state/gen_data/{constellation}_{isls}_{sol}_{algo}": ground_stations.txt
+    ns3_experiments/runs: run.*
   #currinfo: currlog #sinon commenter ce champs
   execution: graine # sauvegarder après chaque graine, les autres paramètres de l'expérience étant changés

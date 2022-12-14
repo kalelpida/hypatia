@@ -6,7 +6,8 @@ import subprocess
 import yaml
 import re
 import time # can be used in destdir
-from papier2.satellite_networks_state.main_net_helper import MainNetHelper
+from satellite_networks_state.main_net_helper import MainNetHelper
+from ns3_experiments.step_1_generate_runs2 import main_step1
 
 #papier2 directory
 basedir=os.getcwd()
@@ -66,17 +67,17 @@ class Experiences():
         #create ground nodes
         os.chdir("satellite_networks_state")
         mh=MainNetHelper(self.courante, os.path.join(configdir, self.courante['constellation']+'.yaml'), "gen_data")
-        mh.init_ground_stations()
-        
+        list_from_to=mh.init_ground_stations()
+        os.chdir(basedir)
 
         ### Create commodities, prepare ns experiment
-        os.chdir("ns3_experiments/traffic_matrix_load")
-        #subprocess.check_call(["python",  "step_1_generate_runs2.py", nomfic_courante] )
+        os.chdir("ns3_experiments")
+        main_step1(list_from_to)
         os.chdir(basedir)
 
         #create routing table
         os.chdir("satellite_networks_state")
-        #mh.calculate()
+        mh.calculate()
         os.chdir(basedir)
 
         ### SATGENPY ANALYSIS
@@ -84,13 +85,13 @@ class Experiences():
         # edit variables 'satgenpy_generated_constellation', 'duration_s' 
         # and 'list_update_interval_ms' in perform_full_analysis according to `liste_arguments`
         os.chdir("satgenpy_analysis")
-        #subprocess.check_call(["python", "perform_full_analysis.py", nomfic_courante])
+        subprocess.check_call(["python", "perform_full_analysis.py", nomfic_courante])
         from satgenpy_analysis.deteriorIsl import casseISLs
         #casseISLs(self.courante)
         os.chdir(basedir)
 
         # NS-3 EXPERIMENTS
-        os.chdir("ns3_experiments/traffic_matrix_load")
+        os.chdir("ns3_experiments")
         subprocess.check_call(["python", "step_2_run.py", "0", nomfic_courante])
         os.chdir(basedir)
 
@@ -101,7 +102,9 @@ class Experiences():
         nomdestdir=destdir.format(strdate=time.strftime(self.strdate), graine=self.courante.get('graine', ''))
         sources_a_svgder=[]
         for dir, regex in sources.items():
-            sources_a_svgder+=[os.path.join(dir,x) for x in os.listdir(dir) if re.match(regex, x)]
+            dir_str=dir.format(**self.courante)
+            regex_str=regex.format(**self.courante)
+            sources_a_svgder+=[os.path.join(dir_str,x) for x in os.listdir(dir_str) if re.match(regex_str, x)]
         subprocess.check_call(["mkdir", nomdestdir])
         for src in sources_a_svgder:
             subprocess.check_call(["cp", "-R", '-t', nomdestdir, src])

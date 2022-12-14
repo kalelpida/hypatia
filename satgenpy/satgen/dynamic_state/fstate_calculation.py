@@ -53,9 +53,7 @@ def calculate_fstate_shortest_path_without_gs_relaying(
                                 b[1]
                             )
                         )
-                #possibilities = list(sorted(possibilities))
-                #end station must connect to the nearest satellite
-                possibilities = list(sorted(ground_station_satellites_in_range_candidates[dst_gid]))
+                possibilities = list(sorted(possibilities))
 
                 # By default, if there is no satellite in range for the
                 # destination ground station, it will be dropped (indicated by -1)
@@ -129,9 +127,7 @@ def calculate_fstate_shortest_path_without_gs_relaying(
                                     a[1]
                                 )
                             )
-                    #possibilities = sorted(possibilities)
-                    #src station must connect to the nearest satellite
-                    possibilities = sorted(possible_src_sats)
+                    possibilities = sorted(possibilities)
 
                     # By default, if there is no satellite in range for one of the
                     # ground stations, it will be dropped (indicated by -1)

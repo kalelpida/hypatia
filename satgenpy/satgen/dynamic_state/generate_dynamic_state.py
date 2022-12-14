@@ -52,8 +52,7 @@ def generate_dynamic_state(
         ground_stations,
         list_isls,
         list_gsl_interfaces_info,
-        max_gsl_length_m,
-        max_isl_length_m,
+        types_parametres,
         dynamic_state_algorithm,  # Options:
                                   # "algorithm_free_one_only_gs_relays"
                                   # "algorithm_free_one_only_over_isls"
@@ -86,8 +85,7 @@ def generate_dynamic_state(
             ground_stations,
             list_isls,
             list_gsl_interfaces_info,
-            max_gsl_length_m,
-            max_isl_length_m,
+            types_parametres,
             dynamic_state_algorithm,
             prev_output,
             enable_verbose_logs,
@@ -103,8 +101,7 @@ def generate_dynamic_state_at(
         ground_stations,
         list_isls,
         list_gsl_interfaces_info,
-        max_gsl_length_m,
-        max_isl_length_m,
+        types_parametres,
         dynamic_state_algorithm,
         prev_output,
         enable_verbose_logs,
@@ -139,8 +136,9 @@ def generate_dynamic_state_at(
     if enable_verbose_logs:
         print("  > Satellites............. " + str(len(satellites)))
         print("  > Ground stations........ " + str(len(ground_stations)))
-        print("  > Max. range GSL......... " + str(max_gsl_length_m) + "m")
-        print("  > Max. range ISL......... " + str(max_isl_length_m) + "m")
+        for type_obj, dic in types_parametres.items():
+            for cle, val in dic.items():
+                print("  > {}:{}......... {}".format(type_obj, cle, val))
 
     #################################
 
@@ -158,11 +156,11 @@ def generate_dynamic_state_at(
         # TODO: but practically, defining a permanent ISL between two satellites which
         # TODO: can go out of distance is generally unwanted
         sat_distance_m = distance_m_between_satellites(satellites[a], satellites[b], str(epoch), str(time))
-        if sat_distance_m > max_isl_length_m:
+        if sat_distance_m > types_parametres['sat']['max_isl_length_m']:
             raise ValueError(
                 "The distance between two satellites (%d and %d) "
                 "with an ISL exceeded the maximum ISL length (%.2fm > %.2fm at t=%dns)"
-                % (a, b, sat_distance_m, max_isl_length_m, time_since_epoch_ns)
+                % (a, b, sat_distance_m, types_parametres['sat']['max_isl_length_m'], time_since_epoch_ns)
             )
 
         # Add to networkx graph
@@ -209,6 +207,7 @@ def generate_dynamic_state_at(
     # What satellites can a ground station see
     ground_station_satellites_in_range = []
     for ground_station in ground_stations:
+        gs_type=ground_station['type']
         # Find satellites in range
         satellites_in_range = []
         for sid in range(len(satellites)):
@@ -218,7 +217,7 @@ def generate_dynamic_state_at(
                 str(epoch),
                 str(time)
             )
-            if distance_m <= max_gsl_length_m:
+            if distance_m <= types_parametres[gs_type]['max_gsl_length_m']:
                 satellites_in_range.append((distance_m, sid))
                 sat_net_graph_all_with_only_gsls.add_edge(
                     sid, len(satellites) + ground_station["gid"], weight=distance_m

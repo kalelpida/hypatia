@@ -7,6 +7,7 @@ deteriorISL:
 duree: 8
 graine: 0
 isls: isls_plus_grid
+nb-UEs-sol: 10
 pas: 2000
-sol: ground_stations_top_100
+sol: users_and_main_stations
 threads: 4

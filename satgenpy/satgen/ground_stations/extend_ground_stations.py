@@ -22,6 +22,7 @@
 
 from satgen.distance_tools import *
 from .read_ground_stations import *
+import numpy as np
 
 
 def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_stations_out):
@@ -34,7 +35,7 @@ def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_st
                 ground_station["elevation_m_float"]
             )
             f_out.write(
-                "%d,%s,%f,%f,%f,%f,%f,%f\n" % (
+                "%d,%s,%f,%f,%f,%f,%f,%f,station\n" % (
                     ground_station["gid"],
                     ground_station["name"],
                     float(ground_station["latitude_degrees_str"]),
@@ -46,27 +47,74 @@ def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_st
                 )
             )
 
-def extend_stations_and_users(filename_ground_gateways_basic_in, filename_users_in, Nb, filename_ground_out):
-    ground_stations = read_ground_stations_basic(filename_ground_gateways_basic_in)
-    #get ground,
-    #create commodities
-    #save both
-    with open(filename_ground_out, "w+") as f_out:
-        for ground_station in ground_stations:
-            cartesian = geodetic2cartesian(
+def extend_stations_and_users(graine, NbGateways, NbUEs, cstl_config, filename_ground_out):
+    np.random.seed(graine)
+    #gather ground bodies 
+    assert cstl_config['gateway']['type'] == 'topCities' # autres cas à faire
+    gateways = read_ground_stations_basic("input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt")
+    UEs = read_ground_stations_basic("input_data/UEs_{}.txt".format(cstl_config['ue']['type']))
+    if NbUEs > len(UEs):
+        raise Exception('generate more users')
+    
+    list_from_to=[]
+
+    #save ground bodies for simulation
+    ground_objects_positions=[]
+    for gid, ground_station in enumerate(gateways[:NbGateways]):
+        cartesian = geodetic2cartesian(
+            float(ground_station["latitude_degrees_str"]),
+            float(ground_station["longitude_degrees_str"]),
+            ground_station["elevation_m_float"]
+        )
+        ground_objects_positions.append(
+            "%d,%s,%f,%f,%f,%f,%f,%f,gateway\n" % (
+                gid,
+                ground_station["name"],
                 float(ground_station["latitude_degrees_str"]),
                 float(ground_station["longitude_degrees_str"]),
-                ground_station["elevation_m_float"]
+                ground_station["elevation_m_float"],
+                cartesian[0],
+                cartesian[1],
+                cartesian[2]
             )
-            f_out.write(
-                "%d,%s,%f,%f,%f,%f,%f,%f\n" % (
-                    ground_station["gid"],
-                    ground_station["name"],
-                    float(ground_station["latitude_degrees_str"]),
-                    float(ground_station["longitude_degrees_str"]),
-                    ground_station["elevation_m_float"],
-                    cartesian[0],
-                    cartesian[1],
-                    cartesian[2]
-                )
+        )
+
+    for gid, ground_station in enumerate(UEs[:NbUEs]):
+        cartesian = geodetic2cartesian(
+            float(ground_station["latitude_degrees_str"]),
+            float(ground_station["longitude_degrees_str"]),
+            ground_station["elevation_m_float"]
+        )
+        
+        # add source and dest of commodities 
+        if gid < 0.2*NbUEs:#20% flots longs
+            dest=np.random.randint(0, NbGateways)
+        else: #80% flots courts
+            dest=sorted([(geodesic_distance_m_between_ground_stations(ground_station, gateway), sid) for sid, gateway in enumerate(gateways[:NbGateways])])[0][1]
+        
+        gid+=NbGateways
+        ground_objects_positions.append(
+            "%d,%s,%f,%f,%f,%f,%f,%f,ue\n" % (
+                gid,
+                ground_station["name"],
+                float(ground_station["latitude_degrees_str"]),
+                float(ground_station["longitude_degrees_str"]),
+                ground_station["elevation_m_float"],
+                cartesian[0],
+                cartesian[1],
+                cartesian[2]
             )
+        )
+
+        # remember that for convenience in later routing, IDs in commodities are allocated from 0 to infinite
+        # begin by satellites, then ground gateways, finally users
+        nbsats=cstl_config['nb_sats']
+        list_from_to.append([gid+nbsats, dest+nbsats])
+        list_from_to.append([dest+nbsats, gid+nbsats])
+
+    #save config
+    with open(filename_ground_out, "w+") as f_out:
+        f_out.writelines(ground_objects_positions)
+    
+    return list_from_to
+        

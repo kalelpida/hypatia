@@ -26,6 +26,7 @@ from satgen.isls import *
 from satgen.ground_stations import *
 from satgen.tles import *
 import exputil
+import yaml
 import numpy as np
 from .print_routes_and_rtt import print_routes_and_rtt
 from statsmodels.distributions.empirical_distribution import ECDF
@@ -65,13 +66,12 @@ def analyze_rtt(
     satellites = tles["satellites"]
     list_isls = read_isls(satellite_network_dir + "/isls.txt", len(satellites))
     epoch = tles["epoch"]
-    description = exputil.PropertiesConfig(satellite_network_dir + "/description.txt")
+    with open(satellite_network_dir + "/description.yaml", 'r') as f:
+        description = yaml.load(f, Loader=yaml.Loader)
 
     # Derivatives
     simulation_end_time_ns = simulation_end_time_s * 1000 * 1000 * 1000
     dynamic_state_update_interval_ns = dynamic_state_update_interval_ms * 1000 * 1000
-    max_gsl_length_m = exputil.parse_positive_float(description.get_property_or_fail("max_gsl_length_m"))
-    max_isl_length_m = exputil.parse_positive_float(description.get_property_or_fail("max_isl_length_m"))
 
     #get commodities
     with open("../papier2/satellite_networks_state/commodites.temp","r") as f_comms:
@@ -105,7 +105,7 @@ def analyze_rtt(
 
             # Given we are going to graph often, we can pre-compute the edge lengths
             graph_with_distance = construct_graph_with_distances(epoch, t, satellites, ground_stations,
-                                                                 list_isls, max_gsl_length_m, max_isl_length_m)
+                                                                 list_isls, description)
 
             # Go over each pair of ground stations and calculate the length
             for (src_node_id,dst_node_id,_) in list_comms:

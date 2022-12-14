@@ -37,11 +37,12 @@ NUM_ORBS: 28
 NUM_SATS_PER_ORB: 27
 INCLINATION_DEGREE: 65
 
-gateways: 
+gateway: 
   type: topCities #from 100 biggest cities
-  nombre: 10 #random or give IDs and place them?
+  nombre: 10 #random, give IDs and place them, or set it in config?
   minElevation: 10 #degrees above horizon
 
-UEs:
-  type: random
+ue:
+  type: randomGlobe
   minElevation: 35 #degrees above horizon
+  nombre: config/nb-UEs-sol #voir dans config

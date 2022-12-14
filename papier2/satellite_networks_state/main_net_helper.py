@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import sys, os
-sys.path.append("../../satgenpy")
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),"../../satgenpy"))
 import satgen
 import math
 import yaml
@@ -30,7 +30,8 @@ import yaml
 EARTH_RADIUS= 6378135.0
 MU_EARTH= 3.98574405e+14
 SECONDS_SIDEREAL_DAY= 86164
-
+RADIO_K_FACTOR = 1.33 # The K-factor varies a lot according to temperature, humidity
+TYPES_OBJETS_SOL = ('ue', 'gateway')
 
 class MainNetHelper:
 
@@ -39,7 +40,6 @@ class MainNetHelper:
     output_generated_data_dir # Final directory in which the result will be placed
     ):
 
-        
         self.config=dico_config
         self.output_generated_data_dir = output_generated_data_dir
 
@@ -48,28 +48,41 @@ class MainNetHelper:
         
         self.cstl_config=cstl_dico
         
-        ALTITUDE_M = cstl_dico['ALTITUDE_M']
-        SATELLITE_CONE_RADIUS_M = self.ALTITUDE_M / math.tan(math.radians(35.0))  # Considering an elevation angle of 35 degrees;
-        MAX_GSL_LENGTH_M = math.sqrt(math.pow(SATELLITE_CONE_RADIUS_M, 2) + math.pow(self.ALTITUDE_M, 2))
-        # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
-        MAX_ISL_LENGTH_M = 2 * math.sqrt(math.pow(EARTH_RADIUS + self.ALTITUDE_M, 2) - math.pow(EARTH_RADIUS + 80000, 2))
-
-        self.BASE_NAME = cstl_dico['BASE_NAME']
-        self.NICE_NAME = cstl_dico['NICE_NAME']
-        self.ECCENTRICITY = cstl_dico['ECCENTRICITY']
-        self.ARG_OF_PERIGEE_DEGREE = cstl_dico['ARG_OF_PERIGEE_DEGREE']
-        self.PHASE_DIFF = cstl_dico['PHASE_DIFF']
-        self.MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(self.ALTITUDE_M+EARTH_RADIUS)**3)/math.pi/2  # ~14.5 revs/jour
+        altitude = cstl_dico['ALTITUDE_M']
         
-        self.MAX_GSL_LENGTH_M = MAX_GSL_LENGTH_M
-        self.MAX_ISL_LENGTH_M = MAX_ISL_LENGTH_M
+        self.types_parametres={}
+        for cle, val in cstl_dico.items():
+            if cle in TYPES_OBJETS_SOL:
+                #old approximation, false for low elevation angle
+                #sat_cone_radius_m= altitude/math.tan(math.radians(val['minElevation']))  # Considering an elevation angle of 35 degrees;
+                #max_gsl_m = math.sqrt(math.pow(sat_cone_radius_m, 2) + math.pow(altitude, 2))
+                t=EARTH_RADIUS*math.sin(math.radians(val['minElevation']))
+                max_gsl_m=(math.sqrt((EARTH_RADIUS+altitude)**2-EARTH_RADIUS**2+t**2) -t)*RADIO_K_FACTOR
+                self.types_parametres[cle] = {"max_gsl_length_m": max_gsl_m}
+                
+        # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
+        self.types_parametres["sat"] = {'max_isl_length_m' :2 * math.sqrt(math.pow(EARTH_RADIUS + altitude, 2) - math.pow(EARTH_RADIUS + 80000, 2))}
+
+        self.MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(altitude+EARTH_RADIUS)**3)/math.pi/2  # ~14.5 revs/jour
+        
+
         self.NUM_ORBS = cstl_dico['NUM_ORBS']
         self.NUM_SATS_PER_ORB = cstl_dico['NUM_SATS_PER_ORB']
+        self.cstl_config['nb_sats'] = self.NUM_ORBS * self.NUM_SATS_PER_ORB
         self.INCLINATION_DEGREE = cstl_dico['INCLINATION_DEGREE']
+    
+    def getCstlInfo(self, *attributs):
+        info=self.cstl_config
+        liste=list(reversed(attributs))
+        while liste:
+            info=info[liste.pop()]
+        if type(info) is str and info.startswith("config/"):
+            return self.config[info.removeprefix("config/")]
+        return info
 
     def init_ground_stations(self):
         # Add base name to setting
-        name = self.BASE_NAME + "_" + self.config['isls'] + "_" + self.config['sol'] + "_" + self.config['algo']
+        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['sol'] + "_" + self.config['algo']
 
         # Create output directories
         if not os.path.isdir(self.output_generated_data_dir):
@@ -84,39 +97,45 @@ class MainNetHelper:
                 "input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt",
                 self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
             )
+            #TODO
+            #list_from_to
         elif self.config['sol'] == "ground_stations_paris_moscow_grid":
             satgen.extend_ground_stations(
                 "input_data/ground_stations_paris_moscow_grid.basic.txt",
                 self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
             )
-        elif self.config['sol'].startswith("users_and_main_stations"):
-            NbUsers=int(self.config['sol'].removeprefix("users_and_main_stations"))
-            satgen.extend_stations_and_users(
-                "input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt",
-                filename_users_in, NbUsers, AFAIRE
+            #TODO
+            #list_from_to
+        elif self.config['sol'] == "users_and_main_stations":
+            NbGateways = self.getCstlInfo("gateway", "nombre")
+            NbUEs = self.getCstlInfo('ue', "nombre")
+            list_from_to=satgen.extend_stations_and_users(self.config['graine'], NbGateways, NbUEs, self.cstl_config,
                 self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
             )
         else:
             raise ValueError("Unknown ground station selection: " + self.config['sol'])
+        
+        # create a from_to list
+        return list_from_to
 
     def calculate(self,      
     ):
 
         # Add base name to setting
-        name = self.BASE_NAME + "_" + self.config['isls'] + "_" + self.config['sol'] + "_" + self.config['algo']
+        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['sol'] + "_" + self.config['algo']
 
 
         # TLEs
         print("Generating TLEs...")
         satgen.generate_tles_from_scratch_manual(
             self.output_generated_data_dir + "/" + name + "/tles.txt",
-            self.NICE_NAME,
+            self.cstl_config['NICE_NAME'],
             self.NUM_ORBS,
             self.NUM_SATS_PER_ORB,
-            self.PHASE_DIFF,
+            self.cstl_config['PHASE_DIFF'],
             self.INCLINATION_DEGREE,
-            self.ECCENTRICITY,
-            self.ARG_OF_PERIGEE_DEGREE,
+            self.cstl_config['ECCENTRICITY'],
+            self.cstl_config['ARG_OF_PERIGEE_DEGREE'],
             self.MEAN_MOTION_REV_PER_DAY
         )
 
@@ -139,11 +158,8 @@ class MainNetHelper:
 
         # Description
         print("Generating description...")
-        satgen.generate_description(
-            self.output_generated_data_dir + "/" + name + "/description.txt",
-            self.MAX_GSL_LENGTH_M,
-            self.MAX_ISL_LENGTH_M
-        )
+        with open(self.output_generated_data_dir + "/" + name + "/description.yaml", 'w') as f:
+            yaml.dump(self.types_parametres, f)
 
         # GSL interfaces
         ground_stations = satgen.read_ground_stations_extended(
@@ -183,8 +199,7 @@ class MainNetHelper:
             name,
             self.config['pas'],
             self.config['duree'],
-            self.MAX_GSL_LENGTH_M,
-            self.MAX_ISL_LENGTH_M,
+            self.types_parametres,
             self.config['algo'],
             True
         )

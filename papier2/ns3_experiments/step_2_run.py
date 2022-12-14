@@ -60,10 +60,10 @@ for protocol_chosen in ["udp"]:#["tcp", "udp"]:
 
 		# Perform run
 		local_shell.perfect_exec(
-			"cd ../../../ns3-sat-sim/simulator; "
+			"cd ../../ns3-sat-sim/simulator; "
 			"./waf --run=\"main_satnet "
-			"--run_dir='../../papier2/ns3_experiments/traffic_matrix_load/" + run_dir + "'\""
-			" 2>&1 | tee '../../papier2/ns3_experiments/traffic_matrix_load/" + logs_ns3_dir + "/console.txt'",
+			"--run_dir='../../papier2/ns3_experiments/" + run_dir + "'\""
+			" 2>&1 | tee '../../papier2/ns3_experiments/" + logs_ns3_dir + "/console.txt'",
 			output_redirect=exputil.OutputRedirect.CONSOLE
 		)
 

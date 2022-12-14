@@ -23,6 +23,7 @@
 import math
 import ephem
 import pandas as pd
+import re
 
 try:
     from . import util
@@ -31,16 +32,6 @@ except (ImportError, SystemError):
 
 import sys
 
-# Input utilization data file; Generated during simulation
-IN_UTIL_FILE = "../../papier2/ns3_experiments/traffic_matrix_load/runs/run_loaded_tm_pairing_20_Mbps_for_2s_with_udp_algorithm_free_one_only_over_isls2_com10Mbs/logs_ns3/isl_utilization.csv"
-
-
-if len(sys.argv)>1:
-	modif=True
-	fic=sys.argv[1]
-	print(fic)
-	IN_UTIL_FILE = fic
-	myOUTPUT_NAME = '-'.join(fic.split('/')[3:])
 # For all end-end paths, visualize link utilization at a specific time instance
 
 EARTH_RADIUS = 6378135.0 # WGS72 value; taken from https://geographiclib.sourceforge.io/html/NET/NETGeographicLib_8h_source.html
@@ -52,62 +43,41 @@ PHASE_DIFF = True
 EPOCH = "2000-01-01 00:00:00"
 UTIL_INTERVAL = 100
 
-
-# CONSTELLATION SPECIFIC PARAMETERS
-"""
-# STARLINK 550
-NAME = "starlink_550"
+NAME = "tas_700"
 
 ################################################################
-# The below constants are taken from Starlink's FCC filing as below:
-# [1]: https://fcc.report/IBFS/SAT-MOD-20190830-00087
+# The below constants are taken from Telesat's FCC filing as below:
+# [1]: https://fcc.report/IBFS/SAT-MPL-20200526-00053/2378318.pdf
 ################################################################
+ECCENTRICITY= 0.0000001  # Circular orbits are zero, but pyephem does not permit 0, so lowest possible value
+ARG_OF_PERIGEE_DEGREE= 0.0
 
-MEAN_MOTION_REV_PER_DAY = 15.19  # Altitude ~550 km
-ALTITUDE_M = 550000  # Altitude ~550 km
-SATELLITE_CONE_RADIUS_M = 940700 # From https://fcc.report/IBFS/SAT-MOD-20181108-00083/1569860.pdf (minimum angle of elevation: 25 deg)
-MAX_GSL_LENGTH_M = math.sqrt(math.pow(SATELLITE_CONE_RADIUS_M, 2) + math.pow(ALTITUDE_M, 2))
-MAX_ISL_LENGTH_M = 2 * math.sqrt(math.pow(EARTH_RADIUS + ALTITUDE_M, 2) - math.pow(EARTH_RADIUS + 80000, 2)) # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
-NUM_ORBS = 72
-NUM_SATS_PER_ORB = 22
-INCLINATION_DEGREE = 53
-"""
+ALTITUDE_M = 700000  # Altitude ~700 km
+NUM_ORBS = 28
+NUM_SATS_PER_ORB = 27
+INCLINATION_DEGREE= 65
+MU_EARTH= 3.98574405e+14
+SECONDS_SIDEREAL_DAY= 86164
+MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(ALTITUDE_M+EARTH_RADIUS)**3)/math.pi/2
 
-# KUIPER 630
-NAME = "kuiper_630"
-
-################################################################
-# The below constants are taken from Kuiper's FCC filing as below:
-# [1]: https://www.itu.int/ITU-R/space/asreceived/Publication/DisplayPublication/8716
-################################################################
-
-MEAN_MOTION_REV_PER_DAY = 14.80  # Altitude ~630 km
-ALTITUDE_M = 630000  # Altitude ~630 km
-SATELLITE_CONE_RADIUS_M = ALTITUDE_M / math.tan(math.radians(30.0))  # Considering an elevation angle of 30 degrees; possible values [1]: 20(min)/30/35/45
-MAX_GSL_LENGTH_M = math.sqrt(math.pow(SATELLITE_CONE_RADIUS_M, 2) + math.pow(ALTITUDE_M, 2))
-MAX_ISL_LENGTH_M = 2 * math.sqrt(math.pow(EARTH_RADIUS + ALTITUDE_M, 2) - math.pow(EARTH_RADIUS + 80000, 2))  # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
-NUM_ORBS = 34
-NUM_SATS_PER_ORB = 34
-INCLINATION_DEGREE = 51.9
-
-
-# TELESAT 1015
-NAME = "telesat_1015"
-
-MEAN_MOTION_REV_PER_DAY = 13.66  # Altitude ~1015 km
-ALTITUDE_M = 1015000  # Altitude ~1015 km
-SATELLITE_CONE_RADIUS_M = ALTITUDE_M / math.tan(math.radians(10.0))  # According to paper, could theoretically reach 10
-MAX_GSL_LENGTH_M = math.sqrt(math.pow(SATELLITE_CONE_RADIUS_M, 2) + math.pow(ALTITUDE_M, 2))
-MAX_ISL_LENGTH_M = 2 * math.sqrt(math.pow(EARTH_RADIUS + ALTITUDE_M, 2) - math.pow(EARTH_RADIUS + 80000, 2))  # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
-NUM_ORBS = 27
-NUM_SATS_PER_ORB = 13
-INCLINATION_DEGREE = 98.98
 
 # General files needed to generate visualizations; Do not change for different simulations
 topFile = "../static_html/top.html"
 bottomFile = "../static_html/bottom.html"
-city_detail_file = "../../paper/satellite_networks_state/input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_1000.basic.txt"
 
+# Time in ms for which visualization will be generated
+GEN_TIME=3000  #ms
+
+# Input file; Generated during simulation
+# Note the file_name consists of the 2 city IDs being offset by the size of the constellation
+# City IDs are available in the city_detail_file.
+# If city ID is X (for Paris X = 24) and constellation is Starlink_550 (1584 satellites),
+# then offset ID is 1584 + 24 = 1608.
+IN_UTIL_FILE = "../../papier2/sauvegardes/svgde_global/svgde_pas2s-sanslienpolaire2022-11-27-0027_2/run_loaded_tm_pairing_10_Mbps_for_120s_with_udp_algorithm_free_one_only_over_isls3-slp/logs_ns3/isl_utilization.csv"
+
+sat_objs = []
+city_details = {}
+paths_over_time = []
 # Time in ms for which visualization will be generated
 GEN_TIME=1000  #ms
 
@@ -115,8 +85,13 @@ GEN_TIME=1000  #ms
 # Output directory for creating visualization html files
 OUT_DIR = "../viz_output/"
 OUT_HTML_FILE = OUT_DIR + NAME + "_util_" + str(GEN_TIME) + ".html"
-if modif:
-	OUT_HTML_FILE = OUT_DIR + myOUTPUT_NAME + "_util_" + str(GEN_TIME) + ".html"
+if len(sys.argv)>1:
+    IN_UTIL_FILE =sys.argv[1]
+    print(IN_UTIL_FILE)
+myOUTPUT_NAME = '-'.join(IN_UTIL_FILE.split('/')[3:])
+OUT_HTML_FILE = OUT_DIR + myOUTPUT_NAME + "_util_" + str(GEN_TIME) + ".html"
+city_detail_file = re.search(".*svgde_[^/]*",IN_UTIL_FILE).group() 
+
 sat_objs = []
 time_wise_util = {}
 

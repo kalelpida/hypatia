@@ -61,7 +61,7 @@ def compute_path_length_with_graph(path, graph):
 
 
 def compute_path_length_without_graph(path, epoch, time_since_epoch_ns, satellites, ground_stations, list_isls,
-                                      max_gsl_length_m, max_isl_length_m):
+                                      type_params):
 
     # Time
     time = epoch + time_since_epoch_ns * u.ns
@@ -81,7 +81,7 @@ def compute_path_length_without_graph(path, epoch, time_since_epoch_ns, satellit
                 str(epoch),
                 str(time)
             )
-            if sat_distance_m > max_isl_length_m \
+            if sat_distance_m > type_params['sat']['max_isl_length_m'] \
                     or ((to_node_id, from_node_id) not in list_isls and (from_node_id, to_node_id) not in list_isls):
                 raise ValueError("Invalid ISL hop")
             path_length_m += sat_distance_m
@@ -95,7 +95,7 @@ def compute_path_length_without_graph(path, epoch, time_since_epoch_ns, satellit
                 str(epoch),
                 str(time)
             )
-            if distance_m > max_gsl_length_m:
+            if distance_m > (max_gsl_length_m:=type_params[ground_station['type']]['max_gsl_length_m']):
                 raise ValueError("Invalid GSL hop from " + str(from_node_id) + " to " + str(to_node_id)
                                  + " (" + str(distance_m) + " larger than " + str(max_gsl_length_m) + ")")
             path_length_m += distance_m
@@ -109,7 +109,7 @@ def compute_path_length_without_graph(path, epoch, time_since_epoch_ns, satellit
                 str(epoch),
                 str(time)
             )
-            if distance_m > max_gsl_length_m:
+            if distance_m > (max_gsl_length_m:=type_params[ground_station['type']]['max_gsl_length_m']):
                 raise ValueError("Invalid GSL hop from " + str(from_node_id) + " to " + str(to_node_id)
                                  + " (" + str(distance_m) + " larger than " + str(max_gsl_length_m) + ")")
             path_length_m += distance_m

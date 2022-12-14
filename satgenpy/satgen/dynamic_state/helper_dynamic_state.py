@@ -43,8 +43,7 @@ def worker(args):
         ground_stations,
         list_isls,
         list_gsl_interfaces_info,
-        max_gsl_length_m,
-        max_isl_length_m,
+        types_parametres,
         dynamic_state_algorithm,
         print_logs
      ) = args
@@ -60,8 +59,7 @@ def worker(args):
         ground_stations,
         list_isls,
         list_gsl_interfaces_info,
-        max_gsl_length_m,
-        max_isl_length_m,
+        types_parametres,
         dynamic_state_algorithm,  # Options:
                                   # "algorithm_free_one_only_gs_relays"
                                   # "algorithm_free_one_only_over_isls[2]"
@@ -73,7 +71,7 @@ def worker(args):
 
 def help_dynamic_state(
         output_generated_data_dir, num_threads, name, time_step_ms, duration_s,
-        max_gsl_length_m, max_isl_length_m, dynamic_state_algorithm, print_logs
+        types_parametres, dynamic_state_algorithm, print_logs
 ):
 
     # Directory
@@ -128,8 +126,7 @@ def help_dynamic_state(
             ground_stations,
             list_isls,
             list_gsl_interfaces_info,
-            max_gsl_length_m,
-            max_isl_length_m,
+            types_parametres,
             dynamic_state_algorithm,
             print_logs
         ))

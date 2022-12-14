@@ -201,7 +201,7 @@ namespace ns3 {
         std::string line;
         while (std::getline(fs, line)) {
 
-            std::vector<std::string> res = split_string(line, ",", 8);
+            std::vector<std::string> res = split_string(line, ",", 9);
 
             // All eight values
             uint32_t gid = parse_positive_int64(res[0]);
@@ -213,6 +213,7 @@ namespace ns3 {
             double cartesian_y = parse_double(res[6]);
             double cartesian_z = parse_double(res[7]);
             Vector cartesian_position(cartesian_x, cartesian_y, cartesian_z);
+            //std::string type = res[8] //gateway, UE, etc..
 
             // Create ground station data holder
             Ptr<GroundStation> gs = CreateObject<GroundStation>(

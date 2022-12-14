@@ -63,8 +63,8 @@ def read_ground_stations_extended(filename_ground_stations_extended):
     with open(filename_ground_stations_extended, 'r') as f:
         for line in f:
             split = line.split(',')
-            if len(split) != 8:
-                raise ValueError("Extended ground station file has 8 columns: " + line)
+            if len(split) != 9:
+                raise ValueError("Extended ground station file has 9 columns: " + line)
             if int(split[0]) != gid:
                 raise ValueError("Ground station id must increment each line")
             ground_station_basic = {
@@ -76,6 +76,7 @@ def read_ground_stations_extended(filename_ground_stations_extended):
                 "cartesian_x": float(split[5]),
                 "cartesian_y": float(split[6]),
                 "cartesian_z": float(split[7]),
+                "type": split[8].strip(),
             }
             ground_stations_extended.append(ground_station_basic)
             gid += 1
