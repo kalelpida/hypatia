@@ -14,6 +14,7 @@ def build(bld):
         'model/topology-satellite-network.cc',
         'model/arbiter-satnet.cc',
         'model/arbiter-single-forward.cc',
+        'model/states-error-model.cc',
         'helper/arbiter-single-forward-helper.cc',
         'helper/gsl-if-bandwidth-helper.cc',
         ]
@@ -37,6 +38,7 @@ def build(bld):
         'model/topology-satellite-network.h',
         'model/arbiter-satnet.h',
         'model/arbiter-single-forward.h',
+        'model/states-error-model.h',
         'helper/arbiter-single-forward-helper.h',
         'helper/gsl-if-bandwidth-helper.h',
         ]

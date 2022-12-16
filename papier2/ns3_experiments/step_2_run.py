@@ -46,7 +46,7 @@ algo = dico_params.get('algo')
 unique_id = 0
 
 
-for protocol_chosen in ["udp"]:#["tcp", "udp"]:
+for protocol_chosen in dico_params.get('protocoles',[]):#["tcp", "udp"]:
 
 	if (unique_id % num_machines) == workload_id:
 
@@ -61,6 +61,7 @@ for protocol_chosen in ["udp"]:#["tcp", "udp"]:
 		# Perform run
 		local_shell.perfect_exec(
 			"cd ../../ns3-sat-sim/simulator; "
+			"NS_LOG='StatesErrorModel' "
 			"./waf --run=\"main_satnet "
 			"--run_dir='../../papier2/ns3_experiments/" + run_dir + "'\""
 			" 2>&1 | tee '../../papier2/ns3_experiments/" + logs_ns3_dir + "/console.txt'",

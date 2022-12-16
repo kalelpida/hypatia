@@ -39,12 +39,12 @@ def calcul_ISL_utilisation(nom_doss):
             satsId=[int(sat) for sat in listeSats]
             for i in range(len(listeSats)-1):
                 paire=min(satsId[i:i+2]), max(satsId[i:i+2])
-                if paire in listeSats:
+                if paire in dico_compteur_ISL:
                     dico_compteur_ISL[paire]+=1
                 else:
                     dico_compteur_ISL[paire]=1
-
-    return sorted(dico_compteur_ISL.items(), key= lambda x: x[1])
+    
+    return sorted(dico_compteur_ISL.items(), key= lambda x: (x[1], x[0])) #name of satellites is added for reproducibility
 
 def casseISLs(dico):
     
@@ -57,31 +57,54 @@ def casseISLs(dico):
     duree=dico['duree']
     pas=dico['pas']
     
-    sel=params.get('sel', 'topUtil10')
-    erreur=params.get('errRate', "0.1")
-    listeUtilISL=calcul_ISL_utilisation(os.path.join(nom_doss, f"{pas}ms_for_{duree}s", "manual"))
-    if sel.startswith('topUtil'):
-        nb=int(sel.removeprefix('topUtil'))
-        liens_compromis_int=listeUtilISL[:nb]
-        liens_compromis_str=[]
-        for l in liens_compromis_int:
-            liens_compromis_str.append('{} {}'.format(*l[0]))
-            liens_compromis_str.append(f'{l[0][1]} {l[0][0]}')
 
+    liens_compromis_str=[]
+    ajout_str_isl=""
+    if erreur:=params.get('errModel', ""):
+        ajout_str_isl+=" "+erreur+" trackLinkDrops"
+
+        sel=params.get('sel', '')
+        if sel.startswith('topUtil'):
+            listeUtilISL=calcul_ISL_utilisation(os.path.join(nom_doss, f"{pas}ms_for_{duree}s", "manual"))
+            nb=int(sel.removeprefix('topUtil'))
+            liens_compromis_int=listeUtilISL[:nb]
+            for l in liens_compromis_int:
+                liens_compromis_str.append('{} {}'.format(*l[0]))
+                liens_compromis_str.append(f'{l[0][1]} {l[0][0]}')
+
+    print("generation des liens compromis :", liens_compromis_str)
+    if not liens_compromis_str or not ajout_str_isl:
+        #nothing to do, exit
+        return
     ficISL=os.path.join("../satellite_networks_state/gen_data/",nom_doss, "isls.txt")
     assert os.path.isfile(ficISL)
     vrai_lignes=[]
-    str_vereuse=" recvErrRate:"+str(erreur)+" trackLinkDrops\n"
+    
     with open(ficISL, 'r') as f:
         lignes=f.readlines()
     for ligne in lignes:
-        if any(ligne.startswith(l) for l in liens_compromis_str):
-            vrai_lignes.append(ligne.strip()+ str_vereuse)
-        else:
+        modif=False
+        for l in liens_compromis_str:
+            if ligne.startswith(l):
+                vrai_lignes.append(l + ' ' + ajout_str_isl + "\n")
+                modif=True
+                break
+        if not modif:
             vrai_lignes.append(ligne)
     with open(ficISL, 'w') as f:
         f.writelines(vrai_lignes)
-    
+
+
+    #just to keep a trace of the changes, write it as comments in the config file of the simulation
+    for protocol_chosen in dico['protocoles']:
+        run_dir = "../ns3_experiments/runs/run_loaded_tm_pairing_{}_Mbps_for_{}s_with_{}_{}".format( dico['debit_isl'], dico['duree'], protocol_chosen, dico['algo'])
+        assert os.path.isfile( fic_config_ns3:=os.path.join(run_dir,"config_ns3.properties"))
+        with open(fic_config_ns3, 'a') as f:
+            f.write("######### Liens compromis, paramètres:"+ajout_str_isl+"\n")
+            for l in liens_compromis_str:
+                f.write("# "+l+"\n") 
+
+
     
 
 

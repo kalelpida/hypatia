@@ -54,7 +54,7 @@ def extend_stations_and_users(graine, NbGateways, NbUEs, cstl_config, filename_g
     gateways = read_ground_stations_basic("input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt")
     UEs = read_ground_stations_basic("input_data/UEs_{}.txt".format(cstl_config['ue']['type']))
     if NbUEs > len(UEs):
-        raise Exception('generate more users')
+        raise Exception('please, generate more users. This can be done using `generate_users.py` in satellite_networks_state/input_data/')
     
     list_from_to=[]
 

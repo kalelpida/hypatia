@@ -22,15 +22,29 @@
 #include "topology-satellite-network.h"
 #include <regex>
 #include "ns3/id-seq-header.h"
+#include "states-error-model.h"
 
 namespace ns3 {
 static void
-RxDrop(Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p)
+RxDrop(Ptr<OutputStreamWrapper> stream, Ptr<const Packet> packet)
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
-    IdSeqHeader h;
-    //p->PeekHeader(h, sizeof(IdSeqHeader));
-    *stream->GetStream() << Simulator::Now().GetSeconds() << "\t " << p->ToString() << std::endl;
+    // Extract burst identifier and packet sequence number
+    Ptr <Packet> p = packet->Copy();
+    IdSeqHeader incomingIdSeq;
+    TypeId tidInteret= incomingIdSeq.GetTypeId();
+    auto it = p->BeginItem ();
+    while (it.HasNext ())
+    {
+      PacketMetadata::Item item = it.Next ();
+      if (item.tid == tidInteret){
+        incomingIdSeq.Deserialize(item.current);
+        break;
+        }
+    }
+    //std::cout << "perte: id" << incomingIdSeq.GetId() << ", seq" << incomingIdSeq.GetSeq() << ", time"  << Simulator::Now().GetNanoSeconds() << std::endl;
+    // Log precise timestamp received of the sequence packet if needed
+    *stream->GetStream() << incomingIdSeq.GetId() << "," << incomingIdSeq.GetSeq() << "," << Simulator::Now().GetNanoSeconds() << std::endl;
     //"\t id:" << h.GetId() << "\t seq:" << h.GetSeq() << std::endl;
 }
 }
@@ -274,14 +288,16 @@ namespace ns3 {
         std::smatch match;
         AsciiTraceHelper asciiTraceHelper;
         const std::regex nodeIDs("(\\d+) (\\d+)");
-        const std::regex recvErrRate("recvErrRate:(\\d*[.]\\d*)");
+        const std::regex rateErrModel("recvErrRate:(\\d*\\.?\\d*)");
+        const std::regex brstErrModel("brstErrMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*)");
+        const std::regex gilbertEliottModel("gilbertElliottMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*\\.?\\d*)");
         const std::regex trackLinkDrops("trackLinkDrops");
         while (std::getline(fs, line)) {
 
             // Retrieve satellite identifiers
             NS_ABORT_MSG_UNLESS(std::regex_search(line, match, nodeIDs), "Error parsing satellite ISL. Abort");
-            int32_t sat0_id = parse_positive_int64(match[1].str());
-            int32_t sat1_id = parse_positive_int64(match[2].str());
+            int64_t sat0_id = parse_positive_int64(match[1].str());
+            int64_t sat1_id = parse_positive_int64(match[2].str());
             
             Ptr<Satellite> sat0 = m_satellites.at(sat0_id);
             Ptr<Satellite> sat1 = m_satellites.at(sat1_id);
@@ -293,17 +309,67 @@ namespace ns3 {
             NetDeviceContainer netDevices = p2p_laser_helper.Install(c);
 
             // Error Model
-            if (std::regex_search(line, match, recvErrRate)){
+            if (std::regex_search(line, match, rateErrModel)){
+                //create burst error models and assign them to both devices
+                double errorRate = std::atof(match[1].str().c_str());
                 Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
-                em->SetAttribute("ErrorRate", DoubleValue(std::atof(match[1].str().c_str())));
+                em->SetAttribute("ErrorRate", DoubleValue(errorRate));
                 em->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
                 netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
-                netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+                Ptr<RateErrorModel> em2 = CreateObject<RateErrorModel>();
+                em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
+                em2->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
+                netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
+            } else if (std::regex_search(line, match, brstErrModel))
+            {
+                //create a Uniform Burst Error Model of the Channel.
+                // "ErrorRate" of Burst Model is the probability to switch from Good to Bad state
+                // "BurstSize" is the number of consecutive packets which will be lost. 
+                //              It corresponds to maximal number of times we remain in the Bad State.
+                //create random uniform variable for burst size
+                Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();
+                x->SetAttribute ("Min", DoubleValue (1.));
+                x->SetAttribute ("Max", DoubleValue (std::atof(match[2].str().c_str())));
+                double errorRate = std::atof(match[1].str().c_str());
+
+                //create burst error models
+                Ptr<BurstErrorModel> em = CreateObject<BurstErrorModel>();
+                em->SetAttribute("ErrorRate", DoubleValue(errorRate));
+                em->SetAttribute("BurstSize", PointerValue(x));
+                netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+                Ptr<BurstErrorModel> em2 = CreateObject<BurstErrorModel>();//did not succeeded to copy
+                em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
+                em2->SetAttribute("BurstSize", PointerValue(x));
+                netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
+            } else if (std::regex_search(line, match, gilbertEliottModel))
+            {
+                //create a Gilbert Elliott Model of the Channel.
+                // "ErrorRate" of Burst Model is the probability to switch from Good to Bad state
+                // "BurstSize" is the number of consecutive packets which will be lost. 
+                //              It corresponds to the expected number of times we remain in the Bad State.
+
+                // First, create an exponential random variable
+                // the integer part of this variable follows a geometric distribution that we use to characterize the burst size
+                Ptr<WeibullRandomVariable> x = CreateObject<WeibullRandomVariable> ();
+                //x->SetAttribute ("Shape", DoubleValue (1.)); //number of exponential laws, default to 1
+                double lambda = std::atof(match[2].str().c_str());
+                x->SetAttribute ("Scale", DoubleValue( lambda ));
+                double errorRate = std::atof(match[1].str().c_str());
+                //create burst error models
+                Ptr<StatesErrorModel> em = CreateObject<StatesErrorModel>();
+                em->SetAttribute("ErrorRate", DoubleValue(errorRate));
+                em->SetAttribute("BurstSize", PointerValue(x));
+                netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+                Ptr<StatesErrorModel> em2 = CreateObject<StatesErrorModel>();
+                em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
+                em2->SetAttribute("BurstSize", PointerValue(x));
+                netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
             }
+            
 
             // Tracking
             if (std::regex_search(line, match, trackLinkDrops)){
-                std::string filename = m_basicSimulation->GetLogsDir() +format_string("/link_%" PRIu64 "-%" PRIu64 ".drops", sat0_id, sat1_id);
+                std::string filename = m_basicSimulation->GetLogsDir() +format_string("/link_%" PRId64 "-%" PRId64 ".drops", sat0_id, sat1_id);
                 Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (filename);
                 netDevices.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&RxDrop, stream));
                 netDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&RxDrop, stream));
