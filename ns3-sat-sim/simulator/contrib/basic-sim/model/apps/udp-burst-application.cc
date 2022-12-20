@@ -80,7 +80,9 @@ namespace ns3 {
         if (m_outgoing_bursts.size() >= 1 && burstInfo.GetStartTimeNs() < std::get<0>(m_outgoing_bursts[m_outgoing_bursts.size() - 1]).GetStartTimeNs()) {
             throw std::runtime_error("Bursts must be added weakly ascending on start time");
         }
-        m_outgoing_bursts.push_back(std::make_tuple(burstInfo, targetAddress));
+
+        std::exponential_distribution<double_t> interGenPacketTime(1.0/std::ceil(1500.0 / (burstInfo.GetTargetRateMegabitPerSec() / 8000.0)));
+        m_outgoing_bursts.push_back(std::make_tuple(burstInfo, targetAddress, interGenPacketTime));
         m_outgoing_bursts_packets_sent_counter.push_back(0);
         m_outgoing_bursts_event_id.push_back(EventId());
         m_outgoing_bursts_enable_precise_logging.push_back(enable_precise_logging);
@@ -165,7 +167,12 @@ namespace ns3 {
         // Schedule the next if the packet gap would not exceed the rate
         uint64_t now_ns = Simulator::Now().GetNanoSeconds();
         UdpBurstInfo info = std::get<0>(m_outgoing_bursts[internal_burst_idx]);
-        uint64_t packet_gap_nanoseconds = std::ceil(1500.0 / (info.GetTargetRateMegabitPerSec() / 8000.0));
+        uint64_t packet_gap_nanoseconds;
+        if (info.GetMetadata().find("expInterPacket") != std::string::npos){
+            packet_gap_nanoseconds = static_cast<uint64_t>(std::get<2>(m_outgoing_bursts[internal_burst_idx])(info.m_random_engine)); 
+        } else {
+            packet_gap_nanoseconds = std::ceil(1500.0 / (info.GetTargetRateMegabitPerSec() / 8000.0));
+        }
         if (now_ns + packet_gap_nanoseconds < (uint64_t) (info.GetStartTimeNs() + info.GetDurationNs())) {
             m_outgoing_bursts_event_id.at(internal_burst_idx) = Simulator::Schedule(NanoSeconds(packet_gap_nanoseconds), &UdpBurstApplication::BurstSendOut, this, internal_burst_idx);
         }

@@ -12,7 +12,7 @@ import re, yaml
 import pickle
 
 
-DOSSIER='experience'
+DOSSIER='experienceBursty'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
 DOSSIER_A_INCLURE=['']
 
@@ -83,8 +83,6 @@ def getconfigcourante(dossier, cles_variantes):
 	chemin, =re.search('(.*svgde_[^/]*20\d{2}-\d{2}-\d{2}-\d{4}_\d+/)',dossier).groups()#all before the config_name
 	with open(os.path.join(chemin,  "courante.yaml"), 'r') as f:
 		dico_config=yaml.load(f, Loader=yaml.Loader)
-	#handle the special case of protocols:
-	assert len(dico_config['protocoles']) == 1
 	liste_variants=[]
 	for cle in cles_variantes:
 		valeur =  dico_config[cle]

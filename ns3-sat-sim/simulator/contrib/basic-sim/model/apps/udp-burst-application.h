@@ -31,6 +31,7 @@
 #include "ns3/id-seq-header.h"
 #include "ns3/string.h"
 #include "ns3/exp-util.h"
+#include <random>
 
 namespace ns3 {
 
@@ -70,7 +71,7 @@ namespace ns3 {
         EventId m_startNextBurstEvent; //!< Event to start next burst
 
         // Outgoing bursts
-        std::vector<std::tuple<UdpBurstInfo, InetSocketAddress>> m_outgoing_bursts; //!< Weakly ascending on start time list of bursts
+        std::vector<std::tuple<UdpBurstInfo, InetSocketAddress, std::exponential_distribution<double_t>>> m_outgoing_bursts; //!< Weakly ascending on start time list of bursts
         std::vector<uint64_t> m_outgoing_bursts_packets_sent_counter; //!< Amount of UDP packets sent out already for each burst
         std::vector<EventId> m_outgoing_bursts_event_id; //!< Event ID of the outgoing burst send loop
         std::vector<bool> m_outgoing_bursts_enable_precise_logging; //!< True iff enable precise logging for each burst
@@ -80,6 +81,8 @@ namespace ns3 {
         std::vector<UdpBurstInfo> m_incoming_bursts;
         std::map<int64_t, uint64_t> m_incoming_bursts_received_counter;       //!< Counter for how many packets received
         std::map<int64_t, uint64_t> m_incoming_bursts_enable_precise_logging; //!< True iff enable precise logging for each burst
+
+        static std::exponential_distribution<double_t> s_exponential_distribution;
 
     };
 

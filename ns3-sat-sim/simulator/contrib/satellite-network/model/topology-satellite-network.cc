@@ -47,6 +47,95 @@ RxDrop(Ptr<OutputStreamWrapper> stream, Ptr<const Packet> packet)
     *stream->GetStream() << incomingIdSeq.GetId() << "," << incomingIdSeq.GetSeq() << "," << Simulator::Now().GetNanoSeconds() << std::endl;
     //"\t id:" << h.GetId() << "\t seq:" << h.GetSeq() << std::endl;
 }
+
+static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
+    static const std::regex rateErrModel("recvErrRate:(\\d*\\.?\\d*)");
+    static const std::regex brstErrModel("brstErrMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*)");
+    static const std::regex gilbertEliottModel("gilbertElliottMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*\\.?\\d*)");
+    static const std::regex periodicModel("periodicMdl-period:(\\d*\\.?\\d*)-recvErrRate:(\\d*\\.?\\d*)-drift:(\\d*\\.?\\d*)");
+
+    std::smatch match;
+    // Error Model
+    if (std::regex_search(line, match, rateErrModel)){
+        //create burst error models and assign them to both devices
+        double errorRate = std::atof(match[1].str().c_str());
+        Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
+        em->SetAttribute("ErrorRate", DoubleValue(errorRate));
+        em->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
+        netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+        Ptr<RateErrorModel> em2 = CreateObject<RateErrorModel>();
+        em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
+        em2->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
+        netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
+    } else if (std::regex_search(line, match, brstErrModel))
+    {
+        //create a Uniform Burst Error Model of the Channel.
+        // "ErrorRate" of Burst Model is the probability to switch from Good to Bad state
+        // "BurstSize" is the number of consecutive packets which will be lost. 
+        //              It corresponds to maximal number of times we remain in the Bad State.
+        //create random uniform variable for burst size
+        Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();
+        x->SetAttribute ("Min", DoubleValue (1.));
+        x->SetAttribute ("Max", DoubleValue (std::atof(match[2].str().c_str())));
+        double errorRate = std::atof(match[1].str().c_str());
+
+        //create burst error models
+        Ptr<BurstErrorModel> em = CreateObject<BurstErrorModel>();
+        em->SetAttribute("ErrorRate", DoubleValue(errorRate));
+        em->SetAttribute("BurstSize", PointerValue(x));
+        netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+        Ptr<BurstErrorModel> em2 = CreateObject<BurstErrorModel>();//did not succeeded to copy
+        em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
+        em2->SetAttribute("BurstSize", PointerValue(x));
+        netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
+    } else if (std::regex_search(line, match, gilbertEliottModel))
+    {
+        //create a Gilbert Elliott Model of the Channel.
+        // "ErrorRate" of Burst Model is the probability to switch from Good to Bad state
+        // "BurstSize" is the number of consecutive packets which will be lost. 
+        //              It corresponds to the expected number of times we remain in the Bad State.
+
+        // First, create an exponential random variable
+        // the integer part of this variable follows a geometric distribution that we use to characterize the burst size
+        Ptr<WeibullRandomVariable> x = CreateObject<WeibullRandomVariable> ();
+        //x->SetAttribute ("Shape", DoubleValue (1.)); //number of exponential laws, default to 1
+        double lambda = std::atof(match[2].str().c_str()); //lambda param of the exponential law
+        x->SetAttribute ("Scale", DoubleValue( lambda ));
+        double errorRate = std::atof(match[1].str().c_str());
+        //create burst error models
+        Ptr<GilbEllErrorModel> em = CreateObject<GilbEllErrorModel>();
+        em->SetAttribute("ErrorRate", DoubleValue(errorRate));
+        em->SetAttribute("BurstSize", PointerValue(x));
+        netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+        Ptr<GilbEllErrorModel> em2 = CreateObject<GilbEllErrorModel>();
+        em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
+        em2->SetAttribute("BurstSize", PointerValue(x));
+        netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
+    } else if (std::regex_search(line, match, periodicModel))
+    {
+        //create a Gilbert Elliott Model of the Channel.
+        // "ErrorRate" of Burst Model is the probability to switch from Good to Bad state
+        // "BurstSize" is the number of consecutive packets which will be lost. 
+        //              It corresponds to the expected number of times we remain in the Bad State.
+
+        // First, create an exponential random variable
+        // the integer part of this variable follows a geometric distribution that we use to characterize the burst size
+        Ptr<NormalRandomVariable> x = CreateObject<NormalRandomVariable> ();
+        //x->SetAttribute ("Shape", DoubleValue (1.)); //number of exponential laws, default to 1
+        double variance = std::pow(std::atof(match[2].str().c_str()), 2);
+        x->SetAttribute ("Variance", DoubleValue( variance ));
+        double errorRate = std::atof(match[1].str().c_str());
+        //create burst error models
+        Ptr<GilbEllErrorModel> em = CreateObject<GilbEllErrorModel>();
+        em->SetAttribute("ErrorRate", DoubleValue(errorRate));
+        em->SetAttribute("DriftModel", PointerValue(x));
+        netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+        Ptr<GilbEllErrorModel> em2 = CreateObject<GilbEllErrorModel>();
+        em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
+        em2->SetAttribute("DriftModel", PointerValue(x));
+        netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
+    }
+}
 }
 namespace ns3 {
 
@@ -288,9 +377,6 @@ namespace ns3 {
         std::smatch match;
         AsciiTraceHelper asciiTraceHelper;
         const std::regex nodeIDs("(\\d+) (\\d+)");
-        const std::regex rateErrModel("recvErrRate:(\\d*\\.?\\d*)");
-        const std::regex brstErrModel("brstErrMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*)");
-        const std::regex gilbertEliottModel("gilbertElliottMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*\\.?\\d*)");
         const std::regex trackLinkDrops("trackLinkDrops");
         while (std::getline(fs, line)) {
 
@@ -307,65 +393,8 @@ namespace ns3 {
             c.Add(m_satelliteNodes.Get(sat0_id));
             c.Add(m_satelliteNodes.Get(sat1_id));
             NetDeviceContainer netDevices = p2p_laser_helper.Install(c);
-
-            // Error Model
-            if (std::regex_search(line, match, rateErrModel)){
-                //create burst error models and assign them to both devices
-                double errorRate = std::atof(match[1].str().c_str());
-                Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
-                em->SetAttribute("ErrorRate", DoubleValue(errorRate));
-                em->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
-                netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
-                Ptr<RateErrorModel> em2 = CreateObject<RateErrorModel>();
-                em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
-                em2->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
-                netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
-            } else if (std::regex_search(line, match, brstErrModel))
-            {
-                //create a Uniform Burst Error Model of the Channel.
-                // "ErrorRate" of Burst Model is the probability to switch from Good to Bad state
-                // "BurstSize" is the number of consecutive packets which will be lost. 
-                //              It corresponds to maximal number of times we remain in the Bad State.
-                //create random uniform variable for burst size
-                Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();
-                x->SetAttribute ("Min", DoubleValue (1.));
-                x->SetAttribute ("Max", DoubleValue (std::atof(match[2].str().c_str())));
-                double errorRate = std::atof(match[1].str().c_str());
-
-                //create burst error models
-                Ptr<BurstErrorModel> em = CreateObject<BurstErrorModel>();
-                em->SetAttribute("ErrorRate", DoubleValue(errorRate));
-                em->SetAttribute("BurstSize", PointerValue(x));
-                netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
-                Ptr<BurstErrorModel> em2 = CreateObject<BurstErrorModel>();//did not succeeded to copy
-                em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
-                em2->SetAttribute("BurstSize", PointerValue(x));
-                netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
-            } else if (std::regex_search(line, match, gilbertEliottModel))
-            {
-                //create a Gilbert Elliott Model of the Channel.
-                // "ErrorRate" of Burst Model is the probability to switch from Good to Bad state
-                // "BurstSize" is the number of consecutive packets which will be lost. 
-                //              It corresponds to the expected number of times we remain in the Bad State.
-
-                // First, create an exponential random variable
-                // the integer part of this variable follows a geometric distribution that we use to characterize the burst size
-                Ptr<WeibullRandomVariable> x = CreateObject<WeibullRandomVariable> ();
-                //x->SetAttribute ("Shape", DoubleValue (1.)); //number of exponential laws, default to 1
-                double lambda = std::atof(match[2].str().c_str());
-                x->SetAttribute ("Scale", DoubleValue( lambda ));
-                double errorRate = std::atof(match[1].str().c_str());
-                //create burst error models
-                Ptr<StatesErrorModel> em = CreateObject<StatesErrorModel>();
-                em->SetAttribute("ErrorRate", DoubleValue(errorRate));
-                em->SetAttribute("BurstSize", PointerValue(x));
-                netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
-                Ptr<StatesErrorModel> em2 = CreateObject<StatesErrorModel>();
-                em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
-                em2->SetAttribute("BurstSize", PointerValue(x));
-                netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
-            }
             
+            SetErrorModel(netDevices, line);
 
             // Tracking
             if (std::regex_search(line, match, trackLinkDrops)){

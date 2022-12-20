@@ -70,81 +70,82 @@
 #include "ns3/boolean.h"
 #include "ns3/enum.h"
 #include "ns3/double.h"
+#include "ns3/integer.h"
 #include "ns3/string.h"
 #include "ns3/pointer.h"
 
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("StatesErrorModel"); // cannot merge it with ErrorModel component
+NS_LOG_COMPONENT_DEFINE ("ExtraChannelErrorModels"); // cannot merge it with ErrorModel component
 
 //
-// StatesErrorModel
+// GilbEllErrorModel
 //
-NS_OBJECT_ENSURE_REGISTERED (StatesErrorModel);
+NS_OBJECT_ENSURE_REGISTERED (GilbEllErrorModel);
 
-TypeId StatesErrorModel::GetTypeId (void)
+TypeId GilbEllErrorModel::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::StatesErrorModel")
+  static TypeId tid = TypeId ("ns3::GilbEllErrorModel")
     .SetParent<ErrorModel> ()
     .SetGroupName("Network")
-    .AddConstructor<StatesErrorModel> ()
+    .AddConstructor<GilbEllErrorModel> ()
     .AddAttribute ("ErrorRate", "The burst error event.",
                    DoubleValue (0.0),
-                   MakeDoubleAccessor (&StatesErrorModel::m_burstRate),
+                   MakeDoubleAccessor (&GilbEllErrorModel::m_burstRate),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("BurstStart", "The decision variable attached to this error model.",
                    StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1.0]"),
-                   MakePointerAccessor (&StatesErrorModel::m_burstStart),
+                   MakePointerAccessor (&GilbEllErrorModel::m_burstStart),
                    MakePointerChecker<RandomVariableStream> ())
     .AddAttribute ("BurstSize", "The number of packets being corrupted at one drop.",
                    StringValue ("ns3::WeibullRandomVariable[Scale=4]"), //the integer part of an Exponential Random variable is geometric
-                   MakePointerAccessor (&StatesErrorModel::m_burstSize),
+                   MakePointerAccessor (&GilbEllErrorModel::m_burstSize),
                    MakePointerChecker<RandomVariableStream> ())
   ;
   return tid;
 }
 
-StatesErrorModel::StatesErrorModel () : m_currentBurstSz (0)
+GilbEllErrorModel::GilbEllErrorModel () : m_currentBurstSz (0)
 {
 
 }
 
-StatesErrorModel::~StatesErrorModel ()
+GilbEllErrorModel::~GilbEllErrorModel ()
 {
   NS_LOG_FUNCTION (this);
 }
 
 double
-StatesErrorModel::GetBurstRate (void) const
+GilbEllErrorModel::GetBurstRate (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_burstRate;
 }
 
 void
-StatesErrorModel::SetBurstRate (double rate)
+GilbEllErrorModel::SetBurstRate (double rate)
 {
   NS_LOG_FUNCTION (this << rate);
   m_burstRate = rate;
 }
 
 void
-StatesErrorModel::SetRandomVariable (Ptr<RandomVariableStream> ranVar)
+GilbEllErrorModel::SetRandomVariable (Ptr<RandomVariableStream> ranVar)
 {
   NS_LOG_FUNCTION (this << ranVar);
   m_burstStart = ranVar;
 }
 
 void
-StatesErrorModel::SetRandomBurstSize(Ptr<RandomVariableStream> burstSz)
+GilbEllErrorModel::SetRandomBurstSize(Ptr<RandomVariableStream> burstSz)
 {
   NS_LOG_FUNCTION (this << burstSz);
   m_burstSize = burstSz;
 }
 
 int64_t
-StatesErrorModel::AssignStreams (int64_t stream)
+GilbEllErrorModel::AssignStreams (int64_t stream)
 {
   NS_LOG_FUNCTION (this << stream);
   m_burstStart->SetStream (stream);
@@ -153,7 +154,7 @@ StatesErrorModel::AssignStreams (int64_t stream)
 }
 
 bool
-StatesErrorModel::DoCorrupt (Ptr<Packet> p)
+GilbEllErrorModel::DoCorrupt (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this);
   if (!IsEnabled ())
@@ -193,10 +194,132 @@ StatesErrorModel::DoCorrupt (Ptr<Packet> p)
 }
 
 void
-StatesErrorModel::DoReset (void)
+GilbEllErrorModel::DoReset (void)
 {
   NS_LOG_FUNCTION (this);
   m_currentBurstSz = 0;
 
 }
+
+#ifndef STATES_ERROR_MODEL_H
+//erreurs à corriger 
+//
+// PeriodicErrorModel
+//
+NS_OBJECT_ENSURE_REGISTERED (PeriodicErrorModel);
+
+TypeId PeriodicErrorModel::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::PeriodicErrorModel")
+    .SetParent<ErrorModel> ()
+    .SetGroupName("Network")
+    .AddConstructor<PeriodicErrorModel> ()
+    .AddAttribute ("ErrorRate", "The error event rate.",
+                   DoubleValue (0.0),
+                   MakeDoubleAccessor (&PeriodicErrorModel::m_faultyPeriodRate),
+                   MakeDoubleChecker<double> ())
+    .AddAttribute ("Period", "The period of the model.",
+                   IntegerValue (60000000000), //1min
+                   MakeIntegerAccessor (&PeriodicErrorModel::m_rotationPeriod_ns),
+                   MakeIntegerChecker<RandomVariableStream> ())
+    .AddAttribute ("DriftModel", "The number of packets being corrupted at one drop.",
+                   StringValue ("ns3::NormalRandomVariable[mean=0, variance=0.1]"),
+                   MakePointerAccessor (&PeriodicErrorModel::m_ranRotationVelocity_msps),
+                   MakePointerChecker<RandomVariableStream> ())
+  ;
+  return tid;
+}
+
+PeriodicErrorModel::PeriodicErrorModel () : m_lastTime_ns (0)
+{
+
+}
+
+PeriodicErrorModel::~PeriodicErrorModel ()
+{
+  NS_LOG_FUNCTION (this);
+}
+
+double
+PeriodicErrorModel::GetErrorRate (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_faultyPeriodRate;
+}
+
+void
+PeriodicErrorModel::SetErrorRate (double rate)
+{
+  NS_LOG_FUNCTION (this << rate);
+  m_faultyPeriodRate = rate;
+}
+
+void
+PeriodicErrorModel::SetRotationPeriod (int64_t period)
+{
+  NS_LOG_FUNCTION (this << period);
+  m_rotationPeriod_ns = period;
+}
+int64_t
+PeriodicErrorModel::GetRotationPeriod (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_rotationPeriod_ns;
+}
+
+void
+PeriodicErrorModel::SetRandomVariable (Ptr<RandomVariableStream> ranVar)
+{
+  NS_LOG_FUNCTION (this << ranVar);
+  m_ranRotationVelocity_msps = ranVar;
+}
+
+int64_t
+PeriodicErrorModel::AssignStreams (int64_t stream)
+{
+  NS_LOG_FUNCTION (this << stream);
+  m_ranRotationVelocity_msps->SetStream (stream);
+  return 2;
+}
+
+bool
+PeriodicErrorModel::DoCorrupt (Ptr<Packet> p)
+{
+  NS_LOG_FUNCTION (this);
+
+  if (!IsEnabled ())
+    {
+      return false;
+    }
+  //int64_t m_lastTime_ns;                               //!< dernier temps de mise à jour de la vitesse de rotation       
+  //double m_faultyPeriodRate;                     //!< the burst error event
+  int64_t now_ns = Simulator::Now().GetNanoSeconds();
+  bool resultat;
+  
+  if (static_cast<double>(now_ns%m_rotationPeriod_ns)/static_cast<double>(m_rotationPeriod_ns) < m_faultyPeriodRate)
+    {
+      // packet loss
+      resultat=true;
+    } 
+  else 
+    {
+      resultat=false;
+    }
+
+  // update rotation period
+  int64_t periodUpdate = static_cast<int64_t>(m_ranRotationVelocity_msps->GetValue()*(now_ns-m_lastTime_ns)*1e-6);
+  m_rotationPeriod_ns = (m_rotationPeriod_ns > - periodUpdate) ?  m_rotationPeriod_ns+periodUpdate : 1;//period cannot be smaller than 1ns
+  m_lastTime_ns = now_ns;
+
+  return resultat;
+}
+
+void
+PeriodicErrorModel::DoReset (void)
+{
+  NS_LOG_FUNCTION (this);
+  m_lastTime_ns = 0;
+
+}
+#endif
 }

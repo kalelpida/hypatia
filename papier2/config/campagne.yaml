@@ -1,4 +1,4 @@
-a-supprimer: #classer par ordre
+experienceBursty: #classer par ordre
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [8] #en s
@@ -7,13 +7,13 @@ a-supprimer: #classer par ordre
   # examples of errModel 
   #      "gilbertElliottMdl-brstRate:0.1-brstSize:3.2" "brstErrMdl-rate:0.1-size:5"  
   #      "brstErrMdl-brstRate:0.01-brstSize:5"
-  deteriorISL: [ { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] #, {}, { sel: topUtil10, errModel: "brstErrMdl-brstRate:0.01-brstSize:5" } ] #{ sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] # "gilbertElliottMdl-brstRate:0.01-brstSize:10" "recvErrRate:0.1"
+  deteriorISL: [ { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" }, {}] # { sel: topUtil10, errModel: "brstErrMdl-brstRate:0.01-brstSize:5" } ] #{ sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] # "gilbertElliottMdl-brstRate:0.01-brstSize:10" "recvErrRate:0.1"
   sol: [ users_and_main_stations ]
   nb-UEs-sol: [ 10 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [4 ]
-  debit_isl: [ 10 ]
-  protocoles: [ [ "udp" ] ] # ["udp", "tcp"]
+  debit_isl: [ 10, 2 ]
+  protocoles: [ {'nom':"udp", "metadata":"expInterPacket"} ]  # ["udp", "tcp"]
 
 
 info-sauvegarde:

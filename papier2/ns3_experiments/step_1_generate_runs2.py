@@ -61,86 +61,87 @@ def main_step1(list_from_to):
     list_start_time = [i*coeff_decalage for i in range(len(list_from_to))]
 
     # Both protocols
-    for protocol_chosen in dico_params.get('protocoles',[]):
-        
-        #ISL network device queue size pkt for TCP, GSL network device queue size pkt for TCP
-        # TCP NewReno needs at least the BDP in queue size to fulfill bandwidth
-        if protocol_chosen == "tcp":
-            queue_size_isl_pkt = 10*data_rate_megabit_per_s
-            queue_size_gsl_pkt = 10*data_rate_megabit_per_s
-        elif protocol_chosen == "udp":  # UDP does not have this problem, so we cap it at 100 packets
-            queue_size_isl_pkt = min(10*data_rate_megabit_per_s, 100)
-            queue_size_gsl_pkt = min(10*data_rate_megabit_per_s, 100)
-        else:
-            raise ValueError("Unknown protocol chosen: " + protocol_chosen)
+    protocol_chosen=dico_params['protocoles']
+    protocol_chosen_name=protocol_chosen['nom']
+    #ISL network device queue size pkt for TCP, GSL network device queue size pkt for TCP
+    # TCP NewReno needs at least the BDP in queue size to fulfill bandwidth
+    if protocol_chosen_name == "tcp":
+        queue_size_isl_pkt = 10*data_rate_megabit_per_s
+        queue_size_gsl_pkt = 10*data_rate_megabit_per_s
+    elif protocol_chosen_name == "udp":  # UDP does not have this problem, so we cap it at 100 packets
+        queue_size_isl_pkt = min(10*data_rate_megabit_per_s, 100)
+        queue_size_gsl_pkt = min(10*data_rate_megabit_per_s, 100)
+    else:
+        raise ValueError("Unknown protocol chosen: " + protocol_chosen_name)
 
-        # Prepare run directory
-        run_dir = "runs/run_loaded_tm_pairing_{}_Mbps_for_{}s_with_{}_{}".format(
-            data_rate_megabit_per_s, duration_s, protocol_chosen, params[5]
+    # Prepare run directory
+    run_dir = "runs/run_loaded_tm_pairing_{}_Mbps_for_{}s_with_{}_{}".format(
+        data_rate_megabit_per_s, duration_s, protocol_chosen_name, params[5]
+    )
+    local_shell.remove_force_recursive(run_dir)
+    local_shell.make_full_dir(run_dir)
+    # config_ns3.properties
+    local_shell.copy_file(
+        "templates/template_config_ns3_" + protocol_chosen_name + "2.properties",
+        run_dir + "/config_ns3.properties"
+    )
+    sat_net_dir="../../../satellite_networks_state/gen_data/{}_{}_{}_{}".format(params[0],params[3],params[4],params[5])
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                    "[SAT-NET-DIR]", sat_net_dir)
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                    "[SAT-NET-ROUTES-DIR]", sat_net_dir+"/dynamic_state_{}ms_for_{}s".format(params[2],params[1]))
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                    "[DYN-FSTATE-INTERVAL-UPDATE-MS]", str(params[2]))
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        "[SIMULATION-END-TIME-NS]", str(duration_s * 1000 * 1000 * 1000))
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        "[ISL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        "[GSL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        "[ISL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_isl_pkt))
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        "[GSL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_gsl_pkt))
+    #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
+    commodities_set='set(' + ', '.join(str(i) for i in range(len(list_from_to))) + ')'
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        "[SET-OF-COMMODITY-PAIRS-LOG]", commodities_set)
+    commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in list_from_to) + ')'
+    local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        "[SET-OF-COMMODITY-PAIRS-PINGMESH]", 'set()')
+    
+    # Make logs_ns3 already for console.txt mapping
+    local_shell.make_full_dir(run_dir + "/logs_ns3")
+
+    # .gitignore (legacy reasons)
+    local_shell.write_file(run_dir + "/.gitignore", "logs_ns3")
+
+    #schedule was here !!
+    # tcp_flow_schedule.csv
+    if protocol_chosen_name == "tcp":
+        networkload.write_schedule(
+            run_dir + "/tcp_flow_schedule.csv",
+            len(list_from_to),
+            list_from_to,
+            tcp_list_flow_size_byte,
+            list_start_time
         )
-        local_shell.remove_force_recursive(run_dir)
-        local_shell.make_full_dir(run_dir)
-        # config_ns3.properties
-        local_shell.copy_file(
-            "templates/template_config_ns3_" + protocol_chosen + "2.properties",
-            run_dir + "/config_ns3.properties"
-        )
-        sat_net_dir="../../../satellite_networks_state/gen_data/{}_{}_{}_{}".format(params[0],params[3],params[4],params[5])
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                        "[SAT-NET-DIR]", sat_net_dir)
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                        "[SAT-NET-ROUTES-DIR]", sat_net_dir+"/dynamic_state_{}ms_for_{}s".format(params[2],params[1]))
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                        "[DYN-FSTATE-INTERVAL-UPDATE-MS]", str(params[2]))
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                            "[SIMULATION-END-TIME-NS]", str(duration_s * 1000 * 1000 * 1000))
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                            "[ISL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                            "[GSL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                            "[ISL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_isl_pkt))
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                            "[GSL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_gsl_pkt))
-        #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
-        commodities_set='set(' + ', '.join(str(i) for i in range(len(list_from_to))) + ')'
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                            "[SET-OF-COMMODITY-PAIRS-LOG]", commodities_set)
-        commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in list_from_to) + ')'
-        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                            "[SET-OF-COMMODITY-PAIRS-PINGMESH]", 'set()')
-        
-        # Make logs_ns3 already for console.txt mapping
-        local_shell.make_full_dir(run_dir + "/logs_ns3")
 
-        # .gitignore (legacy reasons)
-        local_shell.write_file(run_dir + "/.gitignore", "logs_ns3")
-
-        #schedule was here !!
-        # tcp_flow_schedule.csv
-        if protocol_chosen == "tcp":
-            networkload.write_schedule(
-                run_dir + "/tcp_flow_schedule.csv",
-                len(list_from_to),
-                list_from_to,
-                tcp_list_flow_size_byte,
-                list_start_time
-            )
-
-        # udp_burst_schedule.csv
-        elif protocol_chosen == "udp":
-            with open(run_dir + "/udp_burst_schedule.csv", "w+") as f_out:
-                for i in range(len(list_from_to)):
-                    f_out.write(
-                        "%d,%d,%d,%.10f,%d,%d,,\n" % (
-                            i,
-                            list_from_to[i][0],
-                            list_from_to[i][1],
-                            udp_list_flow_size_proportion[i],
-                            i*coeff_decalage,
-                            1000000000000
-                        )
+    # udp_burst_schedule.csv
+    elif protocol_chosen_name == "udp":
+        with open(run_dir + "/udp_burst_schedule.csv", "w+") as f_out:
+            for i in range(len(list_from_to)):
+                f_out.write(
+                    "%d,%d,%d,%.10f,%d,%d,,%s\n" % (
+                        i,
+                        list_from_to[i][0],
+                        list_from_to[i][1],
+                        udp_list_flow_size_proportion[i],
+                        i*coeff_decalage,
+                        1000000000000,
+                        protocol_chosen.get("metadata", "")
                     )
+                )
 
     #write the commodity list in an easy place for path generation with mcnf
     local_shell.write_file("../satellite_networks_state/commodites.temp", list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion)))

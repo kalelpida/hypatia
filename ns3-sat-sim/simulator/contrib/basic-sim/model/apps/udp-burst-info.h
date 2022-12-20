@@ -9,7 +9,8 @@
 #include <fstream>
 #include <cinttypes>
 #include <algorithm>
-#include <regex>
+#include <random>
+
 
 namespace ns3 {
 
@@ -34,6 +35,8 @@ namespace ns3 {
         int64_t GetDurationNs();
         std::string GetAdditionalParameters();
         std::string GetMetadata();
+        static void SetRandomGenerator(std::mt19937_64 &random_engine);
+        static std::mt19937_64 m_random_engine;
     private:
         int64_t m_udp_burst_id;
         int64_t m_from_node_id;

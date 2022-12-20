@@ -96,13 +96,13 @@ def casseISLs(dico):
 
 
     #just to keep a trace of the changes, write it as comments in the config file of the simulation
-    for protocol_chosen in dico['protocoles']:
-        run_dir = "../ns3_experiments/runs/run_loaded_tm_pairing_{}_Mbps_for_{}s_with_{}_{}".format( dico['debit_isl'], dico['duree'], protocol_chosen, dico['algo'])
-        assert os.path.isfile( fic_config_ns3:=os.path.join(run_dir,"config_ns3.properties"))
-        with open(fic_config_ns3, 'a') as f:
-            f.write("######### Liens compromis, paramètres:"+ajout_str_isl+"\n")
-            for l in liens_compromis_str:
-                f.write("# "+l+"\n") 
+    protocol_chosen=dico['protocoles']
+    run_dir = "../ns3_experiments/runs/run_loaded_tm_pairing_{}_Mbps_for_{}s_with_{}_{}".format( dico['debit_isl'], dico['duree'], protocol_chosen['nom'], dico['algo'])
+    assert os.path.isfile( fic_config_ns3:=os.path.join(run_dir,"config_ns3.properties"))
+    with open(fic_config_ns3, 'a') as f:
+        f.write("######### Liens compromis, paramètres:"+ajout_str_isl+"\n")
+        for l in liens_compromis_str:
+            f.write("# "+l+"\n") 
 
 
     

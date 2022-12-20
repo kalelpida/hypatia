@@ -46,26 +46,27 @@ algo = dico_params.get('algo')
 unique_id = 0
 
 
-for protocol_chosen in dico_params.get('protocoles',[]):#["tcp", "udp"]:
+protocol_chosen=dico_params['protocoles'] #["tcp", "udp"]:
+protocol_chosen_name=protocol_chosen['nom']
 
-	if (unique_id % num_machines) == workload_id:
+if (unique_id % num_machines) == workload_id:
 
-		# Prepare run directory
-		run_dir = "runs/run_loaded_tm_pairing_%d_Mbps_for_%ds_with_%s_%s" % (
-			data_rate_megabit_per_s, duration_s, protocol_chosen, algo
-		)
-		logs_ns3_dir = run_dir + "/logs_ns3"
-		local_shell.remove_force_recursive(logs_ns3_dir)
-		local_shell.make_full_dir(logs_ns3_dir)
+	# Prepare run directory
+	run_dir = "runs/run_loaded_tm_pairing_%d_Mbps_for_%ds_with_%s_%s" % (
+		data_rate_megabit_per_s, duration_s, protocol_chosen_name, algo
+	)
+	logs_ns3_dir = run_dir + "/logs_ns3"
+	local_shell.remove_force_recursive(logs_ns3_dir)
+	local_shell.make_full_dir(logs_ns3_dir)
 
-		# Perform run
-		local_shell.perfect_exec(
-			"cd ../../ns3-sat-sim/simulator; "
-			"NS_LOG='StatesErrorModel' "
-			"./waf --run=\"main_satnet "
-			"--run_dir='../../papier2/ns3_experiments/" + run_dir + "'\""
-			" 2>&1 | tee '../../papier2/ns3_experiments/" + logs_ns3_dir + "/console.txt'",
-			output_redirect=exputil.OutputRedirect.CONSOLE
-		)
+	# Perform run
+	local_shell.perfect_exec(
+		"cd ../../ns3-sat-sim/simulator; "
+		#"NS_LOG='StatesErrorModel' "
+		"./waf --run=\"main_satnet "
+		"--run_dir='../../papier2/ns3_experiments/" + run_dir + "'\""
+		" 2>&1 | tee '../../papier2/ns3_experiments/" + logs_ns3_dir + "/console.txt'",
+		output_redirect=exputil.OutputRedirect.CONSOLE
+	)
 
 	unique_id += 1

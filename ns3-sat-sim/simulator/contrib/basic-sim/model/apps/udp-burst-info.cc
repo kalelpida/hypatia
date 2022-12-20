@@ -1,6 +1,7 @@
 #include "udp-burst-info.h"
 
 namespace ns3 {
+    std::mt19937_64 UdpBurstInfo::m_random_engine = std::mt19937_64();
 
     UdpBurstInfo::UdpBurstInfo(
             int64_t udp_burst_id,
@@ -54,4 +55,8 @@ namespace ns3 {
         return m_metadata;
     }
 
+
+    void UdpBurstInfo::SetRandomGenerator(std::mt19937_64 &random_engine){
+        m_random_engine = random_engine;
+    }
 }

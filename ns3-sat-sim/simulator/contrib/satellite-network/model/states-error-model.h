@@ -64,6 +64,7 @@
 #define STATES_ERROR_MODEL_H
 
 #include "ns3/error-model.h"
+#include "ns3/simulator.h" // pour le temps
 
 namespace ns3 {
 /**
@@ -95,7 +96,7 @@ namespace ns3 {
  * IsCorrupt() will not modify the packet data buffer
  */
 
-class StatesErrorModel: public ErrorModel
+class GilbEllErrorModel: public ErrorModel
 {
 public:
   /**
@@ -104,8 +105,8 @@ public:
    */
   static TypeId GetTypeId (void);
 
-  StatesErrorModel ();
-  virtual ~StatesErrorModel ();
+  GilbEllErrorModel ();
+  virtual ~GilbEllErrorModel ();
 
   /**
    * \returns the error rate being applied by the model
@@ -148,5 +149,66 @@ private:
 };
 
 }
+
+#endif
+
+#ifndef STATES_ERROR_MODEL_H
+//erreurs à corriger
+
+class PeriodicErrorModel: public ErrorModel
+{
+public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
+
+  PeriodicErrorModel ();
+  virtual ~PeriodicErrorModel ();
+
+  /**
+   * \returns the error rate being applied by the model
+   */
+  double GetErrorRate (void) const;
+  /**
+   * \returns Time rate when errors will occur
+   */
+  void SetErrorRate (double rate);
+
+
+  /**
+   * \returns the period (ns) of the model
+   */
+  int64_t GetRotationPeriod (void) const;
+  /**
+   * \param rate the period (ns) of the model
+   */
+  void SetRotationPeriod (int64_t period);
+
+  /**
+   * \param ranVar A random variable distribution to generate random variation on the period
+   */
+  void SetRandomVariable (Ptr<RandomVariableStream> ranVar);
+
+  /**
+    * Assign a fixed random variable stream number to the random variables
+    * used by this model.  Return the number of streams (possibly zero) that
+    * have been assigned.
+    *
+    * \param stream first stream index to use
+    * \return the number of stream indices assigned by this model
+    */
+  int64_t AssignStreams (int64_t stream);
+
+private:
+  virtual bool DoCorrupt (Ptr<Packet> p);
+  virtual void DoReset (void);
+
+  Ptr<RandomVariableStream> m_ranRotationVelocity_msps;    //!< a random for velocity acceleration
+  int64_t m_lastTime_ns;                               //!< dernier temps de mise à jour de la vitesse de rotation       
+  int64_t m_rotationPeriod_ns;
+  double m_faultyPeriodRate;                     //!< the burst error event
+};
 
 #endif
