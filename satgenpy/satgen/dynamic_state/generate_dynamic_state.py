@@ -165,7 +165,7 @@ def generate_dynamic_state_at(
             )
 
         # Add to networkx graph
-        if val=='s' or (is_connected_to_adjacent(satellites[a], seuil=types_parametres['sat']['ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE']) and is_connected_to_adjacent(satellites[b], seuil=types_parametres['sat']['ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE'])):
+        if val=='s' or (is_connected_to_adjacent(satellites[a], seuil=types_parametres['sat']['isl_polar_desactivation_anomaly_degree']) and is_connected_to_adjacent(satellites[b], seuil=types_parametres['sat']['isl_polar_desactivation_anomaly_degree'])):
             sat_net_graph_only_satellites_with_isls.add_edge(
                 a, b, weight=sat_distance_m
             )
