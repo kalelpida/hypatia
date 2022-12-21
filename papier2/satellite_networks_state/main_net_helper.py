@@ -61,7 +61,7 @@ class MainNetHelper:
                 self.types_parametres[cle] = {"max_gsl_length_m": max_gsl_m}
                 
         # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
-        self.types_parametres["sat"] = {'max_isl_length_m' :2 * math.sqrt(math.pow(EARTH_RADIUS + altitude, 2) - math.pow(EARTH_RADIUS + 80000, 2))}
+        self.types_parametres["sat"] = {'max_isl_length_m' :2 * math.sqrt(math.pow(EARTH_RADIUS + altitude, 2) - math.pow(EARTH_RADIUS + 80000, 2)), 'polar_max_adj_anomaly': cstl_config['ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE']}
 
         self.MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(altitude+EARTH_RADIUS)**3)/math.pi/2  # ~14.5 revs/jour
         

@@ -37,6 +37,13 @@ NUM_ORBS: 28
 NUM_SATS_PER_ORB: 27
 INCLINATION_DEGREE: 65
 
+ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE: 75
+# orbites circulaires, périgée confondu avec le noeud ascendant à l'équateur, lorsque l'anomalie atteint 90°, le satellite est à sa latitude maximale. 
+# lorsque l'anomalie dépasse ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE, les isl adjacents sont désactivés
+# Par symétrie centrale, les ISL sont désactivés lorsque l'anomalie et comprise entre ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE et 180-ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE
+# ou entre -ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE et ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE-180
+# Todo: différencier désactivations à droite et à gauche
+
 gateway: 
   type: topCities #from 100 biggest cities
   nombre: 10 #random, give IDs and place them, or set it in config?

@@ -1,5 +1,6 @@
 from .distance_tools import (
     distance_m_between_satellites,
+    is_connected_to_adjacent,
     distance_m_ground_station_to_satellite,
     geodesic_distance_m_between_ground_stations,
     straight_distance_m_between_ground_stations,

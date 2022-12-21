@@ -149,7 +149,8 @@ def generate_dynamic_state_at(
     total_num_isls = 0
     num_isls_per_sat = [0] * len(satellites)
     sat_neighbor_to_if = {}
-    for (a, b) in list_isls:
+    for (a, b), val in sorted(list_isls.items()):
+        # val: 's' means "same orbit", 'a' means "adjacent"
 
         # ISLs are not permitted to exceed their maximum distance
         # TODO: Technically, they can (could just be ignored by forwarding state calculation),
@@ -164,9 +165,10 @@ def generate_dynamic_state_at(
             )
 
         # Add to networkx graph
-        sat_net_graph_only_satellites_with_isls.add_edge(
-            a, b, weight=sat_distance_m
-        )
+        if val=='s' or (is_connected_to_adjacent(satellites[a], seuil=types_parametres['sat']['ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE']) and is_connected_to_adjacent(satellites[b], seuil=types_parametres['sat']['ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE'])):
+            sat_net_graph_only_satellites_with_isls.add_edge(
+                a, b, weight=sat_distance_m
+            )
 
         # Interface mapping of ISLs
         sat_neighbor_to_if[(a, b)] = num_isls_per_sat[a]

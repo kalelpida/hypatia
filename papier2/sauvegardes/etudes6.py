@@ -142,7 +142,8 @@ def affiche_logs_sources():
 			for idinArr, (inArr, dseq) in enumerate(inter_arrivees):
 				if dseq == 1:
 					dico_listes_commodites[commodite]["bon"].append((inArr))
-				elif not dico_pertes_isl.get(valparams):
+				elif not dico_pertes_isl.get(valparams) or not dico_pertes_isl[valparams].get(commodite):
+					#les pertes ne sont pas activées dans la configuration valparams ou pour la commodite
 					dico_listes_commodites[commodite]["perteAutre"].append((inArr))
 				else:
 					causes_pertes = [int(arrivees[idinArr][1]+q) in dico_pertes_isl[valparams][commodite] for q in range(1, int(dseq))]
@@ -164,6 +165,7 @@ def affiche_logs_sources():
 		axs[expCntr].legend()
 		axs[expCntr].set_xlabel("ID commodité")
 		axs[expCntr].set_ylabel("temps inter-arrivée (s)")
+	fig.tight_layout()
 	
 	plt.savefig(os.path.join(DOSSIER, 'comparaisonv6.png'))
 	plt.show()
@@ -185,6 +187,8 @@ try:
 	assert dos_svgdes == dossiers
 	assert dico
 except Exception:
+	dico.clear()
+	dico_pertes_isl.clear()
 	for i,dos in enumerate(dossiers):
 		print(f"repartition données: {i}/{len(dossiers)}")
 		str_params = getconfigcourante(dos, cles_variantes)
