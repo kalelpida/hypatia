@@ -13,10 +13,6 @@ cp -r ${NS3_VERSION}/* simulator/ || exit 1
 rm -r ${NS3_VERSION} || exit 1
 cd simulator || exit 1
 
-# Update the basic-sim module
-echo "Updating git submodules"
-git submodule update || exit 1
-
 # Configure the build
 if [ "$1" == "--debug_all" ]; then
   ./waf configure --build-profile=debug --enable-mpi --enable-examples --enable-tests --enable-gcov --out=build/debug_all || exit 1

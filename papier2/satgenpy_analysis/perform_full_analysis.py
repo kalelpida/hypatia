@@ -85,6 +85,7 @@ else:
 		                   "> ../papier2/satgenpy_analysis/data/command_logs/manual_graphical_telesat_isls_372_to_411.log 2>&1")
 """
 # Constellation comparison
+"""
 print("Generating commands for constellation comparison...")
 for satgenpy_generated_constellation in [
 	"telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls",
@@ -135,7 +136,7 @@ for satgenpy_generated_constellation in [
                 duration_s
             )
         )
-
+"""
 # Run the commands
 print("Running commands (at most %d in parallel)..." % max_num_processes)
 for i in range(len(commands_to_run)):

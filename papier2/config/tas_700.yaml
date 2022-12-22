@@ -50,6 +50,6 @@ gateway:
   minElevation: 10 #degrees above horizon
 
 ue:
-  type: randomGlobe
+  type: randomGlobe_tas700 #randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation 
   minElevation: 35 #degrees above horizon
   nombre: config/nb-UEs-sol #voir dans config

@@ -12,7 +12,7 @@ import re, yaml
 import pickle
 
 
-DOSSIER='experienceBursty'
+DOSSIER='experienceder'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
 DOSSIER_A_INCLURE=['']
 

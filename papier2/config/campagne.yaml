@@ -9,7 +9,7 @@ a-supprimer: #classer par ordre
   #      { sel: topUtil10, errModel: "brstErrMdl-brstRate:0.01-brstSize:5" },
   #      { sel: topUtil10, errModel: "recvErrRate:0.1"}
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
-  deteriorISL: [ {}] 
+  deteriorISL: [ {} ] 
   sol: [ users_and_main_stations ]
   nb-UEs-sol: [ 10 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
