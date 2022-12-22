@@ -11,7 +11,7 @@ sudo apt-get update || exit 1
 #check python3.9+
 versionString=$(python --version)
 versionArray=(`sed -n 's/\./ /gp' <<< ${versionString:7}`)
-if (( ${versionArray[1]} < 3 ));then
+if (( ${versionArray[*]:0:1} < 3 ));then  # avoid different array indexing between bash and zsh 
 echo "we recommend installing python-is-python3 module if you don't need python2\
 	otherwise you can replace 'python' by 'python3' everywhere "
 echo "proceed to python-is-python3 installation ? [y/n]"
@@ -22,7 +22,7 @@ else echo "python is not replaced by python3, quit"; exit 1
 fi
 fi
 
-if (( ${versionArray[2]} < 10 )); then
+if (( ${versionArray[*]:1:1} < 9 )); then
 echo "please upgrade python to python 3.9+"
 exit 1
 fi
