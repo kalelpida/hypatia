@@ -344,7 +344,7 @@ GSLNetDevice::SetReceiveErrorModel (Ptr<ErrorModel> em)
 void
 GSLNetDevice::Receive (Ptr<Packet> packet)
 {
-  NS_LOG_FUNCTION (this << packet << this->GetNode()->GetId());
+  NS_LOG_FUNCTION (this << packet->ToString() << this->GetNode()->GetId());
   uint16_t protocol = 0;
 
   if (m_receiveErrorModel && m_receiveErrorModel->IsCorrupt (packet) ) 
@@ -512,9 +512,10 @@ GSLNetDevice::Send (
   uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << packet << dest << protocolNumber);
-  NS_LOG_LOGIC ("p=" << packet << ", dest=" << &dest);
+  NS_LOG_LOGIC ("p=" << packet->ToString() << ", dest=" << &dest);
   NS_LOG_LOGIC ("UID is " << packet->GetUid ());
   NS_LOG_LOGIC ("node is " << this->GetNode()->GetId());
+  NS_LOG_LOGIC ("queue size is " << m_queue->GetCurrentSize());
 
   //
   // If IsLinkUp() is false it means there is no channel to send any packet 

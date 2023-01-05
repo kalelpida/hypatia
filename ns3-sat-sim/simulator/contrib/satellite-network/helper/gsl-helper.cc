@@ -141,7 +141,7 @@ GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
     // Aggregate NetDeviceQueueInterface objects to connect
     // the device queue to the interface (used by traffic control layer)
     Ptr<NetDeviceQueueInterface> ndqi = CreateObject<NetDeviceQueueInterface>();
-    ndqi->GetTxQueue (0)->ConnectQueueTraces (queue);
+    // ndqi->GetTxQueue (0)->ConnectQueueTraces (queue); the device handles its own queue, different from control layer
     dev->AggregateObject (ndqi);
 
     // Aggregate MPI receivers // TODO: Why?

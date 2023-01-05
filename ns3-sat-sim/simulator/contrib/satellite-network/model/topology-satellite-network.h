@@ -132,6 +132,8 @@ namespace ns3 {
         bool m_enable_isl_utilization_tracking;
         int64_t m_isl_utilization_tracking_interval_ns;
 
+        Ptr<OutputStreamWrapper> m_drop_stream; //!< stream where to log drop events
+
     };
 
 }

@@ -428,7 +428,7 @@ public:
         // UDP application
 
         // Install a UDP burst client on all
-        UdpBurstHelper udpBurstHelper(1026, basicSimulation->GetLogsDir());
+        UdpBurstHelper udpBurstHelper(1026, 3, basicSimulation->GetLogsDir());
         ApplicationContainer udpApp = udpBurstHelper.Install(allNodes);
         udpApp.Start(Seconds(0.0));
 
@@ -581,7 +581,7 @@ public:
         // UDP application
 
         // Install a UDP burst client on all
-        UdpBurstHelper udpBurstHelper(1026, basicSimulation->GetLogsDir());
+        UdpBurstHelper udpBurstHelper(1026, 3, basicSimulation->GetLogsDir());
         ApplicationContainer udpApp = udpBurstHelper.Install(allNodes);
         udpApp.Start(Seconds(0.0));
 
@@ -860,7 +860,7 @@ public:
         // UDP application
 
         // Install a UDP burst client on all
-        UdpBurstHelper udpBurstHelper(1026, basicSimulation->GetLogsDir());
+        UdpBurstHelper udpBurstHelper(1026, 2, basicSimulation->GetLogsDir());
         ApplicationContainer udpApp = udpBurstHelper.Install(allNodes);
         udpApp.Start(Seconds(0.0));
 
@@ -1037,7 +1037,7 @@ public:
             // UDP application
 
             // Install a UDP burst client on all
-            UdpBurstHelper udpBurstHelper(1026, basicSimulation->GetLogsDir());
+            UdpBurstHelper udpBurstHelper(1026, std::max(burst_1_rate, burst_2_rate), basicSimulation->GetLogsDir());
             ApplicationContainer udpApp = udpBurstHelper.Install(allNodes);
             udpApp.Start(Seconds(0.0));
 
@@ -1165,7 +1165,7 @@ public:
         // UDP application
 
         // Install a UDP burst client on all
-        UdpBurstHelper udpBurstHelper(1026, basicSimulation->GetLogsDir());
+        UdpBurstHelper udpBurstHelper(1026, 6, basicSimulation->GetLogsDir());
         ApplicationContainer udpApp = udpBurstHelper.Install(allNodes);
         udpApp.Start(Seconds(0.0));
 
@@ -1318,7 +1318,7 @@ public:
         // UDP application
 
         // Install a UDP burst client on all
-        UdpBurstHelper udpBurstHelper(1026, basicSimulation->GetLogsDir());
+        UdpBurstHelper udpBurstHelper(1026, burst_1_rate, basicSimulation->GetLogsDir());
         ApplicationContainer udpApp = udpBurstHelper.Install(allNodes);
         udpApp.Start(Seconds(0.0));
 
@@ -1497,7 +1497,7 @@ public:
         // UDP application
 
         // Install a UDP burst client on all
-        UdpBurstHelper udpBurstHelper(1026, basicSimulation->GetLogsDir());
+        UdpBurstHelper udpBurstHelper(1026, burst_1_rate, basicSimulation->GetLogsDir());
         ApplicationContainer udpApp = udpBurstHelper.Install(allNodes);
         udpApp.Start(Seconds(0.0));
 

@@ -117,10 +117,10 @@ PointToPointLaserHelper::Install (Ptr<Node> a, Ptr<Node> b)
 
   // Aggregate NetDeviceQueueInterface objects
   Ptr<NetDeviceQueueInterface> ndqiA = CreateObject<NetDeviceQueueInterface> ();
-  ndqiA->GetTxQueue (0)->ConnectQueueTraces (queueA);
+  //ndqiA->GetTxQueue (0)->ConnectQueueTraces (queueA); the control layer queue is not related to the physical device queue
   devA->AggregateObject (ndqiA);
   Ptr<NetDeviceQueueInterface> ndqiB = CreateObject<NetDeviceQueueInterface> ();
-  ndqiB->GetTxQueue (0)->ConnectQueueTraces (queueB);
+  //ndqiB->GetTxQueue (0)->ConnectQueueTraces (queueB); the control layer queue is not related to the physical device queue
   devB->AggregateObject (ndqiB);
 
   // Distributed mode
