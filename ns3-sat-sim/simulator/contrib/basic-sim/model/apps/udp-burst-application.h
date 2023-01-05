@@ -65,6 +65,7 @@ namespace ns3 {
 
         uint16_t m_port;      //!< Port on which we listen for incoming packets.
         uint32_t m_max_udp_payload_size_byte;  //!< Maximum size of UDP payload before getting fragmented
+        uint64_t m_min_std_packet_time; //!< Minimum standard MTU (1500bytes) packet send time. Maximum sending datarate of the node, shall be greater than the target sending rate
         Ptr<Socket> m_socket; //!< IPv4 Socket
         std::string m_baseLogsDir; //!< Where the UDP burst logs will be written to:
                                    //!<   logs_dir/udp_burst_[id]_{incoming, outgoing}.csv

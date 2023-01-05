@@ -55,7 +55,11 @@ namespace ns3 {
                 .AddAttribute("MaxUdpPayloadSizeByte", "Total UDP payload size (byte) before it gets fragmented.",
                               UintegerValue(1472), // 1500 (point-to-point default) - 20 (IP) - 8 (UDP) = 1472
                               MakeUintegerAccessor(&UdpBurstApplication::m_max_udp_payload_size_byte),
-                              MakeUintegerChecker<uint32_t>());
+                              MakeUintegerChecker<uint32_t>())
+                .AddAttribute("PktSendTimeNs", "Sending time (nanoseconds) of a standard packet",
+                              UintegerValue(60000), // In nanoseconds. For a 2 Mb/s ISL, by default GSL rate is set to 100*ISL, so that's a 1500bytes packet sent at 200Mb/s
+                              MakeUintegerAccessor(&UdpBurstApplication::m_min_std_packet_time),
+                              MakeUintegerChecker<uint64_t>());
         return tid;
     }
 
@@ -80,8 +84,10 @@ namespace ns3 {
         if (m_outgoing_bursts.size() >= 1 && burstInfo.GetStartTimeNs() < std::get<0>(m_outgoing_bursts[m_outgoing_bursts.size() - 1]).GetStartTimeNs()) {
             throw std::runtime_error("Bursts must be added weakly ascending on start time");
         }
-
-        std::exponential_distribution<double_t> interGenPacketTime(1.0/std::ceil(1500.0 / (burstInfo.GetTargetRateMegabitPerSec() / 8000.0)));
+        double interpackettime_ns = std::ceil(1500.0 / (burstInfo.GetTargetRateMegabitPerSec() / 8000.0) - m_min_std_packet_time);
+        NS_ABORT_MSG_IF(interpackettime_ns <= 0, "UDP application rate shall not exceed device sending rate.");
+        std::exponential_distribution<double_t> interGenPacketTime(1.0/interpackettime_ns);
+        
         m_outgoing_bursts.push_back(std::make_tuple(burstInfo, targetAddress, interGenPacketTime));
         m_outgoing_bursts_packets_sent_counter.push_back(0);
         m_outgoing_bursts_event_id.push_back(EventId());
@@ -169,10 +175,11 @@ namespace ns3 {
         UdpBurstInfo info = std::get<0>(m_outgoing_bursts[internal_burst_idx]);
         uint64_t packet_gap_nanoseconds;
         if (info.GetMetadata().find("expInterPacket") != std::string::npos){
-            packet_gap_nanoseconds = static_cast<uint64_t>(std::get<2>(m_outgoing_bursts[internal_burst_idx])(info.m_random_engine)); 
+            packet_gap_nanoseconds = m_min_std_packet_time + static_cast<uint64_t>(std::get<2>(m_outgoing_bursts[internal_burst_idx])(info.m_random_engine)); 
         } else {
             packet_gap_nanoseconds = std::ceil(1500.0 / (info.GetTargetRateMegabitPerSec() / 8000.0));
         }
+        NS_LOG_INFO(info.GetUdpBurstId() << "interpaquet_ns " << packet_gap_nanoseconds);
         if (now_ns + packet_gap_nanoseconds < (uint64_t) (info.GetStartTimeNs() + info.GetDurationNs())) {
             m_outgoing_bursts_event_id.at(internal_burst_idx) = Simulator::Schedule(NanoSeconds(packet_gap_nanoseconds), &UdpBurstApplication::BurstSendOut, this, internal_burst_idx);
         }
@@ -190,20 +197,25 @@ namespace ns3 {
         // One more packet will be sent out
         m_outgoing_bursts_packets_sent_counter[internal_burst_idx] += 1;
 
-        // Log precise timestamp sent away of the sequence packet if needed
-        if (m_outgoing_bursts_enable_precise_logging[internal_burst_idx]) {
-            std::ofstream ofs;
-            ofs.open(m_baseLogsDir + "/" + format_string("udp_burst_%" PRIu64 "_outgoing.csv", idSeq.GetId()), std::ofstream::out | std::ofstream::app);
-            ofs << idSeq.GetId() << "," << idSeq.GetSeq() << "," << Simulator::Now().GetNanoSeconds() << std::endl;
-            ofs.close();
-        }
-
         // A full payload packet
         Ptr<Packet> p = Create<Packet>(m_max_udp_payload_size_byte - idSeq.GetSerializedSize());
         p->AddHeader(idSeq);
 
-        // Send out the packet to the target address
-        m_socket->SendTo(p, 0, std::get<1>(m_outgoing_bursts[internal_burst_idx]));
+        int envoyes = m_socket->SendTo(p, 0, std::get<1>(m_outgoing_bursts[internal_burst_idx]));
+
+        // Log precise timestamp sent away of the sequence packet if needed
+        if (m_outgoing_bursts_enable_precise_logging[internal_burst_idx]) {
+            std::ofstream ofs;
+            ofs.open(m_baseLogsDir + "/" + format_string("udp_burst_%" PRIu64 "_outgoing.csv", idSeq.GetId()), std::ofstream::out | std::ofstream::app);
+            ofs << idSeq.GetId() << "," << idSeq.GetSeq() << "," << Simulator::Now().GetNanoSeconds();
+            if ( envoyes <= 0){// Send out the packet to the target address
+                ofs << ",False";// failure
+            } else {
+                 ofs << ",True";
+            }
+            ofs << std::endl;
+            ofs.close();
+        }
 
     }
 

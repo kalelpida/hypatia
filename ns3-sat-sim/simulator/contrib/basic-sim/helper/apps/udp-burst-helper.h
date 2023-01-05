@@ -36,7 +36,7 @@ namespace ns3 {
 class UdpBurstHelper
 {
 public:
-  UdpBurstHelper (uint16_t port, std::string baseLogsDir);
+  UdpBurstHelper (uint16_t port, double max_data_rate_megabit_per_s, std::string baseLogsDir);
   void SetAttribute (std::string name, const AttributeValue &value);
   ApplicationContainer Install (Ptr<Node> node) const;
   ApplicationContainer Install (NodeContainer c) const;
