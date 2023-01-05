@@ -56,6 +56,11 @@ pip install git+https://github.com/snkas/exputilpy.git@v1.6 || exit 1
 pip install git+https://github.com/snkas/networkload.git@v1.3 || exit 1
 sudo apt-get install gnuplot
 
+# for mcnf algorithms
+# if using mcnf algorithm, you will need to retrieve a gurobi license
+pip install gurobipy
+
 # Confirmation dependencies are installed
 echo ""
 echo "Hypatia dependencies have been installed."
+echo "if you plan to use UMCF routing algorithm, make your gurobi license is up to date" 

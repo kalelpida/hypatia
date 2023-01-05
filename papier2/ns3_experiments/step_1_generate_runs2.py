@@ -40,6 +40,7 @@ def main_step1(list_from_to):
 
     graine=dico_params.pop('graine')
     data_rate_megabit_per_s = dico_params.pop('debit_isl')
+    #true_gsl_max_data_rate_megabit_per_s = data_rate_megabit_per_s*100 # used to generate bursty traffic. maybe admission control from the ground will change that 
     duration_s = int(dico_params['duree'])
     liste_params=('constellation', 'duree', 'pas', 'isls', 'sol', 'algo', 'threads')
     params=[str(dico_params[cle]) for cle in liste_params]

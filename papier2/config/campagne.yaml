@@ -14,8 +14,11 @@ a-supprimer: #classer par ordre
   nb-UEs-sol: [ 10 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [4 ]
-  debit_isl: [ 10 ]
-  protocoles: [ {'nom':"udp", "metadata":"expInterPacket"} ]  # ["udp", "tcp"]
+  debit_isl: [ 2 ]
+  # examples of protocoles:
+  # { 'nom':"udp", "metadata":"expInterPacket" }
+  # { 'nom': "tcp"}
+  protocoles: [ { 'nom':"udp", "metadata":"expInterPacket" } ]
 
 
 info-sauvegarde:
@@ -33,6 +36,6 @@ actions: #[]
   - noeuds
   - commodites
   - routes
-  - "analyse theorique"
-  - "casse liens sat"  # attention, l'analyse théorique doit être juste sinon les liens isl desactives seront aleatoires
+  #- "analyse theorique"
+  #- "casse liens sat"  # attention, l'analyse théorique doit être juste sinon les liens isl desactives seront aleatoires
   - simulation
