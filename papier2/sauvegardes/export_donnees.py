@@ -5,12 +5,6 @@ just save the
 import os, sys
 from etudes6 import *
 
-DOSSIER='experienceBursty'
-
-if len(sys.argv)==2:
-	DOSSIER=sys.argv[1].strip('/')
-
-
 if __name__=='__main__':
 	remplissage_dico()
 	fic_export = __file__.removesuffix('.py')+".pickle"

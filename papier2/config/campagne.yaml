@@ -1,4 +1,4 @@
-a-supprimer: #classer par ordre
+reunion0601: #classer par ordre
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [8] #en s
@@ -9,16 +9,16 @@ a-supprimer: #classer par ordre
   #      { sel: topUtil10, errModel: "brstErrMdl-brstRate:0.01-brstSize:5" },
   #      { sel: topUtil10, errModel: "recvErrRate:0.1"}
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
-  deteriorISL: [ {} ] 
+  deteriorISL: [  { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" }, {} ] 
   sol: [ users_and_main_stations ]
-  nb-UEs-sol: [ 10 ]
+  nb-UEs-sol: [ 50 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [4 ]
-  debit_isl: [ 2 ]
+  debit_isl: [ 4, 17 ]
   # examples of protocoles:
   # { 'nom':"udp", "metadata":"expInterPacket" }
   # { 'nom': "tcp"}
-  protocoles: [ { 'nom':"udp", "metadata":"expInterPacket" } ]
+  protocoles: [ { 'nom':"udp"}, { 'nom':"udp", "metadata":"expInterPacket" } ]
 
 
 info-sauvegarde:
@@ -36,6 +36,6 @@ actions: #[]
   - noeuds
   - commodites
   - routes
-  #- "analyse theorique"
-  #- "casse liens sat"  # attention, l'analyse théorique doit être juste sinon les liens isl desactives seront aleatoires
+  - "analyse theorique"
+  - "casse liens sat"  # attention, l'analyse théorique doit être juste sinon les liens isl desactives seront aleatoires
   - simulation

@@ -1,22 +1,33 @@
 """
 README
-analyse loss logs, find out when they occur and why
+analyse des inter-arrivées, quand et pourquoi apparaissent les pertes
+À relier à etudes7 (sur les routes)
 """
 import os
 import os, sys
 import matplotlib.pyplot as plt
-from matplotlib import colormaps, markers #names of colormaps
+from matplotlib import markers 
 import numpy as np
 import re, yaml
 import pickle
 
 
-DOSSIER='a-supprimer'
+DOSSIER='reunion0601'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
 DOSSIER_A_INCLURE=['']
 AFFICHE_RATIO=True
 
 PARAMS_A_EXCLURE = []#'NuldeteriorISL', 'brstErrMdl'] #
+
+COMMODITES_COMMUNES = {'routes communes': [{67, 5, 37, 71, 7, 73, 13, 45, 61, 93, 53, 87, 89, 27, 29}, {26, 27, 36, 37}, {88, 66, 28, 86}, {24, 34, 62}, {43, 19, 51, 59, 31}, {50, 51, 30, 31}, {11, 47}, {1, 35, 39, 77, 15, 23, 25, 63}, {17, 75, 97, 49}, {32, 33, 84}, {64, 65, 90}, {0, 38, 14}, {65, 3, 99, 69, 83, 57, 91}, {78, 79}, {8, 98}, {70, 71}, {18, 19}, {20, 21}, {81, 21}, {54, 94}, {9, 99}, {56, 82}, {44, 45}, {33, 41, 79, 85, 55, 95}, {80, 81}, {96, 74, 48}, {58, 59}]}#output of etudes7.py
+def is_authorisee(commodite):
+	return True #commodite%2 == 0
+
+def est_meme_commodite_inversee(xcoms):
+	if len(xcoms)!=2:
+		return False
+	x=sorted(xcoms)
+	return x[1]-x[0]==1
 
 if len(sys.argv)==2:
 	DOSSIER=sys.argv[1].strip('/')
@@ -31,7 +42,16 @@ dico_ratio={}
 
 #LABELS for packets inter-arrival
 # triés par ordre pour analyse de classe
-LABELS=["bon", "perteTampon", "perteEmission", "réordonnancement", "perteAutre", "mélange"]
+LABELS=["bon", "perteTampon", "pertePhyISL", "perteEmission", "réordonnancement", "perteAutre", "mélange"]
+
+def traduit_erreur(nomerr):
+	match nomerr:
+		case "bufOvflwLinkErr":
+			return "perteTampon"
+		case "channelError":
+			return "pertePhyISL"
+		case _:
+			raise Exception(f"erreur nom déinie: {nomerr}")
 
 def nom_algo(algo):
 	if algo=='isls':
@@ -127,8 +147,9 @@ def veritePertesLiens(dossier, str_variants):
 
 	with open(os.path.join(dossier, nom_fic), "r") as fic:
 		for line in fic:
+			type_erreur=line[(z:=line.rfind(',')+1):z+line[z:].find('-')]
 			id_commodite, idseq, temps_ns= eval(line[:line.rfind(',')])
-			add_dico(str_variants, id_commodite, idseq, dico=dico_pertes_bole)
+			add_dico(str_variants, id_commodite, traduit_erreur(type_erreur), idseq, dico=dico_pertes_bole)
 
 
 def repartiteurLogBrut(dossier, str_variants):
@@ -166,12 +187,14 @@ def labellise_arrivees():
 				if dseq < 0:
 					add_dico(valparams, commodite, tuple([*l_arrivees[idinArr+1], inArr, "réordonnancement"]), dico=dico_labellise)
 					continue
-				active_isl=dico_pertes_bole.get(valparams) and dico_pertes_bole[valparams].get(commodite)
+				active_bole=dico_pertes_bole.get(valparams) and dico_pertes_bole[valparams].get(commodite)
 				active_emission=dico_pertes_emission.get(valparams) and dico_pertes_emission[valparams].get(commodite)
 				causes_pertes = np.zeros(int(dseq)-1, dtype=int)+LABELS.index("perteAutre") #par défaut on ne sait pas d'ou vient la perte
 				for q in range(1, int(dseq)):
-					if active_isl and int(arrivees[idinArr][1]+q) in dico_pertes_bole[valparams][commodite]:
-						causes_pertes[q-1] = LABELS.index("perteTampon")
+					if active_bole:
+						for type_err in dico_pertes_bole[valparams][commodite]:
+							if int(arrivees[idinArr][1]+q) in dico_pertes_bole[valparams][commodite][type_err]:
+								causes_pertes[q-1] = LABELS.index(type_err)
 					elif active_emission and int(arrivees[idinArr][1]+q) in dico_pertes_emission[valparams][commodite]:
 						causes_pertes[q-1] = LABELS.index("perteEmission")
 					elif arrivees[idinArr][1]+q in arrivees[:, 1]:
@@ -182,17 +205,20 @@ def labellise_arrivees():
 					add_dico(valparams, commodite, tuple([*l_arrivees[idinArr+1], inArr, "mélange"]), dico=dico_labellise)
 
 #Etude par sources
-def affiche_logs_sources(display_success_rate=AFFICHE_RATIO):
+def affiche_logs_sources():
 	#fig.suptitle("Comparison of the median pings per source")
 	markers_choisis=[m for m in markers.MarkerStyle.markers if m not in markers.MarkerStyle.filled_markers and m!=',']
 	couleurs=['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']
 	nbaxis=len(dico_labellise)
-	fig, axs = plt.subplots(nbaxis, sharex=True, sharey=True, figsize=(10, 10))
-	if not '__getitem__' in dir(axs):
-		axs=np.array([axs])
+	#fig, axs = plt.subplots(nbaxis, sharex=True, sharey=True, figsize=(10, 10*nbaxis))
+	#if not '__getitem__' in dir(axs):
+	#	axs=np.array([axs])
 
 	# affiche pertes
 	for expCntr, (valparams, dic) in enumerate(sorted([elt for elt in dico_labellise.items()])):
+		fig, axs = plt.subplots(1, sharex=True, sharey=True, figsize=(10, 10))
+		axs=np.array([axs])
+		expCntr=0
 		dico_listes_commodites={}
 		for commodite, l_arrivees in sorted([elt for elt in dic.items()]):
 			#l_arrivees : (temps, idseq, inter_arrivee, label)
@@ -202,6 +228,8 @@ def affiche_logs_sources(display_success_rate=AFFICHE_RATIO):
 		axs[expCntr].set_title(valparams)
 		labels_utilises=set()
 		for commodite, donnees in dico_listes_commodites.items():
+			if not is_authorisee(commodite):
+				continue
 			for label, liste in donnees.items():
 				indexCouleur=LABELS.index(label)
 				axs[expCntr].plot([commodite]*len(liste), liste, ls='', marker=markers_choisis[indexCouleur], color=couleurs[indexCouleur], label=('' if label in labels_utilises else label)  )
@@ -211,30 +239,67 @@ def affiche_logs_sources(display_success_rate=AFFICHE_RATIO):
 		axs[expCntr].set_xlabel("ID commodité")
 		axs[expCntr].set_ylabel("temps inter-arrivée (s)")
 
-	fig.tight_layout()
-	plt.savefig(os.path.join(DOSSIER, 'comparaisonv6.png'))
-	plt.show()
+		fig.tight_layout()
+		plt.savefig(os.path.join(DOSSIER, f'comparaisonv6-{valparams}.png'))
+		#plt.show()
 
-	# affiche success ratio
-	if not display_success_rate:
-		return
-	
-	fig, axs = plt.subplots(nbaxis, sharex=True, sharey=True, figsize=(10, 10))
-	if not '__getitem__' in dir(axs):
-		axs=np.array([axs])
+def affiche_ratio_succes():
+	#fig, axs = plt.subplots(nbaxis, sharex=True, sharey=True, figsize=(10, 10*nbaxis))
+	#if not '__getitem__' in dir(axs):
+	#	axs=np.array([axs])
 	
 	for expCntr, (valparams, listexy) in enumerate(sorted([elt for elt in dico_ratio.items()])):
-		nplistexy=np.array(sorted(listexy))
-		axs[expCntr].fill_between(nplistexy[:, 0], nplistexy[: , 1], step='mid', label="sortant")
-		axs[expCntr].fill_between(nplistexy[:, 0], nplistexy[: , 2], step="mid", label="entrant")
+		if 'routes communes' in COMMODITES_COMMUNES:
+			com_communes=COMMODITES_COMMUNES['routes communes']
+		else:
+			com_communes.get(valparams, [])
+		
+		fig, axs = plt.subplots(1, sharex=True, sharey=True, figsize=(10, 10))
+		axs=np.array([axs])
+		expCntr=0
+		nplistexy=np.array(sorted([elt for elt in listexy if is_authorisee(elt[0])]))
+		axs[expCntr].set_title(valparams)
+		axs[expCntr].fill_between(nplistexy[:, 0], nplistexy[: , 1], step='mid', label="émis")
+		axs[expCntr].fill_between(nplistexy[:, 0], nplistexy[: , 2], step="mid", label="reçu")
+		#colorcycle = plt.rcParams['axes.prop_cycle'].by_key()['color'][2:]
+
+		# tout ce bazar pour calculer les groupes et les couleurs
+		lxcoms=[]
+		lenxcoms=0
+		nbgroupes, setcommoditesconcurrentes=0,set()
+		setcommoditesconcurrentes.union()
+		for set_com in com_communes:
+			xcoms=[elt for elt in set_com if is_authorisee(elt)]
+			if len(xcoms):
+				lxcoms.append(xcoms)
+				lenxcoms+=(len(xcoms)>1) and not est_meme_commodite_inversee(xcoms)
+				nbgroupes+=1
+				setcommoditesconcurrentes=setcommoditesconcurrentes.union(set_com)
+		#colorcycle=plt.get_cmap('tab20b')(np.linspace(0,1,6))
+		colorcycle =  plt.rcParams['axes.prop_cycle'].by_key()['color'][2:]
+		couleurgroupeunique=plt.rcParams['axes.prop_cycle'].by_key()['color'][0]
+		axs[expCntr].set_prop_cycle(color=colorcycle)
+		nbcouleursUtlisees=0
+		estPremierUnique=True
+		ilenxcomssupun=0
+		for xcoms in lxcoms:
+			if (len(xcoms)>1) and not est_meme_commodite_inversee(xcoms):
+				ilenxcomssupun+=1
+				y= [min(nplistexy[: , 2])*ilenxcomssupun/lenxcoms]*len(xcoms)
+				axs[expCntr].plot(xcoms, y, ls='-', marker='o')
+				nbcouleursUtlisees+=1
+			else:
+				axs[expCntr].plot(xcoms, [0]*len(xcoms), ls='-', marker='o', color=couleurgroupeunique, label='groupe unique'*estPremierUnique)
+				estPremierUnique=False
+		print(f"{nbgroupes} groupes de commodités en compétition trouvés, dont {nbgroupes-lenxcoms} singuliers, pour un total de {len(setcommoditesconcurrentes)} commodités")
 		axs[expCntr].legend()
 		axs[expCntr].set_xlabel("ID commodité")
 		#axs[expCntr, 1].set_ylabel("Ratio de succes")
-		axs[expCntr].set_ylabel("Débit (Mb/s)")			
-	fig.tight_layout()
-	
-	plt.savefig(os.path.join(DOSSIER, 'comparaisonv6-debits.png'))
-	plt.show()
+		axs[expCntr].set_ylabel("Débit (Mb/s)")	
+				
+		fig.tight_layout()
+		plt.savefig(os.path.join(DOSSIER, f'comparaisonv6-debits-{valparams}.png'))
+		#plt.show()
 		
 
 		
@@ -243,6 +308,7 @@ def remplissage_dico():
 	cleSVGDE='-'.join([DOSSIER,'|à|']+sorted(dossiers))
 	global dico, dico_pertes_bole, dico_ratio, dico_labellise
 	try:
+		#raise Exception("show must go on")
 		with open(FIC_SAUVEGARDE, 'rb') as f:
 			lessvgdes=pickle.load(f)
 		dos_svgdes, dico, dico_pertes_bole, dico_ratio, dico_labellise=lessvgdes.get(cleSVGDE)
@@ -283,4 +349,5 @@ def remplissage_dico():
 if __name__=='__main__':
 	remplissage_dico()
 	affiche_logs_sources()
+	affiche_ratio_succes()
 
