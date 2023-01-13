@@ -44,6 +44,7 @@ def main_step1(list_from_to):
     duration_s = int(dico_params['duree'])
     liste_params=('constellation', 'duree', 'pas', 'isls', 'sol', 'algo', 'threads')
     params=[str(dico_params[cle]) for cle in liste_params]
+    nb_commodites=len(list_from_to)
         
 
 
@@ -51,15 +52,15 @@ def main_step1(list_from_to):
     #setting up commodities
     random.seed(graine)
     reference_rate = 1 # target sending rate in Mb/s
-    list_proportion  =[random.choice(range(70,130))/100 for _ in range(len(list_from_to))]
-    #list_proportion  = [1 for _ in range(len(list_from_to))]
+    list_proportion  =[random.choice(range(70,130))/100 for _ in range(nb_commodites)]
+    #list_proportion  = [1 for _ in range(nb_commodites)]
     tcp_list_flow_size_byte=[int(elt*2*reference_rate*int(params[1])*(1e6/8)) for elt in list_proportion]#tcp : randomization * sending rate  * simu_duration * coeff_Mb_to_bytes
     #tcp_list_flow_size_byte=[int(reference_rate*int(params[1])*(1e6/8))]#tcp : sending rate  * simu_duration * coeff_Mb_to_bytes
     udp_list_flow_size_proportion=[elt*reference_rate for elt in list_proportion]#udp : sending rate * randomization, in Mb/s
 
     #setting up different start times
-    coeff_decalage=1500/reference_rate*1e3/len(list_from_to) # MTU-packet time / nb_commodites in ns
-    list_start_time = [i*coeff_decalage for i in range(len(list_from_to))]
+    coeff_decalage=1500/reference_rate*1e3/nb_commodites # MTU-packet time / nb_commodites in ns
+    list_start_time = [i*coeff_decalage for i in range(nb_commodites)]
 
     # Both protocols
     protocol_chosen=dico_params['protocoles']
@@ -98,13 +99,13 @@ def main_step1(list_from_to):
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[ISL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                        "[GSL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
+                                        "[GSL-DATA-RATE-MEGABIT-PER-S]", str(reference_rate*nb_commodites/10))# for ground station: /10 => a station can accept ~20% of users if gthere are 10 stations
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[ISL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_isl_pkt))
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[GSL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_gsl_pkt))
     #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
-    commodities_set='set(' + ', '.join(str(i) for i in range(len(list_from_to))) + ')'
+    commodities_set='set(' + ', '.join(str(i) for i in range(nb_commodites)) + ')'
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[SET-OF-COMMODITY-PAIRS-LOG]", commodities_set)
     commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in list_from_to) + ')'
@@ -122,7 +123,7 @@ def main_step1(list_from_to):
     if protocol_chosen_name == "tcp":
         networkload.write_schedule(
             run_dir + "/tcp_flow_schedule.csv",
-            len(list_from_to),
+            nb_commodites,
             list_from_to,
             tcp_list_flow_size_byte,
             list_start_time
@@ -131,7 +132,7 @@ def main_step1(list_from_to):
     # udp_burst_schedule.csv
     elif protocol_chosen_name == "udp":
         with open(run_dir + "/udp_burst_schedule.csv", "w+") as f_out:
-            for i in range(len(list_from_to)):
+            for i in range(nb_commodites):
                 f_out.write(
                     "%d,%d,%d,%.10f,%d,%d,,%s\n" % (
                         i,

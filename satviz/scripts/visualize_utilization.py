@@ -23,7 +23,8 @@
 import math
 import ephem
 import pandas as pd
-import re
+import re, os
+import yaml
 
 try:
     from . import util
@@ -35,30 +36,29 @@ import sys
 # For all end-end paths, visualize link utilization at a specific time instance
 
 EARTH_RADIUS = 6378135.0 # WGS72 value; taken from https://geographiclib.sourceforge.io/html/NET/NETGeographicLib_8h_source.html
+MU_EARTH= 3.98574405e+14
+SECONDS_SIDEREAL_DAY= 86164
 
 # CONSTELLATION GENERATION GENERAL CONSTANTS
-ECCENTRICITY = 0.0000001  # Circular orbits are zero, but pyephem does not permit 0, so lowest possible value
-ARG_OF_PERIGEE_DEGREE = 0.0
 PHASE_DIFF = True
 EPOCH = "2000-01-01 00:00:00"
 UTIL_INTERVAL = 100
 
-NAME = "tas_700"
+#Default constellation
+NAME='tas_700'
+ECCENTRICITY=1e-7
+ARG_OF_PERIGEE_DEGREE=0.0
+ALTITUDE_M=700000
+NUM_ORBS=28
+NUM_SATS_PER_ORB=27
+INCLINATION_DEGREE=65
 
-################################################################
-# The below constants are taken from Telesat's FCC filing as below:
-# [1]: https://fcc.report/IBFS/SAT-MPL-20200526-00053/2378318.pdf
-################################################################
-ECCENTRICITY= 0.0000001  # Circular orbits are zero, but pyephem does not permit 0, so lowest possible value
-ARG_OF_PERIGEE_DEGREE= 0.0
-
-ALTITUDE_M = 700000  # Altitude ~700 km
-NUM_ORBS = 28
-NUM_SATS_PER_ORB = 27
-INCLINATION_DEGREE= 65
-MU_EARTH= 3.98574405e+14
-SECONDS_SIDEREAL_DAY= 86164
-MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(ALTITUDE_M+EARTH_RADIUS)**3)/math.pi/2
+def maj_cstl(**kwargs):
+    global MEAN_MOTION_REV_PER_DAY
+    for k, v in kwargs.items():
+        if k in globals():
+            globals()[k]=v
+    MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(ALTITUDE_M+EARTH_RADIUS)**3)/math.pi/2
 
 
 # General files needed to generate visualizations; Do not change for different simulations
@@ -74,6 +74,7 @@ GEN_TIME=3000  #ms
 # If city ID is X (for Paris X = 24) and constellation is Starlink_550 (1584 satellites),
 # then offset ID is 1584 + 24 = 1608.
 IN_UTIL_FILE = "../../papier2/sauvegardes/svgde_global/svgde_pas2s-sanslienpolaire2022-11-27-0027_2/run_loaded_tm_pairing_10_Mbps_for_120s_with_udp_algorithm_free_one_only_over_isls3-slp/logs_ns3/isl_utilization.csv"
+IN_UTIL_DIR=''
 
 sat_objs = []
 city_details = {}
@@ -86,15 +87,72 @@ GEN_TIME=1000  #ms
 OUT_DIR = "../viz_output/"
 OUT_HTML_FILE = OUT_DIR + NAME + "_util_" + str(GEN_TIME) + ".html"
 if len(sys.argv)>1:
-    IN_UTIL_FILE =sys.argv[1]
+    #for compatibility
+    if sys.argv[1].endswith("isl_utilization.csv"):
+        IN_UTIL_FILE = sys.argv[1]
+        maj_cstl()
+    else:
+        IN_UTIL_DIR = sys.argv[1]
     print(IN_UTIL_FILE)
+
+
 myOUTPUT_NAME = '-'.join(IN_UTIL_FILE.split('/')[3:])
 OUT_HTML_FILE = OUT_DIR + myOUTPUT_NAME + "_util_" + str(GEN_TIME) + ".html"
 city_detail_file = re.search(".*svgde_[^/]*",IN_UTIL_FILE).group() 
 
 sat_objs = []
 time_wise_util = {}
+liste_commodites=[]
 
+def add_dico(*args,dico={}):
+	n=len(args)
+	assert n>=2
+	dic=dico
+	for k in range(n-2):
+		if args[k] not in dic:
+			dic[args[k]]={}
+		dic=dic[args[k]]
+	if args[n-2] not in dic:
+		dic[args[n-2]]=[]
+	dic[args[n-2]].append(args[-1])
+
+def parse_commodites(fic):
+    pass
+
+def retrouveFicsEtConfigRecursif(chemin_initial):
+    global IN_UTIL_FILE
+    isl_utilisation=False
+    gsl_utilization=False
+    trouves={}
+    aChercher=[chemin_initial]
+    while aChercher:
+        nom=aChercher.pop()
+        for glob in os.listdir(nom):
+            x=os.path.join(nom,glob)  
+            if os.path.isdir(x):
+                aChercher.append(x)
+            elif glob=="courante.yaml":
+                #update constellation parameters 
+                with open(x, 'r') as f:
+                    dico_params=yaml.load(f, Loader=yaml.Loader)
+                constel_fic=dico_params.get('constellation')
+                constel_fic="../../papier2/config/"+constel_fic+".yaml"
+                with open(constel_fic, 'r') as f:
+                    dico_constel=yaml.load(f, Loader=yaml.Loader)
+                maj_cstl(**dico_constel)
+            elif glob=="isl_utilization.csv":
+                isl_utilisation=True
+                add_dico(nom, glob, dico=trouves)
+            elif glob=="udp_bursts_incoming.csv":
+                add_dico(nom, "commodites", dico=trouves)
+            elif re.match("udp_burst_\d+_incoming\.csv", glob):
+                #recup pkts envoyes
+                pass
+            elif re.match("pattern", glob):
+                #recup pkts recus
+                pass
+    #
+    return isl_utilisation, gsl_utilization
 
 def generate_link_util_at_time():
     """
