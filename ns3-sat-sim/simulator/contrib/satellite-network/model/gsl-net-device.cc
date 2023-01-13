@@ -255,7 +255,6 @@ GSLNetDevice::TransmitStart (Ptr<Packet> p, const Address dest)
   NS_ASSERT_MSG (m_txMachineState == READY, "Must be READY to transmit");
   m_txMachineState = BUSY;
   m_currentPkt = p;
-  m_phyTxBeginTrace (m_currentPkt);
 
   Time txTime = m_bps.CalculateBytesTxTime (p->GetSize ());
   Time txCompleteTime = txTime + m_tInterframeGap;
@@ -264,9 +263,10 @@ GSLNetDevice::TransmitStart (Ptr<Packet> p, const Address dest)
   Simulator::Schedule (txCompleteTime, &GSLNetDevice::TransmitComplete, this, dest);
 
   bool result = m_channel->TransmitStart (p, this, dest, txTime);
+  m_phyTxBeginTrace (m_node, m_channel->GetDestDevice()->GetNode(),  m_currentPkt, txTime);
   if (result == false)
     {
-      m_phyTxDropTrace (p);
+      m_phyTxDropTrace (m_node, m_channel->GetDestDevice()->GetNode(),  m_currentPkt, txTime);
     }
 
   NS_LOG_FUNCTION (this << " done");
@@ -353,7 +353,7 @@ GSLNetDevice::Receive (Ptr<Packet> packet)
       // If we have an error model and it indicates that it is time to lose a
       // corrupted packet, don't forward this packet up, let it go.
       //
-      m_phyRxDropTrace (packet);
+      m_phyRxDropTrace (m_node, packet);
     }
   else 
     {
@@ -523,7 +523,7 @@ GSLNetDevice::Send (
   //
   if (IsLinkUp () == false)
     {
-      m_macTxDropTrace (packet);
+      m_macTxDropTrace (m_node,  m_currentPkt);
       return false;
     }
 
@@ -559,7 +559,7 @@ GSLNetDevice::Send (
 
   // Enqueue may fail (overflow)
 
-  m_macTxDropTrace (packet);
+  m_macTxDropTrace (m_node,  packet);
   return false;
 }
 

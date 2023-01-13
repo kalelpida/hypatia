@@ -12,7 +12,7 @@ import re, yaml
 import pickle
 
 
-DOSSIER='reunion0601'
+DOSSIER='simpletest'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
 DOSSIER_A_INCLURE=['']
 AFFICHE_RATIO=True
@@ -37,21 +37,11 @@ FIC_SAUVEGARDE = __file__.removesuffix('.py')+".pickle"
 dico={}
 dico_labellise={} # similar to dico
 dico_pertes_bole={}#buffer overflow link error
-dico_pertes_emission={}
 dico_ratio={}
 
 #LABELS for packets inter-arrival
 # triés par ordre pour analyse de classe
-LABELS=["bon", "perteTampon", "pertePhyISL", "perteEmission", "réordonnancement", "perteAutre", "mélange"]
-
-def traduit_erreur(nomerr):
-	match nomerr:
-		case "bufOvflwLinkErr":
-			return "perteTampon"
-		case "channelError":
-			return "pertePhyISL"
-		case _:
-			raise Exception(f"erreur nom déinie: {nomerr}")
+LABELS=["bon", "perteTampon", "pertePhyISL", "réordonnancement", "perteAutre", "mélange"]
 
 def nom_algo(algo):
 	if algo=='isls':
@@ -147,27 +137,30 @@ def veritePertesLiens(dossier, str_variants):
 
 	with open(os.path.join(dossier, nom_fic), "r") as fic:
 		for line in fic:
-			type_erreur=line[(z:=line.rfind(',')+1):z+line[z:].find('-')]
-			id_commodite, idseq, temps_ns= eval(line[:line.rfind(',')])
-			add_dico(str_variants, id_commodite, traduit_erreur(type_erreur), idseq, dico=dico_pertes_bole)
+			z=line.rfind(',')
+			nom_erreur=line[z+5:].strip()#[ISL/GSL]-erreur
+			temps_ns, node_id, id_commodite, idseq, pkt_size = eval(line[:z])
+			match nom_erreur:
+				case "bufOvflwLinkErr":
+					add_dico(str_variants, id_commodite, idseq, "perteTampon", dico=dico_pertes_bole)
+				case "channelError":
+					add_dico(str_variants, id_commodite, idseq, "pertePhyISL", dico=dico_pertes_bole) 
+				case _:
+					raise Exception(f"erreur nom déinie: {nom_erreur}")
 
 
 def repartiteurLogBrut(dossier, str_variants):
-	for nom_fic in os.listdir(dossier):
-		if re.match("udp_burst_\d+_incoming.csv", nom_fic):
-			################ add data in main dict
-			with open(os.path.join(dossier, nom_fic), "r") as fic:
-				for line in fic:
-					id_commodite, idseq, temps_ns= eval(line.strip())
-					add_dico(str_variants, id_commodite, (temps_ns*1e-9, idseq))
-		elif re.match("udp_burst_\d+_outgoing.csv", nom_fic):
-			################ add emission losses in related dict
-			with open(os.path.join(dossier, nom_fic), "r") as fic:
-				for line in fic:
-					id_commodite, idseq, temps_ns, succes= eval(line.strip())
-					if not succes:
-						print("erreur", str_variants, id_commodite, idseq)
-						add_dico(str_variants, id_commodite, idseq, dico=dico_pertes_emission)
+	nom_fic="link.tx"
+	if nom_fic not in os.listdir(dossier):
+		raise Exception("Log non présent")
+	################ add emission losses in related dict
+	with open(os.path.join(dossier, nom_fic), "r") as fic:
+		for line in fic:
+			n=line.rfind(',')
+			info=line[n+1:]
+			temps_ns, emtr_id, rcptr_id, id_commodite, idseq, pkt_size, txtime = eval(line[:n])
+			if info.startswith("GSL") and emtr_id<rcptr_id:#seuls paquets vers le bas
+				add_dico(str_variants, id_commodite, (temps_ns*1e-9, idseq, emtr_id))
 	
 def labellise_arrivees():
 	""" copy dico, but for each commodity, deletes the 1st packet, 
@@ -175,8 +168,8 @@ def labellise_arrivees():
 
 	for (valparams, dic) in dico.items():
 		for commodite, l_arrivees in sorted([elt for elt in dic.items()]):
-			arrivees=np.array(l_arrivees)
-			inter_arrivees= arrivees[1:] - arrivees[:-1]
+			arrivees=np.array(l_arrivees)#, dtype=np.dtype({'names':['idseq', 'instant', 'idNdEmtr'], 'formats':[int, float, int]}))
+			inter_arrivees= arrivees[1:, :2] - arrivees[:-1, :2]
 			#diviseuria = np.mean(inter_arrivees)*10
 			#inter_arrivees/=diviseuria
 			#inter_arrivees[:,0].clip(min=0, max=1, out=inter_arrivees[:,0])
@@ -188,15 +181,11 @@ def labellise_arrivees():
 					add_dico(valparams, commodite, tuple([*l_arrivees[idinArr+1], inArr, "réordonnancement"]), dico=dico_labellise)
 					continue
 				active_bole=dico_pertes_bole.get(valparams) and dico_pertes_bole[valparams].get(commodite)
-				active_emission=dico_pertes_emission.get(valparams) and dico_pertes_emission[valparams].get(commodite)
 				causes_pertes = np.zeros(int(dseq)-1, dtype=int)+LABELS.index("perteAutre") #par défaut on ne sait pas d'ou vient la perte
 				for q in range(1, int(dseq)):
 					if active_bole:
-						for type_err in dico_pertes_bole[valparams][commodite]:
-							if int(arrivees[idinArr][1]+q) in dico_pertes_bole[valparams][commodite][type_err]:
-								causes_pertes[q-1] = LABELS.index(type_err)
-					elif active_emission and int(arrivees[idinArr][1]+q) in dico_pertes_emission[valparams][commodite]:
-						causes_pertes[q-1] = LABELS.index("perteEmission")
+						if (curseq:=int(arrivees[idinArr][1]+q)) in dico_pertes_bole[valparams][commodite]:
+							causes_pertes[q-1] = LABELS.index(dico_pertes_bole[valparams][commodite][curseq][0])
 					elif arrivees[idinArr][1]+q in arrivees[:, 1]:
 						causes_pertes[q-1] = LABELS.index("réordonnancement")
 				if all(causes_pertes==causes_pertes[0]): #toutes les pertes sont identiques
@@ -222,7 +211,7 @@ def affiche_logs_sources():
 		dico_listes_commodites={}
 		for commodite, l_arrivees in sorted([elt for elt in dic.items()]):
 			#l_arrivees : (temps, idseq, inter_arrivee, label)
-			for (temps, idseq, inter_arrivee, label) in l_arrivees:
+			for (temps, idseq, idNdEmtr, inter_arrivee, label) in l_arrivees:
 				add_dico(commodite, label, inter_arrivee, dico=dico_listes_commodites)
 		
 		axs[expCntr].set_title(valparams)
@@ -241,7 +230,7 @@ def affiche_logs_sources():
 
 		fig.tight_layout()
 		plt.savefig(os.path.join(DOSSIER, f'comparaisonv6-{valparams}.png'))
-		#plt.show()
+		plt.show()
 
 def affiche_ratio_succes():
 	#fig, axs = plt.subplots(nbaxis, sharex=True, sharey=True, figsize=(10, 10*nbaxis))
@@ -299,7 +288,7 @@ def affiche_ratio_succes():
 				
 		fig.tight_layout()
 		plt.savefig(os.path.join(DOSSIER, f'comparaisonv6-debits-{valparams}.png'))
-		#plt.show()
+		plt.show()
 		
 
 		
@@ -349,5 +338,5 @@ def remplissage_dico():
 if __name__=='__main__':
 	remplissage_dico()
 	affiche_logs_sources()
-	affiche_ratio_succes()
+	#affiche_ratio_succes()
 

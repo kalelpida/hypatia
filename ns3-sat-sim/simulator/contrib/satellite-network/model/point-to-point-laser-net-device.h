@@ -333,7 +333,7 @@ private:
    * The trace source fired when packets coming into the "top" of the device
    * at the L3/L2 transition are dropped before being queued for transmission.
    */
-  TracedCallback<Ptr<const Packet> > m_macTxDropTrace;
+  TracedCallback<Ptr<const Node>, Ptr<const Packet>> m_macTxDropTrace;
 
   /**
    * The trace source fired for packets successfully received by the device
@@ -362,7 +362,7 @@ private:
    * The trace source fired when a packet begins the transmission process on
    * the medium.
    */
-  TracedCallback<Ptr<const Packet> > m_phyTxBeginTrace;
+  TracedCallback<Ptr<const Node>, Ptr<const Node>,  Ptr<const Packet>, const Time& > m_phyTxBeginTrace;
 
   /**
    * The trace source fired when a packet ends the transmission process on

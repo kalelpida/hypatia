@@ -123,6 +123,7 @@ namespace ns3 {
         // ISL devices
         NetDeviceContainer m_islNetDevices;
         std::vector<std::pair<int32_t, int32_t>> m_islFromTo;
+        //std::map<std::pair<int32_t, int32_t>, Ptr<std::vector<double>>> m_map_FromTo_UtilizationVec;
 
         // Values
         double m_isl_data_rate_megabit_per_s;
@@ -130,9 +131,11 @@ namespace ns3 {
         int64_t m_isl_max_queue_size_pkts;
         int64_t m_gsl_max_queue_size_pkts;
         bool m_enable_isl_utilization_tracking;
+        bool m_enable_full_log;
         int64_t m_isl_utilization_tracking_interval_ns;
 
         Ptr<OutputStreamWrapper> m_drop_stream; //!< stream where to log drop events
+        Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log drop events
 
     };
 

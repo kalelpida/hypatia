@@ -252,7 +252,6 @@ PointToPointLaserNetDevice::TransmitStart (Ptr<Packet> p)
   NS_ASSERT_MSG (m_txMachineState == READY, "Must be READY to transmit");
   m_txMachineState = BUSY;
   m_currentPkt = p;
-  m_phyTxBeginTrace (m_currentPkt);
   TrackUtilization(true);
 
   Time txTime = m_bps.CalculateBytesTxTime (p->GetSize ());
@@ -262,6 +261,7 @@ PointToPointLaserNetDevice::TransmitStart (Ptr<Packet> p)
   Simulator::Schedule (txCompleteTime, &PointToPointLaserNetDevice::TransmitComplete, this);
 
   bool result = m_channel->TransmitStart (p, this, m_destination_node, txTime);
+  m_phyTxBeginTrace(m_node, m_destination_node,  m_currentPkt, txTime);
   if (result == false)
     {
       m_phyTxDropTrace (p);
@@ -540,7 +540,7 @@ PointToPointLaserNetDevice::Send (
   //
   if (IsLinkUp () == false)
     {
-      m_macTxDropTrace (packet);
+      m_macTxDropTrace (m_node,  m_currentPkt);
       return false;
     }
 
@@ -573,7 +573,7 @@ PointToPointLaserNetDevice::Send (
 
   // Enqueue may fail (overflow)
 
-  m_macTxDropTrace (packet);
+  m_macTxDropTrace (m_node,  m_currentPkt);
   return false;
 }
 
