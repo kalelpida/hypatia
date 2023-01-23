@@ -193,6 +193,10 @@ namespace ns3 {
         std::string filenameDeux = m_basicSimulation->GetLogsDir() + "/link.tx";
         AsciiTraceHelper asciiTraceHelperDeux;
         m_tx_stream = asciiTraceHelperDeux.CreateFileStream (filenameDeux);
+
+        std::string filenameTrois = m_basicSimulation->GetLogsDir() + "/link.rx";
+        AsciiTraceHelper asciiTraceHelperTrois;
+        m_rx_stream = asciiTraceHelperDeux.CreateFileStream (filenameTrois);
         
         // Initialize satellites
         ReadSatellites();
@@ -450,8 +454,10 @@ namespace ns3 {
                 m_islFromTo.push_back(std::make_pair(sat1_id, sat0_id));
             }
             if (m_enable_full_log){
-                netDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, "ISL-tx"));
+                netDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, "ISL-rx"));
                 //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
+                netDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, "ISL-rx"));
+                netDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, "ISL-tx"));
                 netDevices.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, "ISL-tx"));
 
                 /*
@@ -541,12 +547,14 @@ namespace ns3 {
                     //Ptr<const std::string> ptr_str_sat(&str_sat);
                     devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, "GSL-bufOvflwLinkErr"));
                     devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, "GSL-tx"));
+                    devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, "GSL-rx"));
             } else {
                     //Ground station case
                     //const std::string str_gs = format_string("bufOvflwLinkErr-GSL-GS%d", i-nb_sats);
                     //Ptr<const std::string> ptr_str_gs(&str_gs);
                     devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, "GSL-bufOvflwLinkErr"));
                     devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, "GSL-tx"));
+                    devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, "GSL-rx"));
             }            
             }
         }

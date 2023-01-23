@@ -135,7 +135,8 @@ namespace ns3 {
         int64_t m_isl_utilization_tracking_interval_ns;
 
         Ptr<OutputStreamWrapper> m_drop_stream; //!< stream where to log drop events
-        Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log drop events
+        Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log transmission events
+        Ptr<OutputStreamWrapper> m_rx_stream; //!< stream where to log receive events
 
     };
 

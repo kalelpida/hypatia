@@ -389,8 +389,8 @@ GSLNetDevice::Receive (Ptr<Packet> packet)
           // 'from' argument for distributed simulator
           m_promiscCallback (this, packet, protocol, GetAddress(), GetAddress (), NetDevice::PACKET_HOST);
         }
-
-      m_macRxTrace (originalPacket);
+      
+      m_macRxTrace (m_node, originalPacket);
       m_rxCallback (this, packet, protocol, GetAddress());
     }
 }

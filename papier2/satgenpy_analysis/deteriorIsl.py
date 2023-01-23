@@ -23,19 +23,23 @@
 
 import os
 
-def calcul_ISL_utilisation(nom_doss):
+def calcul_ISL_utilisation(nom_doss, commodites):
     """ get the most used ISLs"""
 
     emplacement_fics=os.path.join('data', nom_doss, 'data')
-
+    dico_coms={(src, dst) for (src, dst, deb) in commodites}
     nx_calcs=os.listdir(emplacement_fics)
     nx_paths=[os.path.join(emplacement_fics,nom) for nom in nx_calcs if nom.startswith('networkx_path')]
     dico_compteur_ISL={}
     for fic in nx_paths:
         with open(fic, 'r') as f:
             ligne0=f.readline()
-            ligne0.removeprefix('0,')
-            listeSats=ligne0.split('-')[1:-1]
+            ligne0=ligne0.removeprefix('0,')
+            lsplit=ligne0.split('-')
+            solsrc, soldst=int(lsplit[0]), int(lsplit[-1])
+            if (solsrc, soldst) not in dico_coms:
+                continue
+            listeSats=lsplit[1:-1]
             satsId=[int(sat) for sat in listeSats]
             for i in range(len(listeSats)-1):
                 paire=min(satsId[i:i+2]), max(satsId[i:i+2])
@@ -57,6 +61,9 @@ def casseISLs(dico):
     duree=dico['duree']
     pas=dico['pas']
     
+    #get commodities list
+    with open("../satellite_networks_state/commodites.temp","r") as f_comms:
+            list_comms = eval(f_comms.readline())
 
     liens_compromis_str=[]
     ajout_str_isl=""
@@ -65,12 +72,11 @@ def casseISLs(dico):
 
         sel=params.get('sel', '')
         if sel.startswith('topUtil'):
-            listeUtilISL=calcul_ISL_utilisation(os.path.join(nom_doss, f"{pas}ms_for_{duree}s", "manual"))
+            listeUtilISL=calcul_ISL_utilisation(os.path.join(nom_doss, f"{pas}ms_for_{duree}s", "manual"), list_comms)
             nb=int(sel.removeprefix('topUtil'))
             liens_compromis_int=listeUtilISL[:nb]
             for l in liens_compromis_int:
-                liens_compromis_str.append('{} {}'.format(*l[0]))
-                liens_compromis_str.append(f'{l[0][1]} {l[0][0]}')
+                liens_compromis_str.append((l[0][0], '{} {} '.format(*l[0])))
 
     print("generation des liens compromis :", liens_compromis_str)
     if not liens_compromis_str or not ajout_str_isl:
@@ -84,10 +90,13 @@ def casseISLs(dico):
         lignes=f.readlines()
     for ligne in lignes:
         modif=False
-        for l in liens_compromis_str:
+        ligneval0=int(ligne[:ligne.find(' ')])
+        for lv0, l in liens_compromis_str:
             if ligne.startswith(l):
-                vrai_lignes.append(l + ' ' + ajout_str_isl + "\n")
+                vrai_lignes.append(l + ajout_str_isl + "\n")
                 modif=True
+                break
+            if ligneval0 < lv0:
                 break
         if not modif:
             vrai_lignes.append(ligne)
@@ -101,7 +110,7 @@ def casseISLs(dico):
     assert os.path.isfile( fic_config_ns3:=os.path.join(run_dir,"config_ns3.properties"))
     with open(fic_config_ns3, 'a') as f:
         f.write("######### Liens compromis, paramètres:"+ajout_str_isl+"\n")
-        for l in liens_compromis_str:
+        for _, l in liens_compromis_str:
             f.write("# "+l+"\n") 
 
 

@@ -10,16 +10,23 @@ from matplotlib import markers
 import numpy as np
 import re, yaml
 import pickle
+import etudes7
 
 
-DOSSIER='simpletest'
+DOSSIER='reunion230123sc'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
 DOSSIER_A_INCLURE=['']
 AFFICHE_RATIO=True
 
 PARAMS_A_EXCLURE = []#'NuldeteriorISL', 'brstErrMdl'] #
 
-COMMODITES_COMMUNES = {'routes communes': [{67, 5, 37, 71, 7, 73, 13, 45, 61, 93, 53, 87, 89, 27, 29}, {26, 27, 36, 37}, {88, 66, 28, 86}, {24, 34, 62}, {43, 19, 51, 59, 31}, {50, 51, 30, 31}, {11, 47}, {1, 35, 39, 77, 15, 23, 25, 63}, {17, 75, 97, 49}, {32, 33, 84}, {64, 65, 90}, {0, 38, 14}, {65, 3, 99, 69, 83, 57, 91}, {78, 79}, {8, 98}, {70, 71}, {18, 19}, {20, 21}, {81, 21}, {54, 94}, {9, 99}, {56, 82}, {44, 45}, {33, 41, 79, 85, 55, 95}, {80, 81}, {96, 74, 48}, {58, 59}]}#output of etudes7.py
+if len(sys.argv)==2:
+	DOSSIER=sys.argv[1].strip('/')
+	
+assert etudes7.DOSSIER == DOSSIER
+
+COMMODITES_COMMUNES = etudes7.main()
+
 def is_authorisee(commodite):
 	return True #commodite%2 == 0
 
@@ -29,15 +36,13 @@ def est_meme_commodite_inversee(xcoms):
 	x=sorted(xcoms)
 	return x[1]-x[0]==1
 
-if len(sys.argv)==2:
-	DOSSIER=sys.argv[1].strip('/')
-
 FIC_SAUVEGARDE = __file__.removesuffix('.py')+".pickle"
 
 dico={}
 dico_labellise={} # similar to dico
 dico_pertes_bole={}#buffer overflow link error
 dico_ratio={}
+NB_SATS=0
 
 #LABELS for packets inter-arrival
 # triés par ordre pour analyse de classe
@@ -95,9 +100,21 @@ def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
 	return trouves, sorted(cles_variantes)
 
 def getconfigcourante(dossier, cles_variantes):
+	global NB_SATS
 	chemin, =re.search('(.*svgde_[^/]*20\d{2}-\d{2}-\d{2}-\d{4}_\d+/)',dossier).groups()#all before the config_name
 	with open(os.path.join(chemin,  "courante.yaml"), 'r') as f:
 		dico_config=yaml.load(f, Loader=yaml.Loader)
+		constel_nom=dico_config.get('constellation')
+		os.path.abspath
+	chemin_config=re.search('.*papier2', os.path.abspath(__file__)).group(0)
+	with open(os.path.join(chemin_config,  'config', constel_nom+".yaml"), 'r') as f:
+		dico_constel=yaml.load(f, Loader=yaml.Loader)
+	nbsats=dico_constel.get('NUM_ORBS')*dico_constel.get('NUM_SATS_PER_ORB')
+	if NB_SATS==0:
+		NB_SATS=nbsats
+	if NB_SATS!=nbsats:
+		raise Exception("redéfinition nombre satellites")
+	
 	liste_variants=[]
 	for cle in cles_variantes:
 		valeur =  dico_config[cle]
@@ -147,10 +164,11 @@ def veritePertesLiens(dossier, str_variants):
 					add_dico(str_variants, id_commodite, idseq, "pertePhyISL", dico=dico_pertes_bole) 
 				case _:
 					raise Exception(f"erreur nom déinie: {nom_erreur}")
+			assert len(dico_pertes_bole[str_variants][id_commodite][idseq])==1
 
 
 def repartiteurLogBrut(dossier, str_variants):
-	nom_fic="link.tx"
+	nom_fic="link.rx"
 	if nom_fic not in os.listdir(dossier):
 		raise Exception("Log non présent")
 	################ add emission losses in related dict
@@ -158,9 +176,9 @@ def repartiteurLogBrut(dossier, str_variants):
 		for line in fic:
 			n=line.rfind(',')
 			info=line[n+1:]
-			temps_ns, emtr_id, rcptr_id, id_commodite, idseq, pkt_size, txtime = eval(line[:n])
-			if info.startswith("GSL") and emtr_id<rcptr_id:#seuls paquets vers le bas
-				add_dico(str_variants, id_commodite, (temps_ns*1e-9, idseq, emtr_id))
+			temps_ns, rcptr_id, id_commodite, idseq, pkt_size = eval(line[:n])
+			if info.startswith("GSL") and NB_SATS<=rcptr_id:#seuls paquets vers le bas
+				add_dico(str_variants, id_commodite, (temps_ns*1e-9, idseq))
 	
 def labellise_arrivees():
 	""" copy dico, but for each commodity, deletes the 1st packet, 
@@ -173,6 +191,7 @@ def labellise_arrivees():
 			#diviseuria = np.mean(inter_arrivees)*10
 			#inter_arrivees/=diviseuria
 			#inter_arrivees[:,0].clip(min=0, max=1, out=inter_arrivees[:,0])
+			active_bole=dico_pertes_bole.get(valparams) and dico_pertes_bole[valparams].get(commodite)
 			for idinArr, (inArr, dseq) in enumerate(inter_arrivees):
 				if dseq == 1:
 					add_dico(valparams, commodite, tuple([*l_arrivees[idinArr+1], inArr, "bon"]), dico=dico_labellise)
@@ -180,14 +199,14 @@ def labellise_arrivees():
 				if dseq < 0:
 					add_dico(valparams, commodite, tuple([*l_arrivees[idinArr+1], inArr, "réordonnancement"]), dico=dico_labellise)
 					continue
-				active_bole=dico_pertes_bole.get(valparams) and dico_pertes_bole[valparams].get(commodite)
 				causes_pertes = np.zeros(int(dseq)-1, dtype=int)+LABELS.index("perteAutre") #par défaut on ne sait pas d'ou vient la perte
 				for q in range(1, int(dseq)):
-					if active_bole:
-						if (curseq:=int(arrivees[idinArr][1]+q)) in dico_pertes_bole[valparams][commodite]:
-							causes_pertes[q-1] = LABELS.index(dico_pertes_bole[valparams][commodite][curseq][0])
-					elif arrivees[idinArr][1]+q in arrivees[:, 1]:
+					curseq=int(arrivees[idinArr][1]+q)
+					if active_bole and curseq in dico_pertes_bole[valparams][commodite]:
+						causes_pertes[q-1] = LABELS.index(dico_pertes_bole[valparams][commodite][curseq][0])
+					elif curseq in arrivees[:, 1]:
 						causes_pertes[q-1] = LABELS.index("réordonnancement")
+				assert all(causes_pertes!=LABELS.index("perteAutre")) # toutes les pertes doivent être tracées
 				if all(causes_pertes==causes_pertes[0]): #toutes les pertes sont identiques
 					add_dico(valparams, commodite, tuple([*l_arrivees[idinArr+1], inArr, LABELS[causes_pertes[0]]]), dico=dico_labellise)
 				else:
@@ -196,7 +215,8 @@ def labellise_arrivees():
 #Etude par sources
 def affiche_logs_sources():
 	#fig.suptitle("Comparison of the median pings per source")
-	markers_choisis=[m for m in markers.MarkerStyle.markers if m not in markers.MarkerStyle.filled_markers and m!=',']
+	#markers_choisis=[m for m in markers.MarkerStyle.markers if m not in markers.MarkerStyle.filled_markers and m!=',']
+	markers_choisis = ['.', '1', '2', '3', '4', '+', 'x', '|', '_', 4, 5, 6, 7 ]
 	couleurs=['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']
 	nbaxis=len(dico_labellise)
 	#fig, axs = plt.subplots(nbaxis, sharex=True, sharey=True, figsize=(10, 10*nbaxis))
@@ -211,17 +231,18 @@ def affiche_logs_sources():
 		dico_listes_commodites={}
 		for commodite, l_arrivees in sorted([elt for elt in dic.items()]):
 			#l_arrivees : (temps, idseq, inter_arrivee, label)
-			for (temps, idseq, idNdEmtr, inter_arrivee, label) in l_arrivees:
+			for (temps, idseq, inter_arrivee, label) in l_arrivees:
 				add_dico(commodite, label, inter_arrivee, dico=dico_listes_commodites)
 		
 		axs[expCntr].set_title(valparams)
+		axs[expCntr].set_yscale('log')
 		labels_utilises=set()
 		for commodite, donnees in dico_listes_commodites.items():
 			if not is_authorisee(commodite):
 				continue
 			for label, liste in donnees.items():
 				indexCouleur=LABELS.index(label)
-				axs[expCntr].plot([commodite]*len(liste), liste, ls='', marker=markers_choisis[indexCouleur], color=couleurs[indexCouleur], label=('' if label in labels_utilises else label)  )
+				axs[expCntr].plot([commodite]*len(liste), liste, ls='', marker=markers_choisis[indexCouleur], markersize= 4 if indexCouleur == 0 else 10, color=couleurs[indexCouleur], label=('' if label in labels_utilises else label)  )
 				labels_utilises.add(label)
 				
 		axs[expCntr].legend()
@@ -230,7 +251,8 @@ def affiche_logs_sources():
 
 		fig.tight_layout()
 		plt.savefig(os.path.join(DOSSIER, f'comparaisonv6-{valparams}.png'))
-		plt.show()
+		#plt.show()
+		plt.close()
 
 def affiche_ratio_succes():
 	#fig, axs = plt.subplots(nbaxis, sharex=True, sharey=True, figsize=(10, 10*nbaxis))
@@ -238,10 +260,10 @@ def affiche_ratio_succes():
 	#	axs=np.array([axs])
 	
 	for expCntr, (valparams, listexy) in enumerate(sorted([elt for elt in dico_ratio.items()])):
-		if 'routes communes' in COMMODITES_COMMUNES:
-			com_communes=COMMODITES_COMMUNES['routes communes']
+		if etudes7.ROUTAGE_UNIQUE in COMMODITES_COMMUNES:
+			com_communes=COMMODITES_COMMUNES[etudes7.ROUTAGE_UNIQUE]
 		else:
-			com_communes.get(valparams, [])
+			com_communes=COMMODITES_COMMUNES[valparams]
 		
 		fig, axs = plt.subplots(1, sharex=True, sharey=True, figsize=(10, 10))
 		axs=np.array([axs])
@@ -288,7 +310,8 @@ def affiche_ratio_succes():
 				
 		fig.tight_layout()
 		plt.savefig(os.path.join(DOSSIER, f'comparaisonv6-debits-{valparams}.png'))
-		plt.show()
+		#plt.show()
+		plt.close()
 		
 
 		
@@ -338,5 +361,5 @@ def remplissage_dico():
 if __name__=='__main__':
 	remplissage_dico()
 	affiche_logs_sources()
-	#affiche_ratio_succes()
+	affiche_ratio_succes()
 

@@ -349,7 +349,7 @@ private:
    * transition).  This is a non-promiscuous trace (which doesn't mean a lot 
    * here in the point-to-point-laser device).
    */
-  TracedCallback<Ptr<const Packet> > m_macRxTrace;
+  TracedCallback<Ptr<const Node>, Ptr<const Packet> > m_macRxTrace;
 
   /**
    * The trace source fired for packets successfully received by the device
@@ -393,7 +393,7 @@ private:
    * This happens if the receiver is not enabled or the error model is active
    * and indicates that the packet is corrupt.
    */
-  TracedCallback<Ptr<const Packet> > m_phyRxDropTrace;
+  TracedCallback<Ptr<const Node>, Ptr<const Packet>> m_phyRxDropTrace;
 
   /**
    * A trace source that emulates a non-promiscuous protocol sniffer connected 

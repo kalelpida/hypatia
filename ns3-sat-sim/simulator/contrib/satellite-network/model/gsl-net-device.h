@@ -346,7 +346,7 @@ private:
    * transition).  This is a non-promiscuous trace (which doesn't mean a lot 
    * here in the GSL device).
    */
-  TracedCallback<Ptr<const Packet> > m_macRxTrace;
+  TracedCallback<Ptr<const Node>, Ptr<const Packet>> m_macRxTrace;
 
   /**
    * The trace source fired for packets successfully received by the device

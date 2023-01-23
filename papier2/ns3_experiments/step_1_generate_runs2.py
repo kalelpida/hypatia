@@ -99,7 +99,7 @@ def main_step1(list_from_to):
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[ISL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                        "[GSL-DATA-RATE-MEGABIT-PER-S]", str(reference_rate*nb_commodites/10))# for ground station: /10 => a station can accept ~20% of users if gthere are 10 stations
+                                        "[GSL-DATA-RATE-MEGABIT-PER-S]", str(reference_rate*nb_commodites*3/10))# for ground station: /10 => a station can accept ~20% of users if gthere are 10 stations
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[ISL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_isl_pkt))
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",

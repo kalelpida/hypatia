@@ -149,6 +149,8 @@ def generate_dynamic_state_at(
     total_num_isls = 0
     num_isls_per_sat = [0] * len(satellites)
     sat_neighbor_to_if = {}
+    liste_triee=sorted([(a,b,v) for (a,b), v in list_isls.items()])  
+    assert liste_triee==[(a, b, v) for (a,b),v in sorted(list_isls.items()) ]
     for (a, b), val in sorted(list_isls.items()):
         # val: 's' means "same orbit", 'a' means "adjacent"
 

@@ -50,9 +50,10 @@ def generate_plus_grid_isls(output_filename_isls, n_orbits, n_sats_per_orbit, is
 
             # Adjacent orbit
             list_isls.append((idx_offset + min(sat, sat_adjacent_orbit), idx_offset + max(sat, sat_adjacent_orbit), 'a'))
-
+    
+    list_isls.sort()
     with open(output_filename_isls, 'w+') as f:
-        for (a, b, val) in sorted(list_isls):
+        for (a, b, val) in list_isls:
             f.write(str(a) + " " + str(b) + " " + str(val) + "\n")
 
     return list_isls

@@ -19,14 +19,32 @@ nomfic_campagne=os.path.join(basedir, "config/campagne.yaml")
 nomfic_courante=os.path.join(basedir, "config/courante.yaml")
 
 
+#si aucune des variables en cle ne change, les actions sont inutiles
+rend_indispensable={
+    ("graine", "constellation", "duree", "pas", "isls", "deteriorISL", "sol", "nb-UEs-sol", "algo"): ("analyse theorique", "casse liens sat")
+}
+
+def genere_cles(campagne):
+    #ordonner les clefs dans l'ordre le plus efficace pour lancer le moins d'opérations possible
+    liste=list(campagne.keys())
+    note={cle:0 for cle in liste}
+    for cle in campagne.keys():
+        for genantes in rend_indispensable:
+            if cle in genantes:
+                note[cle]+=1
+    liste.sort(key=lambda x: note[x])
+    return liste
+    
 #base
 class Experiences():
     def __init__(self, campagne, actions):
         self.courante={'graine': 2, 'constellation': 'tas_700', 'duree': 8, 'pas': 2000, 'isls': 'isls_plus_grid', 'sol': 'ground_stations_top_100', 'algo': 'algorithm_free_one_only_over_isls', 'threads': 4, 'debit_isl': 10}
         self.campagne=campagne
-        self.cles=list(campagne.keys())
+        self.cles=genere_cles(campagne)
         self.indices_cles=[0]*len(self.cles)
-        self.actions=actions
+        self.toutes_actions=set(actions)
+        self.actions_non_indispensables=set()
+        self.actions=set()
     
     def setCleSvgde(self, cle):
         # depreciee
@@ -46,6 +64,7 @@ class Experiences():
     def experienceSuivante(self):
         #met à jour les paramètres pour l'expérience suivante
         # L'experience 0,0,0,0...0 est effectuée en dernière. C'est celle là qui indique la fin des expériences 
+        self.actions_non_indispensables=set()
         for i, cle in enumerate(self.cles):
             self.indices_cles[i] = (self.indices_cles[i]+1)%len(self.campagne[cle])
             self.courante[cle] = self.campagne[cle][self.indices_cles[i]]
@@ -57,8 +76,14 @@ class Experiences():
         #save debitISL in a simple place for graph generation. Used by mcnf. #ToDo
         with open("satellite_networks_state/debitISL.temp", "w") as f:
             f.write(str(self.courante['debit_isl']))
+
         if cle==self.cles[-1] and self.indices_cles[-1]==0:
             return True
+        # si ce n'est pas le dernier cas, on sait quelle cle a été modifiée, donc optimisation
+        for cle_activantes in rend_indispensable:
+            if not cle in cle_activantes:
+                self.actions_non_indispensables.update(rend_indispensable[cle_activantes])
+        self.actions=self.toutes_actions-self.actions_non_indispensables
         return False
 
     def execution(self):
@@ -125,7 +150,7 @@ def main():
     if 'currinfo' in dic:
         sys.stdout=open(dic['currinfo'], 'w')
     strdate=dic.get('strdate', "%Y-%m-%d-%H%M")
-    campagnedir=dic.get('campagnedir', '').rstrip('/') #"sauvegardes/svgde_{strdate}"
+    campagnedir=dic.get('campagnedir', '').rstrip('/') #"sauvegardes/{nom_campagne}"
     expedir=dic.get('expedir', '').lstrip('/')
     sources=dic.get('sources', [])
 
@@ -139,16 +164,19 @@ def main():
         exp=Experiences(campagne, liste_actions)
         exp.paramExperience()
         exp.setStrDate(strdate)
-
+        estPremiere=True
         while not fini:
             fini=exp.experienceSuivante()
+            if estPremiere:
+                exp.actions=set(liste_actions)
+                estPremiere=False
             exp.execution()
             if (destdir:=campagnedir+'/'+expedir) and sources:
                 exp.operation_sauvegarde(destdir, sources)
-        if os.path.isdir(cd:=campagnedir.format(nom_campagne=nom_campagne)):
-            with open(os.path.join(cd,'variations.txt'), "w") as f:
-                f.write(str(cles_variantes))
-            
+        cd=campagnedir.format(nom_campagne=nom_campagne)
+        with open(os.path.join(cd,'variations.txt'), "w") as f:
+            f.write(str(cles_variantes))
+        subprocess.check_call(["cp", '-t', cd, nomfic_campagne]) #finally save campagne config itself
             
 
 if __name__ == '__main__':

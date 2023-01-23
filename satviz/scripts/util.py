@@ -23,6 +23,7 @@
 # Contains few utility functions
 
 import ephem
+import math
 
 
 def read_city_details(city_details_list, city_detail_file):
@@ -183,6 +184,82 @@ def find_grid_links(sat_positions, num_orbit, num_sats_per_orbit):
         cntr += 1
     #print("num links:", cntr)
     return grid_links
+
+
+def generate_sat_obj_position_list(
+        num_orbit,
+        num_sats_per_orbit,
+        epoch,
+        phase_diff,
+        inclination,
+        eccentricity,
+        arg_perigee,
+        mean_motion,
+        altitude,
+        current_time,
+):
+    """
+    Generates list of satellite objects based on orbital elements
+    :param num_orbit: Number of orbits
+    :param num_sats_per_orbit: Number of satellites per orbit
+    :param epoch: Epoch (start time)
+    :param phase_diff: Phase difference between adjacent orbits
+    :param inclination: Angle of inclination
+    :param eccentricity: Eccentricity of orbits
+    :param arg_perigee: Argument of perigee of orbits
+    :param mean_motion: Mean motion in revolutions per day
+    :param altitude: Altitude in metres
+    :return: List of satellite objects
+    """
+    sat_objs = [None] * (num_orbit * num_sats_per_orbit)
+    counter = 0
+    for orb in range(0, num_orbit):
+        raan = orb * 360 / num_orbit
+        orbit_wise_shift = 0
+        if orb % 2 == 1:
+            if phase_diff:
+                orbit_wise_shift = 360 / (num_sats_per_orbit * 2)
+
+        for n_sat in range(0, num_sats_per_orbit):
+            mean_anomaly = orbit_wise_shift + (n_sat * 360 / num_sats_per_orbit)
+
+            sat = ephem.EarthSatellite()
+            sat._epoch = epoch
+            sat._inc = ephem.degrees(inclination)
+            sat._e = eccentricity
+            sat._raan = ephem.degrees(raan)
+            sat._ap = arg_perigee
+            sat._M = ephem.degrees(mean_anomaly)
+            sat._n = mean_motion
+
+            sat.compute(current_time)
+
+            sat_objs[counter] = {
+                "alt_m": altitude,
+                "orb_id": orb,
+                "orb_sat_id": n_sat,
+                "lon": math.degrees(sat.sublong),
+                "lat":math.degrees(sat.sublat),
+                "type": "sat",
+            }
+            counter += 1
+    return sat_objs
+
+def generate_sol_obj_position_list(nom_fic):
+    liste=[]
+    with open(nom_fic, 'r') as f:
+        for line in f:
+            #0,Tokyo,35.689500,139.691710,0.000000,-3954843.592378,3354935.154958,3700263.820217,gateway
+            idSolObj, ville, lat, lon, alt_m, _, _, _, objtype = line.strip().split(',') 
+            liste.append({
+                "alt_m": alt_m,
+                "gs_id": int(idSolObj),
+                "lat": lat,
+                "lon": lon,
+                "type": objtype
+            })
+    assert int(idSolObj) == len(liste)-1
+    return liste
 
 
 def write_viz_files(viz_string, top_file, bottom_file, out_file):

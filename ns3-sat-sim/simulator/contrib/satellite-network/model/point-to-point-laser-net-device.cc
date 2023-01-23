@@ -348,7 +348,7 @@ PointToPointLaserNetDevice::Receive (Ptr<Packet> packet)
       // If we have an error model and it indicates that it is time to lose a
       // corrupted packet, don't forward this packet up, let it go.
       //
-      m_phyRxDropTrace (packet);
+      m_phyRxDropTrace (m_node, packet);
     }
   else 
     {
@@ -381,7 +381,7 @@ PointToPointLaserNetDevice::Receive (Ptr<Packet> packet)
           m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
         }
 
-      m_macRxTrace (originalPacket);
+      m_macRxTrace (m_node, originalPacket);
       m_rxCallback (this, packet, protocol, GetRemote ());
     }
 }
@@ -540,7 +540,7 @@ PointToPointLaserNetDevice::Send (
   //
   if (IsLinkUp () == false)
     {
-      m_macTxDropTrace (m_node,  m_currentPkt);
+      m_macTxDropTrace (m_node,  packet);
       return false;
     }
 
@@ -573,7 +573,7 @@ PointToPointLaserNetDevice::Send (
 
   // Enqueue may fail (overflow)
 
-  m_macTxDropTrace (m_node,  m_currentPkt);
+  m_macTxDropTrace (m_node,  packet);
   return false;
 }
 

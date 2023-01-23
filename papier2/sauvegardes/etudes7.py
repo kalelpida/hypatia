@@ -10,8 +10,8 @@ import numpy as np
 import re, yaml
 import pickle
 
-ROUTAGE_UNIQUE=True
-DOSSIER='reunion0601'
+ROUTAGE_UNIQUE='' #'routes communes' # set to '' to disable
+DOSSIER='reunion230123sc'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
 DOSSIER_A_INCLURE=['']
 AFFICHE_RATIO=True
@@ -67,6 +67,7 @@ def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
 		nom=aChercher.pop()
 		if "manual/data" in nom and any([motif in nom for motif in DOSSIER_A_INCLURE]):
 			trouves.append(nom)
+			continue
 		
 		for glob in os.listdir(nom):
 			x=os.path.join(nom,glob) 
@@ -75,8 +76,6 @@ def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
 					raise Exception("erreur: cle variantes déjà définies, résoudre la fusion des configurations/données")
 				with open(x, 'r') as f:
 					cles_variantes=eval(f.readline())
-			elif glob=="logs_ns3":
-					maj_liste_commodites(x) 
 			elif os.path.isdir(x) and all([not motif in x for motif in DOSSIER_A_EXCLURE]):
 				aChercher.append(x)
 	return trouves, sorted(cles_variantes)
@@ -103,30 +102,30 @@ def getconfigcourante(dossier, cles_variantes):
 			liste_variants.append("-".join(str(u) for u in valeur))
 		else:
 			liste_variants.append(str(valeur))
-	return '::'.join(liste_variants)
-
-def maj_liste_commodites(chemin):
-	global dict_commodites
-	def readudp(nomfic):
-		ledict={}
-		with open(nomfic, 'r') as f:
-			for line in f:
-				valeurs=eval(line[:line.rfind(',')])
-				idcom, depuis, vers = valeurs[:3]
-				ledict[(depuis, vers)]=idcom
-		return ledict
-
-	infic, outfic="udp_bursts_incoming.csv", "udp_bursts_outgoing.csv"
-	assert infic in (fics:=os.listdir(chemin)) and outfic in fics
-	commodites=readudp(os.path.join(chemin, infic))
-	if dict_commodites:
-		assert commodites == dict_commodites
+	cle='::'.join(liste_variants)
+	if ROUTAGE_UNIQUE:
+		maj_liste_commodites(os.path.join(chemin,  "commodites.temp"), ROUTAGE_UNIQUE) 
 	else:
-		dict_commodites = commodites
+		maj_liste_commodites(os.path.join(chemin,  "commodites.temp"), cle) 
+	return cle
+
+def maj_liste_commodites(chemin, cle):
+	global dict_commodites
+	with open(chemin, "r") as f:
+		coms=f.readlines()
+	coms=eval(coms[0])
+	commodites={}
+	for idcom, (src, dst, ratio) in enumerate(coms):
+		commodites[(src, dst)]=idcom
+	if cle in dict_commodites:
+		assert commodites == dict_commodites[cle]
+	else:
+		dict_commodites[cle] = commodites
 
 
 def repartiteurLogBrut(dossier, str_variants):
 	"""fill in dico with all links used by commodites, at any interval"""
+
 	for nom_fic in os.listdir(dossier):
 		if re.match("networkx_path_\d+_to_\d+.txt", nom_fic):
 			################ add data in main dict
@@ -138,10 +137,10 @@ def repartiteurLogBrut(dossier, str_variants):
 					temps_ns=int(temps)
 					nds=str_nds.split('-')
 					depart, fin=int(nds[0]), int(nds[-1])
-					if (depart, fin) not in dict_commodites:
+					if (depart, fin) not in dict_commodites[str_variants]:
 						#ancien lien penser à supprimer les vieilles simulations
 						break
-					numcom=dict_commodites[(depart, fin)] 
+					numcom=dict_commodites[str_variants][(depart, fin)] 
 					#interface ISL
 					liens = set([(int(nd), int(nds[i+2])) for i, nd in enumerate(nds[1:-2])])
 					#interfaces GSL stations
@@ -153,7 +152,7 @@ def repartiteurLogBrut(dossier, str_variants):
 					for lien in liens.symmetric_difference(liens_precedents):
 						#créer nouveau liens si dans liens-liens_precedents
 						#supprimer anciens lien si dans liens_precedents-liens
-						add_dico(str_variants, lien, dict_commodites[(depart, fin)], temps_ns )
+						add_dico(str_variants, lien, dict_commodites[str_variants][(depart, fin)], temps_ns )
 					liens_precedents = liens
 
 def temps_total_commun(*temps):
@@ -231,11 +230,7 @@ def matrice_correlation():
 	from sklearn import metrics
 	nbcoms=len(dict_commodites)
 	correlation_flux=np.zeros((nbcoms, nbcoms))
-	if ROUTAGE_UNIQUE:
-		ledico = {'routes communes': dico[list(dico.keys())[0]]}
-	else:
-		ledico=dico
-	for experience, dic in ledico.items():
+	for experience, dic in dico.items():
 		for lien, dict_coms in dic.items():
 			coms=list(dict_coms.keys())
 			for num, com in enumerate(coms):
@@ -255,11 +250,7 @@ def sac_de_noeuds():
 	if dico_sacs:
 		return dico_sacs
 	
-	if ROUTAGE_UNIQUE:
-		ledico = {'routes communes': dico[list(dico.keys())[0]]}
-	else:
-		ledico=dico
-	for experience, dic in ledico.items():
+	for experience, dic in dico.items():
 		sacs=[]
 		for lien, dict_coms in dic.items():
 			ensembles=temps_total_parties(*list(dict_coms.values()))
@@ -312,21 +303,25 @@ def remplissage_dico():
 	try:
 		with open(FIC_SAUVEGARDE, 'rb') as f:
 			lessvgdes=pickle.load(f)
-		dos_svgdes, dico, dico_sacs, duree_simu=lessvgdes.get(cleSVGDE)
+		dos_svgdes, dico, dico_sacs, duree_simu, dict_commodites=lessvgdes.get(cleSVGDE)
 		assert dos_svgdes == dossiers
 		assert dico
 	except Exception:
 		dico.clear()
-		assert dict_commodites
 		dico_sacs.clear()
-		for i,dos in enumerate(dossiers):
-			print(f"repartition données: {i}/{len(dossiers)}")
-			str_params = getconfigcourante(dos, cles_variantes)
-			repartiteurLogBrut(dos, str_params)
+		if ROUTAGE_UNIQUE:
+			print(f"Routage unique, seul le dossier {dossiers[0]} est utilisé")
+			str_params = getconfigcourante(dossiers[0], cles_variantes)# pour mettre à jour commodités
+			repartiteurLogBrut(dossiers[0], ROUTAGE_UNIQUE)
+		else:
+			for i,dos in enumerate(dossiers):
+				print(f"repartition données: {i}/{len(dossiers)}")
+				str_params = getconfigcourante(dos, cles_variantes)
+				repartiteurLogBrut(dos, str_params)
 		if 'lessvgdes' not in dir():# if lessvgdes is not defined
 			lessvgdes={}
 		sac_de_noeuds()# update dico_sacs
-		lessvgdes[cleSVGDE]=(dossiers,dico, dico_sacs, duree_simu)
+		lessvgdes[cleSVGDE]=(dossiers,dico, dico_sacs, duree_simu, dict_commodites)
 		with open(FIC_SAUVEGARDE, 'wb') as f:
 			pickle.dump(lessvgdes, f)
 	finally:
@@ -352,6 +347,9 @@ def test():
 	print(temps_total_commun([tempsA.copy(), tempsB.copy()]))
 	print(tempsB, tempsA)
 
+def main():
+	remplissage_dico()
+	return sac_de_noeuds()
 
 if __name__=='__main__':
 	remplissage_dico()
