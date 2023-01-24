@@ -35,17 +35,11 @@ It consists of four main components:
   More information can be found in `satviz/README.md`.
   (license: MIT)
 
-* `paper` : Experimental and plotting code to reproduce the experiments and 
-  figures which are presented in the paper.
+* `papier2` : We configure and launch experiments from it. Was initially created to test mcnf routing algorithm.
   It makes use of several Python modules among which: satgenpy, numpy, networkload, and exputil.
   It uses the gnuplot package for most of its plotting.
-  More information can be found in `paper/README.md`.
+  More information can be found in `papier2/README.md`.
   (license: MIT)
-  
-[ ADDENDUM ]
-* `papier2` : is our adaptation of paper to test mcnf routing algorithm
-  
-(there is a fifth folder called `integration_tests` which is used for integration testing purposes)
 
 This is based on the code repository introduced and used in "Exploring the “Internet from space” with Hypatia" 
 by Simon Kassing*, Debopam Bhattacherjee*, André Baptista Águas, Jens Eirik Saethre and Ankit Singla
@@ -64,7 +58,7 @@ BibTeX citation:
 ## Getting started
 
 1. System setup:
-   - Python version 3.7+
+   - Python version 3.10 (I personnally use this version, so )
    - Recent Linux operating system (e.g., Ubuntu 18+)
 
 2. Install dependencies:

@@ -26,7 +26,8 @@ info-sauvegarde:
   strdate: '%Y-%m-%d-%H%M'
   campagnedir: "sauvegardes/{nom_campagne}"
   expedir: "svgde_{strdate}_{graine}"
-  sources:
+  sources: #select information that should be saved at the end of the experiment
+    #directory: files or directory
     "satgenpy_analysis/data/{constellation}_{isls}_{sol}_{algo}/{pas}ms_for_{duree}s/": manual
     "satellite_networks_state/gen_data/{constellation}_{isls}_{sol}_{algo}": ground_stations.txt
     ns3_experiments/runs: "run_loaded_tm_pairing_{debit_isl}_Mbps_for_{duree}s_with_.*_{algo}"
@@ -39,5 +40,5 @@ actions: #[]
   - commodites
   - routes
   - "analyse theorique"
-  - "casse liens sat"  # attention, l'analyse théorique doit être juste sinon les liens isl desactives seront aleatoires
+  - "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
   - simulation
