@@ -13,7 +13,7 @@ import pickle
 import etudes7
 
 
-DOSSIER='reunion230123sc'
+DOSSIER='reunion230209'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
 DOSSIER_A_INCLURE=['']
 AFFICHE_RATIO=True
@@ -235,7 +235,7 @@ def affiche_logs_sources():
 				add_dico(commodite, label, inter_arrivee, dico=dico_listes_commodites)
 		
 		axs[expCntr].set_title(valparams)
-		axs[expCntr].set_yscale('log')
+		#axs[expCntr].set_yscale('log')
 		labels_utilises=set()
 		for commodite, donnees in dico_listes_commodites.items():
 			if not is_authorisee(commodite):

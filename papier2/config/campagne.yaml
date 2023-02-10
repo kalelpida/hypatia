@@ -1,5 +1,5 @@
-reunion230123sc: #classer par ordre
-  graine: [0, 1]
+test: #classer par ordre
+  graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [8] #en s
   pas: [2000] #en ms
@@ -9,17 +9,18 @@ reunion230123sc: #classer par ordre
   #      { sel: topUtil10, errModel: "brstErrMdl-brstRate:0.01-brstSize:5" },
   #      { sel: topUtil10, errModel: "recvErrRate:0.1"}
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
-  deteriorISL: [ {}, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
+  deteriorISL: [ {} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   sol: [ users_and_main_stations ]
-  nb-UEs-sol: [ 50 ]
+  nb-UEs-sol: [ 20 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [4 ]
-  debit_isl: [ 3, 10 ]
+  debit_isl: [10] #[ 3, 10 ]
   # examples of protocoles:
   # { 'nom':"udp", "metadata":"expInterPacket" }
   # { 'nom':"udp"}
   # { 'nom': "tcp"}
-  protocoles: [ { 'nom':"udp"}, { 'nom':"udp", "metadata":"expInterPacket" }]
+  # { 'nom': 'tcp_and_udp', 'debut_agresseur_ms': [1, 4],'duree_agresseur_ms': 'min,max'
+  protocoles: [ { 'nom': "tcp_and_udp", 'nb_agresseurs': 5,  'debut_agresseur_ms':'min,max'} ]
 
 
 info-sauvegarde:
@@ -39,6 +40,6 @@ actions: #[]
   - noeuds
   - commodites
   - routes
-  - "analyse theorique"
-  - "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
+  #- "analyse theorique"
+  #- "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
   - simulation

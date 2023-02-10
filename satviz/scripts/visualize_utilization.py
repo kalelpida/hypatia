@@ -34,7 +34,7 @@ except (ImportError, SystemError):
 import sys
 
 
-IN_UTIL_DIR='../../papier2/sauvegardes/reunion230123sc'
+IN_UTIL_DIR='../../papier2/sauvegardes/a-supprimer'
 MODE = 2 #0: "S->UE", 1: "UE->S" 2:"TOUS"
 # Time in ms for which visualization will be generated
 GEN_TIME = 3000  #ms

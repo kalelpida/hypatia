@@ -50,8 +50,12 @@ def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_st
 def extend_stations_and_users(graine, NbGateways, NbUEs, cstl_config, filename_ground_out):
     np.random.seed(graine)
     #gather ground bodies 
-    assert cstl_config['gateway']['type'] == 'topCities' # autres cas à faire
-    gateways = read_ground_stations_basic("input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt")
+    if cstl_config['gateway']['type'] == 'topCitiesHypatia':
+        gateways = read_ground_stations_basic("input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt")
+    elif cstl_config['gateway']['type'] == 'topCitiesUN':
+        gateways = read_ground_stations_basic("input_data/ground_stations_cities_by_estimated_2025_pop_300k_UN.csv")
+    else: # autres cas à faire
+        raise Exception("config not recognised")
     UEs = read_ground_stations_basic("input_data/UEs_{}.txt".format(cstl_config['ue']['type']))
     if NbUEs > len(UEs):
         raise Exception('please, generate more users. This can be done using `generate_users.py` in satellite_networks_state/input_data/')
