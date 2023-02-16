@@ -53,7 +53,6 @@
 #include "ns3/tcp-flow-sink.h"
 
 namespace ns3 {
-
 class TcpFlowScheduler
 {
 

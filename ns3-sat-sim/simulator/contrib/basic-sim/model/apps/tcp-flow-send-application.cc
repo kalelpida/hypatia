@@ -37,6 +37,7 @@
 #include "ns3/exp-util.h"
 #include "tcp-flow-send-application.h"
 #include <fstream>
+#include <utility>
 
 namespace ns3 {
 
@@ -109,6 +110,7 @@ TcpFlowSendApplication::TcpFlowSendApplication()
           m_ackedBytes(0),
           m_isCompleted(false) {
     NS_LOG_FUNCTION(this);
+    Packet::EnablePrinting();
 }
 
 TcpFlowSendApplication::~TcpFlowSendApplication() {
@@ -149,7 +151,12 @@ void TcpFlowSendApplication::StartApplication(void) { // Called at time specifie
                 NS_FATAL_ERROR("Failed to bind socket");
             }
         }
-
+        Address localAddrPort;
+        m_socket->GetSockName(localAddrPort);
+        InetSocketAddress saddr = InetSocketAddress::ConvertFrom(localAddrPort);
+        saddr.SetIpv4(GetNode()->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal());
+        m_topology->RegisterFlow(std::pair<InetSocketAddress, Ipv4Address>(saddr, InetSocketAddress::ConvertFrom(m_peer).GetIpv4()) , m_tcpFlowId);
+        
         // Connect, no receiver
         m_socket->Connect(m_peer);
         m_socket->ShutdownRecv();
@@ -373,5 +380,8 @@ TcpFlowSendApplication::FinalizeDetailedLogs() {
         InsertProgressLog(timestamp, GetAckedBytes());
     }
 }
-
+void TcpFlowSendApplication::setTopology(Ptr<Topology> topology){
+    //std::cout << m_topology->GetTypeId().GetName() << std::endl;
+    m_topology = topology;
+}
 } // Namespace ns3

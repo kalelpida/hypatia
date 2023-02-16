@@ -34,7 +34,7 @@ except (ImportError, SystemError):
 import sys
 
 
-IN_UTIL_DIR='../../papier2/sauvegardes/a-supprimer'
+IN_UTIL_DIR='../../papier2/sauvegardes/test'
 MODE = 2 #0: "S->UE", 1: "UE->S" 2:"TOUS"
 # Time in ms for which visualization will be generated
 GEN_TIME = 3000  #ms
@@ -59,19 +59,24 @@ ALTITUDE_M=700000
 NUM_ORBS=28
 NUM_SATS_PER_ORB=27
 INCLINATION_DEGREE=65
-
+NUM_STATIONS=10
+TOTAL_NUM_SATS=NUM_ORBS*NUM_ORBS
 EPOCH = (pd.to_datetime(INITIAL_EPOCH) + pd.to_timedelta(GEN_TIME, unit='ms')).strftime(
         format='%Y/%m/%d %H:%M:%S.%f')
 
 iterator=iter([0]) # to assert constellation parameters won't change between experiments
 def maj_cstl(**kwargs):
-    global MEAN_MOTION_REV_PER_DAY
+    global MEAN_MOTION_REV_PER_DAY, NUM_STATIONS
     changement=False
     for k, v in kwargs.items():
         if k in globals():
             if globals()[k]!=v:
                 changement=True
                 globals()[k]=v
+    if 'gateway' in kwargs:
+        if NUM_STATIONS != kwargs['gateway']['nombre']:
+                changement=True
+                NUM_STATIONS = kwargs['gateway']['nombre']
     if changement:
         next(iterator)
     MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(ALTITUDE_M+EARTH_RADIUS)**3)/math.pi/2

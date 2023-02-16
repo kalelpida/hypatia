@@ -30,6 +30,7 @@ void TcpFlowScheduler::StartNextFlow(int i) {
     int64_t now_ns = Simulator::Now().GetNanoSeconds();
     NS_ASSERT(now_ns == entry.GetStartTimeNs());
 
+    /*
     // Helper to install the source application
     TcpFlowSendHelper source(
             "ns3::TcpSocketFactory",
@@ -40,9 +41,21 @@ void TcpFlowScheduler::StartNextFlow(int i) {
             m_basicSimulation->GetLogsDir(),
             entry.GetAdditionalParameters()
     );
+    ApplicationContainer app = source.Install(m_nodes.Get(entry.GetFromNodeId()));
+    */
+  
+    Ptr<TcpFlowSendApplication> tcpApp=CreateObject<TcpFlowSendApplication>();
+    tcpApp->SetAttribute ("MaxBytes", UintegerValue (entry.GetSizeByte()));
+    tcpApp->SetAttribute ("Remote", AddressValue (InetSocketAddress(m_nodes.Get(entry.GetToNodeId())->GetObject<Ipv4>()->GetAddress(1,0).GetLocal(), 1024)));
+    tcpApp->SetAttribute ("TcpFlowId", UintegerValue (entry.GetTcpFlowId()));
+    tcpApp->SetAttribute ("EnableTcpFlowLoggingToFile", BooleanValue (m_enable_logging_for_tcp_flow_ids.find(entry.GetTcpFlowId()) != m_enable_logging_for_tcp_flow_ids.end()));
+    tcpApp->SetAttribute ("BaseLogsDir", StringValue (m_basicSimulation->GetLogsDir()));
+    tcpApp->SetAttribute ("AdditionalParameters", StringValue (entry.GetAdditionalParameters()));
+    tcpApp->setTopology(m_topology);
 
     // Install it on the node and start it right now
-    ApplicationContainer app = source.Install(m_nodes.Get(entry.GetFromNodeId()));
+    m_nodes.Get(entry.GetFromNodeId())->AddApplication(tcpApp);
+    ApplicationContainer app = ApplicationContainer(tcpApp);
     app.Start(NanoSeconds(0));
     m_apps.push_back(app);
 

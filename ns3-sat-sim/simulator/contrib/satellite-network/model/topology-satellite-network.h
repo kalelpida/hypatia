@@ -55,8 +55,12 @@
 #include "ns3/wifi-net-device.h"
 #include "ns3/point-to-point-laser-net-device.h"
 #include "ns3/ipv4.h"
+#include <regex>
+#include "ns3/id-seq-header.h"
+#include "states-error-model.h"
 
 namespace ns3 {
+    typedef std::map<std::pair<InetSocketAddress,Ipv4Address>, uint64_t> mapflow_t;
 
     class TopologySatelliteNetwork : public Topology
     {
@@ -71,6 +75,7 @@ namespace ns3 {
         int64_t GetNumNodes();
         bool IsValidEndpoint(int64_t node_id);
         const std::set<int64_t>& GetEndpoints();
+        void RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> triplet, uint64_t flowId);
 
         // Additional accessors
         uint32_t GetNumSatellites();
@@ -138,6 +143,7 @@ namespace ns3 {
         Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log transmission events
         Ptr<OutputStreamWrapper> m_rx_stream; //!< stream where to log receive events
 
+        mapflow_t *m_conversion;
     };
 
 }

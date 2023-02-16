@@ -15,7 +15,7 @@ cd simulator || exit 1
 
 # Configure the build
 if [ "$1" == "--debug_all" ]; then
-  ./waf configure --build-profile=debug --enable-mpi --enable-examples --enable-tests --enable-gcov --out=build/debug_all || exit 1
+  ./waf configure --build-profile=debug --enable-mpi --enable-examples --enable-tests --enable-gcov --out=build/debug_all --disable-werror || exit 1
 
 elif [ "$1" == "--debug_minimal" ]; then
   ./waf configure --build-profile=debug --enable-mpi --out=build/debug_minimal || exit 1

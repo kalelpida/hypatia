@@ -132,14 +132,25 @@ class Experiences():
     def operation_sauvegarde(self, destdir, sources):
         nomdestdir=destdir.format(strdate=time.strftime(self.strdate), **self.courante)
         sources_a_svgder=[]
+        str_courante=str_recursif(self.courante)
         for dir, regex in sources.items():
-            dir_str=dir.format(**self.courante)
-            regex_str=regex.format(**self.courante)
+            dir_str=dir.format(**str_courante)
+            regex_str=regex.format(**str_courante)
             sources_a_svgder+=[os.path.join(dir_str,x) for x in os.listdir(dir_str) if re.match(regex_str, x)]
         subprocess.check_call(["mkdir", "-p", nomdestdir])
         for src in sources_a_svgder:
             subprocess.check_call(["cp", "-R", '-t', nomdestdir, src])
 
+
+def str_recursif(dico, prefix=''):
+    #tranform a dict of dict of dict.. in a 1-level dict
+    dic={}
+    for cle, val in dico.items():
+        if type(val) is not dict:
+            dic[prefix+cle]=val
+        else:
+            dic.update(str_recursif(val, prefix=prefix+cle+'_'))
+    return dic
 
 
 def main():

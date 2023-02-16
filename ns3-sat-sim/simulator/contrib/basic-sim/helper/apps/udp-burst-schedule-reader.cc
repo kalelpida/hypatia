@@ -36,8 +36,11 @@ std::vector<UdpBurstInfo> read_udp_burst_schedule(const std::string& filename, P
 
             // Fill entry
             int64_t udp_burst_id = parse_positive_int64(comma_split[0]);
-            if (udp_burst_id != (int64_t) line_counter) {
-                throw std::invalid_argument(format_string("UDP burst ID is not ascending by one each line (violation: %" PRId64 ")\n", udp_burst_id));
+            if (udp_burst_id < (int64_t) line_counter) {
+                throw std::invalid_argument(format_string("UDP burst ID is not ascending by one each line (violation: %" PRId64 "%" PRIu32 ")\n", udp_burst_id, line_counter));
+            } else {
+                // Next line
+                line_counter = udp_burst_id+1;
             }
             int64_t from_node_id = parse_positive_int64(comma_split[1]);
             int64_t to_node_id = parse_positive_int64(comma_split[2]);
@@ -81,9 +84,6 @@ std::vector<UdpBurstInfo> read_udp_burst_schedule(const std::string& filename, P
 
             // Put into schedule
             schedule.push_back(UdpBurstInfo(udp_burst_id, from_node_id, to_node_id, target_rate_megabit_per_s, start_time_ns, duration_ns, additional_parameters, metadata));
-
-            // Next line
-            line_counter++;
 
         }
 

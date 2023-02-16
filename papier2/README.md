@@ -31,5 +31,25 @@ Ce dossier a été remanié de Hypatia pour lancer des simulations. Les appels �
 		+ dans ns3_experiments/traffic_matrix_load/runs les traces réseau
 	+ En fonction de la configuration les `sources` de l'expérience sont copiées dans un dossier dans sauvegarde/nom_campagne
 + analyser les résultats
-	+ cela peut se faire avec les scripts `sauvegardes/étudesX.py` qui permettent de visualiser les performances des flux et autres
+	+ cela peut se faire avec les scripts `sauvegardes/étudesX.py` qui permettent de visualiser les performances des flux et autres (progressivement déprécié)
 	+ pour des visuels césium, se reporter à `../satviz/` 
+
+
+En fonction des paramètres de la campagne, les fichiers enregistrés peuvent varier. En parcourant les dossiers, on peut retrouver des paramètre de la simulation:
+ - campagne.yaml : détermine l'ensemble des simulations à lancer
+ - courante.yaml : les paramètres de la simulation du dossier présent. Correspond à une simulation parmi celles demandées dans 'campagne.yaml'
+ - ground_stations.txt : les stations 5G puis utilisateurs, dont le format est 'id, nom, latitude(deg), longitude(deg), élévation (m), position XYZ(m, référentiel terrestre lié au centre de la Terre), type'
+ Des fichiers intermédiaires:
+ - commodites.temp, forme pythonesque des commodités, valable lorsque udp est seul
+ - tcp_flow_schedule.csv, format: 'id commodité, src, dst, taille du fichier à uploader (o), instant démarrage (ns)
+ - udp_burst_schedule.csv, format : 'id commodité, src, dst, débit (Mb/s), instant de début (ns), fin (ns)
+  - config_ns3.properties: décrit les paramètres principaux de ns3
+ Ainsi que les résultats:
+ - des fichiers de statistiques globales sur les flux : 'udp_bursts_incoming', 'udp_bursts_outgoing', 'tcp_flows'
+ - des fichiers de contrôle de congestion pour la X-ième commodité: tcp_flow_X_{cwnd|progress|rtt}
+ - des fichier contenant les métadonnées de tous les paquets:
+   * link.rx contient tout les paquets reçus par tous les nœuds. Il contient notamment les champs 'instant (ns), src, id commodité, numero de séquence (si UDP), offset (si TCP), taille données (o), estUnFluxTCP, estRetour, information
+   * link.drops contient tous les paquets perdus. Il contient notamment les champs instant (ns), nœud, id commodité, numero de séquence (si UDP), offset (si TCP), taille données (o), estUnFluxTCP, estRetour, cause de la perte
+   * link.tx contient tous les paquets transmis. Il contient notamment les champs instant (ns), src, dst, id commodité, numero de séquence (si UDP), offset (si TCP), taille données (o), estUnFluxTCP, estRetour, info'
+
+

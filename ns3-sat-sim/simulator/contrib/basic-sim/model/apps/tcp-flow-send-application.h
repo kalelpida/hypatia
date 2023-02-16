@@ -29,6 +29,9 @@
 #include "ns3/ptr.h"
 #include "ns3/string.h"
 #include "ns3/traced-callback.h"
+//#include "ns3/topology-satellite-network.h"
+#include "ns3/topology.h"
+#include "ns3/ipv4.h"
 
 namespace ns3 {
 
@@ -51,6 +54,7 @@ public:
   bool IsClosedByError();
   bool IsClosedNormally();
   void FinalizeDetailedLogs();
+  void setTopology(Ptr<Topology>);
 
 protected:
   virtual void DoDispose (void);
@@ -86,6 +90,8 @@ private:
   std::string m_baseLogsDir;               //!< Where the logs will be written to:
                                            //!<   logs_dir/tcp_flow_[id]_{progress, cwnd, rtt}.csv
   TracedCallback<Ptr<const Packet> > m_txTrace;
+  // All flows logging
+  Ptr<Topology> m_topology;
 
 private:
   void ConnectionSucceeded (Ptr<Socket> socket);

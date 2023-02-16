@@ -121,7 +121,6 @@ def main_step1(list_from_to):
     # .gitignore (legacy reasons)
     local_shell.write_file(run_dir + "/.gitignore", "logs_ns3")
 
-    #schedule was here !!
     # tcp_flow_schedule.csv
     if "tcp" in protocol_chosen_name:
         """
@@ -165,18 +164,19 @@ def main_step1(list_from_to):
                 list_start_time[i_deb_agresseurs:]=debuts_agresseurs_ns
 
                 #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [0, max]
-                duree_agresseurs=protocol_chosen.get('duree_agresseur_ms', 'min,max')
-                durees_agresseurs=value_or_random(duree_agresseurs, nb_agresseurs, minmax=[[duree_min_agresseur_ms]*nb_agresseurs, int(duration_s*1e3)-debuts_agresseurs_ns//int(1e6)])
+                duree_agresseurs=protocol_chosen.get('duree_agresseur_ms', 'min+1,max')
+                durees_agresseurs=value_or_random(duree_agresseurs, nb_agresseurs, minmax=[np.array([duree_min_agresseur_ms]*nb_agresseurs), int(duration_s*1e3)-debuts_agresseurs_ns//int(1e6)])
                 list_end_time[i_deb_agresseurs:]=list_start_time[i_deb_agresseurs:]+durees_agresseurs
                 assert all(list_end_time<=duration_s*1e9)
 
+                fdebit=protocol_chosen.get("debit_agresseurs", 1)
                 for i in range(i_deb_agresseurs, nb_commodites):
                     f_out.write(
                         "%d,%d,%d,%.10f,%d,%d,,%s\n" % (
-                            i-i_deb_agresseurs,
+                            i,
                             list_from_to[i][0],
                             list_from_to[i][1],
-                            udp_list_flow_size_proportion[i],
+                            udp_list_flow_size_proportion[i]*fdebit,
                             list_start_time[i],
                             list_end_time[i],
                             protocol_chosen.get("metadata", "")
@@ -196,7 +196,6 @@ def main_step1(list_from_to):
                         )
                     )
         
-
     #write the commodity list in an easy place for path generation with mcnf
     local_shell.write_file("../satellite_networks_state/commodites.temp", list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion)))
 
@@ -208,6 +207,8 @@ def value_or_random(param, nb, minmax):
     if hasattr(param, '__len__'):
         if type(param) is str:#exemples: 'min,max', '3,5'
             listeminmax = np.array(eval(param.replace('min', repr(minmax[0])).replace('max', repr(minmax[1]))))
+            if listeminmax.shape in [(), (1,)]:
+                return np.full(nb, listeminmax)
             if listeminmax.shape == (2, nb):
                 return [np.random.randint(val[0]*1e6, val[1]*1e6) for val in listeminmax.transpose()]
             elif listeminmax.shape in [(2,), (2, 1)]:

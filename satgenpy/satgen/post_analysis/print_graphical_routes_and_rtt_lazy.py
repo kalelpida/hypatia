@@ -215,7 +215,7 @@ def print_graphical_routes_and_rtt_lazy(
                         [from_longitude_deg, to_longitude_deg],
                         [from_latitude_deg, to_latitude_deg],
                         color=ISL_COLOR, linewidth=0.5, marker='',
-                        transform=ccrs.PlateCarree(),
+                        transform=ccrs.PlateCarree(),# or ccrs.Geodetic()
                     )
 
             # Across all points, we need to find the latitude / longitude to zoom into
