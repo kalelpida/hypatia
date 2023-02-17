@@ -34,11 +34,11 @@ except (ImportError, SystemError):
 import sys
 
 
-IN_UTIL_DIR='../../papier2/sauvegardes/test'
-MODE = 2 #0: "S->UE", 1: "UE->S" 2:"TOUS"
+IN_UTIL_DIR='../../papier2/sauvegardes/test-congestion3'
+MODE = 1 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
 # Time in ms for which visualization will be generated
-GEN_TIME = 3000  #ms
-UTIL_INTERVAL = 100
+GEN_TIME = 950  #ms
+UTIL_INTERVAL = 50 #ms
 
 
 # For all end-end paths, visualize link utilization at a specific time instance
@@ -168,10 +168,10 @@ def generate_link_util_at_time():
             deb, fin =l.find(','), l.rfind(',')
             if (t_ns:=int(l[:deb])) < gen_time_ns:
                 continue
-            elif t_ns> fin_interval_ns:
+            elif t_ns>= fin_interval_ns:
                 break
             type_lien=l[fin+1:].strip()
-            src, dst, idcom, _, _, txtime_ns = eval(l[deb+1:fin])
+            src, dst, idcom, idseq, offset, payload, txtime_ns, isTCP, isRetour = eval(l[deb+1:fin])
             if idcom%2==MODE:
                 continue
             txtime_ns=min(txtime_ns,fin_interval_ns-t_ns)

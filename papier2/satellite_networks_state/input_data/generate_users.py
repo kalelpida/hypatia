@@ -122,7 +122,7 @@ def create_users_villesGlobe(Nb, constellation='tas_700', ficVille='ground_stati
             "elev": str(altitude_above_msl), #altitude, meters
         })
     plt.show()
-    return
+    #raise Exception("data not written, comment out this exception to generate users")
     with open(os.path.join(this_file_path,f"UEs_villesGlobe_{constellation.replace('_', '')}.txt"), 'w') as f:
         for i,ue in enumerate(liste_ues):
             f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
@@ -197,4 +197,4 @@ if __name__ =='__main__':
     #create_users_randomGlobe(100)
     #test_distrib()
     #create_users_randomGlobe(250)
-    create_users_villesGlobe(500)
+    create_users_villesGlobe(1000)

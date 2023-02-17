@@ -46,26 +46,32 @@ def main_step1(list_from_to):
     liste_params=('constellation', 'duree', 'pas', 'isls', 'sol', 'algo', 'threads')
     params=[str(dico_params[cle]) for cle in liste_params]
     nb_commodites=len(list_from_to)
-        
-
 
 
     #setting up commodities
     random.seed(graine)
     np.random.seed(graine)
-    reference_rate = 1 # target sending rate in Mb/s
-    list_proportion  =[random.choice(range(70,130))/100 for _ in range(nb_commodites)]
-    #list_proportion  = [1 for _ in range(nb_commodites)]
-    tcp_list_flow_size_byte=[int(elt*reference_rate*int(params[1])*1e6) for elt in list_proportion]#tcp : randomization * sending rate  * simu_duration * coeff_Mb
-    #tcp_list_flow_size_byte=[int(reference_rate*int(params[1])*(1e6/8))]#tcp : sending rate  * simu_duration * coeff_Mb_to_bytes
-    udp_list_flow_size_proportion=[elt*reference_rate for elt in list_proportion]#udp : sending rate * randomization, in Mb/s
-
-    #setting up different start times
-    coeff_decalage=1500/reference_rate*1e3/nb_commodites # MTU-packet time / nb_commodites in ns
-    list_start_time = np.arange(0, nb_commodites*coeff_decalage, coeff_decalage, dtype=int)
-
     # Both protocols
     protocol_chosen=dico_params['protocoles']
+    reference_rate = protocol_chosen.get("debit", 1)# target sending rate in Mb/s
+
+     #setting up different start times
+    decalage=12/reference_rate/10/nb_commodites # 1 MTU-packet time in ms per 10 commodities
+    list_start_time_param=protocol_chosen.get('debut_ms', None)
+    duree_min_ms=min(1000, int(0.5*1e3*duration_s))
+    list_start_time=np.linspace(start=0, stop=decalage, num=nb_commodites, endpoint=True) if list_start_time_param is None else value_or_random(list_start_time_param, nb_commodites, minmax=[0, duration_s*1e3-duree_min_ms])
+    list_start_time.sort()
+
+    #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [0, max]
+    duree=protocol_chosen.get('duree_ms', 'min,max')
+    durees_prevues=value_or_random(duree, nb_commodites, minmax=[np.full(nb_commodites, duree_min_ms), int(duration_s*1e3)-list_start_time//int(1e6)])
+    list_end_time=list_start_time+durees_prevues
+    assert all(list_end_time<=duration_s*1e9)
+
+    tcp_list_flow_size_byte = (durees_prevues*reference_rate*8e-3).astype(int)
+    udp_list_flow_size_proportion=0.3*reference_rate+np.random.exponential(0.7*reference_rate, size=nb_commodites) #udp : sending rate * randomization, in Mb/s
+
+
     protocol_chosen_name=protocol_chosen['nom']
     nb_agresseurs=protocol_chosen.get('nb_agresseurs', 0)#in case there are both TCP and UDP flows, UDP are agressors.
     #ISL network device queue size pkt for TCP, GSL network device queue size pkt for TCP
@@ -164,8 +170,8 @@ def main_step1(list_from_to):
                 list_start_time[i_deb_agresseurs:]=debuts_agresseurs_ns
 
                 #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [0, max]
-                duree_agresseurs=protocol_chosen.get('duree_agresseur_ms', 'min+1,max')
-                durees_agresseurs=value_or_random(duree_agresseurs, nb_agresseurs, minmax=[np.array([duree_min_agresseur_ms]*nb_agresseurs), int(duration_s*1e3)-debuts_agresseurs_ns//int(1e6)])
+                duree_agresseurs=protocol_chosen.get('duree_agresseur_ms', 'min,max')
+                durees_agresseurs=value_or_random(duree_agresseurs, nb_agresseurs, minmax=[np.full(nb_agresseurs, duree_min_agresseur_ms), int(duration_s*1e3)-debuts_agresseurs_ns//int(1e6)])
                 list_end_time[i_deb_agresseurs:]=list_start_time[i_deb_agresseurs:]+durees_agresseurs
                 assert all(list_end_time<=duration_s*1e9)
 
@@ -204,21 +210,21 @@ def value_or_random(param, nb, minmax):
     A function with different behaviours.
     param:
     """
-    if hasattr(param, '__len__'):
-        if type(param) is str:#exemples: 'min,max', '3,5'
-            listeminmax = np.array(eval(param.replace('min', repr(minmax[0])).replace('max', repr(minmax[1]))))
-            if listeminmax.shape in [(), (1,)]:
-                return np.full(nb, listeminmax)
-            if listeminmax.shape == (2, nb):
-                return [np.random.randint(val[0]*1e6, val[1]*1e6) for val in listeminmax.transpose()]
-            elif listeminmax.shape in [(2,), (2, 1)]:
-                return np.random.randint(int(listeminmax[0]*1e6), int(listeminmax[1]*1e6), size=nb)
-            else:
-                raise ValueError('problème de dimension')
-        else:
-            assert len(param) == nb
-            return param
-    elif np.all(param>minmax[0]) and np.all(param<minmax[1]):
-        return [int(param*1e6)]*nb
+    if type(param) is str:#exemples: 'min,max', '3,5'
+        listeminmax = np.array(eval(param.replace('min', repr(minmax[0])).replace('max', repr(minmax[1]))))
     else:
-        raise ValueError('paramètres non reconnus ou non valides')
+        listeminmax = np.array(param)
+    
+    if listeminmax.shape in [(), (1,)]:
+        assert np.all(listeminmax>=minmax[0]) and np.all(listeminmax<=minmax[1])
+        return np.full(nb, int(listeminmax*1e6))
+    elif listeminmax.shape == (2, nb):
+        assert np.all(listeminmax>=minmax[0]) and np.all(listeminmax<=minmax[1])
+        return np.array([np.random.randint(val[0]*1e6, val[1]*1e6) for val in listeminmax.transpose()], dtype=int)
+    elif listeminmax.shape in [(2,), (2, 1)]:
+        assert listeminmax[0]<listeminmax[1]
+        assert np.all(listeminmax[0]>=minmax[0]) and np.all(listeminmax[1]<=minmax[1])
+        return np.random.randint(int(listeminmax[0]*1e6), int(listeminmax[1]*1e6), size=nb)
+    else:
+        raise ValueError('problème de dimension')
+    
