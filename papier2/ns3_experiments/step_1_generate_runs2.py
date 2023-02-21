@@ -54,7 +54,7 @@ def main_step1(list_from_to):
     # Both protocols
     protocol_chosen=dico_params['protocoles']
     reference_rate = protocol_chosen.get("debit", 1)# target sending rate in Mb/s
-
+    data_rate_GSL_megabit_per_s = dico_params.pop('debit_gsl')
      #setting up different start times
     decalage=12/reference_rate/10/nb_commodites # 1 MTU-packet time in ms per 10 commodities
     list_start_time_param=protocol_chosen.get('debut_ms', None)
@@ -108,7 +108,7 @@ def main_step1(list_from_to):
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[ISL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                        "[GSL-DATA-RATE-MEGABIT-PER-S]", str(reference_rate*nb_commodites*3/10))# for ground station: /10 => a station can accept ~20% of users if gthere are 10 stations
+                                        "[GSL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_GSL_megabit_per_s))# for ground station: /10 => a station can accept ~20% of users if gthere are 10 stations
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[ISL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_isl_pkt))
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
@@ -143,7 +143,7 @@ def main_step1(list_from_to):
         list_extra_parameters=None
         list_metadata=None
         with open(run_dir + "/tcp_flow_schedule.csv", "w+") as f_out:
-            for i in range(nb_commodites-protocol_chosen.get('nb_agresseurs', 0)):
+            for i in range(protocol_chosen.get('nb_agresseurs', 0), nb_commodites):
                 f_out.write("%d,%d,%d,%d,%d,%s,%s\n" % (
                     i,
                     list_from_to[i][0],
@@ -161,28 +161,27 @@ def main_step1(list_from_to):
             if 'tcp' in protocol_chosen_name:
                 #udp are aggressors
                 assert nb_agresseurs >0
-                i_deb_agresseurs=nb_commodites-nb_agresseurs
                 #by defaut, all start near of 0, else all at instant t, otherwise random between [min, max] 
-                debut_agresseurs=protocol_chosen.get('debut_agresseur_ms', list_start_time[i_deb_agresseurs:])
+                debut_agresseurs=protocol_chosen.get('debut_agresseur_ms', list_start_time[:nb_agresseurs])
                 duree_min_agresseur_ms=min(1000, int(0.5*1e3*duration_s))
                 debuts_agresseurs_ns=value_or_random(debut_agresseurs, nb_agresseurs, minmax=[0, duration_s*1e3-duree_min_agresseur_ms])
                 debuts_agresseurs_ns.sort()
-                list_start_time[i_deb_agresseurs:]=debuts_agresseurs_ns
+                list_start_time[:nb_agresseurs]=debuts_agresseurs_ns
 
                 #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [0, max]
                 duree_agresseurs=protocol_chosen.get('duree_agresseur_ms', 'min,max')
                 durees_agresseurs=value_or_random(duree_agresseurs, nb_agresseurs, minmax=[np.full(nb_agresseurs, duree_min_agresseur_ms), int(duration_s*1e3)-debuts_agresseurs_ns//int(1e6)])
-                list_end_time[i_deb_agresseurs:]=list_start_time[i_deb_agresseurs:]+durees_agresseurs
+                list_end_time[:nb_agresseurs]=list_start_time[:nb_agresseurs]+durees_agresseurs
                 assert all(list_end_time<=duration_s*1e9)
 
-                fdebit=protocol_chosen.get("debit_agresseurs", 1)
-                for i in range(i_deb_agresseurs, nb_commodites):
+                fdebit=protocol_chosen.get("fdebit_agresseurs", 1)
+                for i in range(nb_agresseurs):
                     f_out.write(
                         "%d,%d,%d,%.10f,%d,%d,,%s\n" % (
                             i,
                             list_from_to[i][0],
                             list_from_to[i][1],
-                            udp_list_flow_size_proportion[i]*fdebit,
+                            max(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s, data_rate_GSL_megabit_per_s/nb_commodites*2*duration_s/np.mean(durees_prevues)),
                             list_start_time[i],
                             list_end_time[i],
                             protocol_chosen.get("metadata", "")

@@ -142,28 +142,29 @@ namespace ns3 {
         }
     }
 
-
-static void PacketEventTracer(Ptr<OutputStreamWrapper> stream, mapflow_t *conversion, const std::string& infodrop, Ptr<const Node> src_node, Ptr<const Node> dst_node,  Ptr<const Packet> packet, const Time& txTime)
+static void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> src_node, Ptr<const Node> dst_node,  Ptr<const Packet> packet, const Time& txTime)
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     resAnalysePacket analysePacket;
-    getPacketFlux(packet, conversion, analysePacket);
+    getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
     *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << src_node->GetId() << "," << dst_node->GetId() << "," << analysePacket.idcomm;
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize << "," << txTime.GetNanoSeconds();
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
 }
 
-static void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, mapflow_t *conversion, const std::string& infodrop, Ptr<const Node> src_node, Ptr<const Packet> packet)
+static void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> node, Ptr<const Packet> packet)
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     // Extract burst identifier and packet sequence number
+    if (cbparams_val->m_log_condition_NodeId.minNodeId >= node->GetId()){
     resAnalysePacket analysePacket;
-    getPacketFlux(packet, conversion, analysePacket);
+    getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
-    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << src_node->GetId() << ","  << analysePacket.idcomm; // we only know the node receiving/where the error occurs
+    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << analysePacket.idcomm; // we only know the node receiving/where the error occurs
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize; //txtime unknown
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    }
 }
 
 
@@ -270,7 +271,7 @@ namespace ns3 {
 
     TopologySatelliteNetwork::TopologySatelliteNetwork(Ptr<BasicSimulation> basicSimulation, const Ipv4RoutingHelper& ipv4RoutingHelper) {
         m_basicSimulation = basicSimulation;
-        m_conversion = new mapflow_t();
+        m_cbparams.m_conversion = new mapflow_t();
         ReadConfig();
         Build(ipv4RoutingHelper);
     }
@@ -333,7 +334,11 @@ namespace ns3 {
             m_isl_utilization_tracking_interval_ns = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("isl_utilization_tracking_interval_ns"));
         }
         // Utilization tracking settings
-        m_enable_full_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_full_log", "true"));
+        m_enable_tx_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_tx_log", "true"));
+        m_enable_rx_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_rx_log", "true"));
+        m_enable_drop_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_drop_log", "true"));
+        m_cbparams.m_log_condition_NodeId.minNodeId = std::stoul(m_basicSimulation->GetConfigParamOrDefault("satellite_network_min_node_log", std::to_string(GetNumSatellites())));
+        
 
         // Create ISLs
         std::cout << "  > Reading and creating ISLs" << std::endl;
@@ -551,13 +556,14 @@ namespace ns3 {
                 m_islNetDevices.Add(netDevices.Get(1));
                 m_islFromTo.push_back(std::make_pair(sat1_id, sat0_id));
             }
-            if (m_enable_full_log){
-                netDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream,m_conversion, "ISL-rx"));
+            if (m_enable_rx_log){
+                netDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "ISL-rx"));
                 //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
-                netDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream,m_conversion, "ISL-rx"));
-                netDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream,m_conversion, "ISL-tx"));
-                netDevices.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream,m_conversion, "ISL-tx"));
-                
+                netDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "ISL-rx"));
+            }
+            if (m_enable_tx_log){
+                netDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "ISL-tx"));
+                netDevices.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "ISL-tx"));
                 /*
                 m_map_FromTo_UtilizationVec[std::make_pair(sat0_id, sat1_id)] = netDevices.Get(0);
                 m_map_FromTo_UtilizationVec[std::make_pair(sat1_id, sat0_id)] = netDevices.Get(1);
@@ -565,15 +571,17 @@ namespace ns3 {
             }
 
             // Tracking
-            //const std::string str_sat0 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat0_id);//could be a buffer overflow as well as a disabled link
-            netDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream,m_conversion, "ISL-bufOvflwLinkErr"));
-            //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
-            netDevices.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream,m_conversion, "ISL-bufOvflwLinkErr"));
-            if (std::regex_search(line, match, trackLinkDrops)){
-                //const std::string str_sat0 = format_string("channelError-ISL-Sat%" PRId64, sat0_id);
-                netDevices.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream,m_conversion, "ISL-channelError"));
-                //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
-                netDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream,m_conversion, "ISL-channelError"));
+            if (m_enable_drop_log){
+                //const std::string str_sat0 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat0_id);//could be a buffer overflow as well as a disabled link
+                netDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-bufOvflwLinkErr"));
+                //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
+                netDevices.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-bufOvflwLinkErr"));
+                if (std::regex_search(line, match, trackLinkDrops)){
+                    //const std::string str_sat0 = format_string("channelError-ISL-Sat%" PRId64, sat0_id);
+                    netDevices.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-channelError"));
+                    //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
+                    netDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-channelError"));
+                }
             }
 
             counter += 1;
@@ -635,25 +643,13 @@ namespace ns3 {
         // Create and install GSL network devices
         NetDeviceContainer devices = gsl_helper.Install(m_satelliteNodes, m_groundStationNodes, node_gsl_if_info);
         // Add callbacks. Dirty to set it here but easier than in the gsl_helper
-        uint32_t nb_sats = GetNumSatellites();
-        if (m_enable_full_log){
+        // uint32_t nb_sats = GetNumSatellites();
+        if (m_enable_rx_log || m_enable_tx_log || m_enable_drop_log){
             for (uint32_t i=0; i< devices.GetN(); i++)
             {
-            if (i<nb_sats){
-                    //This is a sat
-                    //const std::string str_sat = format_string("bufOvflwLinkErr-GSL-Sat%d", i);
-                    //Ptr<const std::string> ptr_str_sat(&str_sat);
-                    devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream,m_conversion, "GSL-bufOvflwLinkErr"));
-                    devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream,m_conversion, "GSL-tx"));
-                    devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream,m_conversion, "GSL-rx"));
-            } else {
-                    //Ground station case
-                    //const std::string str_gs = format_string("bufOvflwLinkErr-GSL-GS%d", i-nb_sats);
-                    //Ptr<const std::string> ptr_str_gs(&str_gs);
-                    devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream,m_conversion, "GSL-bufOvflwLinkErr"));
-                    devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream,m_conversion, "GSL-tx"));
-                    devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream,m_conversion, "GSL-rx"));
-            }            
+                if (m_enable_drop_log) {devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "GSL-bufOvflwLinkErr")); }
+                if (m_enable_tx_log) {devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "GSL-tx")); }
+                if (m_enable_rx_log) {devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "GSL-rx")); }
             }
         }
         std::cout << "    >> Finished install GSL interfaces (interfaces, network devices, one shared channel)" << std::endl;
@@ -854,7 +850,7 @@ namespace ns3 {
     }
 
     void TopologySatelliteNetwork::RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> triplet, uint64_t flowId){
-        (*m_conversion)[triplet]=flowId;
+        (*(m_cbparams.m_conversion))[triplet]=flowId;
     }
 
 }

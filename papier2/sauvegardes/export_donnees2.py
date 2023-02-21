@@ -1,3 +1,4 @@
+#!/bin/python
 """
 README
 new way of handling data
@@ -10,11 +11,11 @@ import pickle
 import pandas as pd
 
 
-DOSSIER='test-congestion3'
+DOSSIER='tests-one-station'
 if len(sys.argv)==2:
 	DOSSIER=sys.argv[1].strip('/')
 
-FIC_SAUVEGARDE = os.path.join(DOSSIER, __file__.removesuffix('.py')+".pickle")
+FIC_SAUVEGARDE = os.path.join(DOSSIER, os.path.basename(__file__).removesuffix('.py')+".pickle")
 
 df_variants=pd.DataFrame()
 dico_bdds={}

@@ -60,7 +60,19 @@
 #include "states-error-model.h"
 
 namespace ns3 {
+    struct structacceptNodeObj { 
+        unsigned int minNodeId; 
+    };
+
     typedef std::map<std::pair<InetSocketAddress,Ipv4Address>, uint64_t> mapflow_t;
+    typedef struct structacceptNodeObj acceptNodeObj;
+
+    struct structCbParams{
+        mapflow_t *m_conversion;
+        acceptNodeObj m_log_condition_NodeId;
+    };
+
+    typedef struct structCbParams cbparams;
 
     class TopologySatelliteNetwork : public Topology
     {
@@ -136,16 +148,15 @@ namespace ns3 {
         int64_t m_isl_max_queue_size_pkts;
         int64_t m_gsl_max_queue_size_pkts;
         bool m_enable_isl_utilization_tracking;
-        bool m_enable_full_log;
+        bool m_enable_tx_log, m_enable_rx_log, m_enable_drop_log;
         int64_t m_isl_utilization_tracking_interval_ns;
 
         Ptr<OutputStreamWrapper> m_drop_stream; //!< stream where to log drop events
         Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log transmission events
         Ptr<OutputStreamWrapper> m_rx_stream; //!< stream where to log receive events
 
-        mapflow_t *m_conversion;
+        cbparams m_cbparams;
     };
-
 }
 
 #endif //TOPOLOGY_SATELLITE_NETWORK_H

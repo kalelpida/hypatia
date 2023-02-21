@@ -54,6 +54,8 @@ def extend_stations_and_users(graine, NbGateways, NbUEs, cstl_config, filename_g
         gateways = read_ground_stations_basic("input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt")
     elif cstl_config['gateway']['type'] == 'topCitiesUN':
         gateways = read_ground_stations_basic("input_data/ground_stations_cities_by_estimated_2025_pop_300k_UN.csv")
+    elif cstl_config['gateway']['type'] == 'Lille':
+        gateways = read_ground_stations_basic("input_data/ground_stations_Lille.csv")
     else: # autres cas à faire
         raise Exception("config not recognised")
     UEs = read_ground_stations_basic("input_data/UEs_{}.txt".format(cstl_config['ue']['type']))
