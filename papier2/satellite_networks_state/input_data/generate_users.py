@@ -106,16 +106,16 @@ def create_users_villesGlobe(Nb, constellation='tas_700', ficVille='ground_stati
             "elev": str(altitude_above_msl), #altitude, meters
         })
 
-
     #generate other random users
-    for prenom in prenoms_sel[Nb_proches_villes:]:
+    koeff=Nb/(Nb-Nb_proches_villes)
+    for i, prenom in enumerate(prenoms_sel[Nb_proches_villes:]):
         theta = np.random.uniform(0, 2*np.pi)
         phi =  np.arcsin(np.random.uniform(-np.sin(latMaxUE_rad), np.sin(latMaxUE_rad)))
 
         plt.plot(*xyz(phi, theta), '.')
         #altitude normal law around 200m+/-
         altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
-        liste_ues.append({
+        liste_ues.insert(int(i*koeff), {
             "nom": prenom.strip(),
             "lon": str(np.degrees(theta)), #degrees
             "lat": str(np.degrees(phi)), #degrees
@@ -275,6 +275,6 @@ if __name__ =='__main__':
     #create_users_randomGlobe(100)
     #test_distrib()
     #create_users_randomGlobe(250)
-    #create_users_villesGlobe(1000)
-    create_users_villeschoisies(1000)
+    create_users_villesGlobe(1000)
+    #create_users_villeschoisies(1000)
 

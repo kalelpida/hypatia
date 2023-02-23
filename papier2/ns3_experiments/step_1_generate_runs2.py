@@ -65,10 +65,9 @@ def main_step1(list_from_to):
     #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [0, max]
     duree=protocol_chosen.get('duree_ms', 'min,max')
     durees_prevues=value_or_random(duree, nb_commodites, minmax=[np.full(nb_commodites, duree_min_ms), int(duration_s*1e3)-list_start_time//int(1e6)])
-    list_end_time=list_start_time+durees_prevues
-    assert all(list_end_time<=duration_s*1e9)
+    assert all(list_start_time+durees_prevues<=duration_s*1e9)
 
-    tcp_list_flow_size_byte = (durees_prevues*reference_rate*8e-3).astype(int)
+    tcp_list_flow_size_byte = (durees_prevues*reference_rate/8e3).astype(int)
     udp_list_flow_size_proportion=0.3*reference_rate+np.random.exponential(0.7*reference_rate, size=nb_commodites) #udp : sending rate * randomization, in Mb/s
 
 
@@ -120,7 +119,18 @@ def main_step1(list_from_to):
     commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in list_from_to) + ')'
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[SET-OF-COMMODITY-PAIRS-PINGMESH]", 'set()')
-    
+    #configure logs
+    logs_possibles=set(('RX', 'TX', 'DROP'))
+    logs_actifs=dico_params.get('logs_actifs', [])
+    logs_actifs=set([elt.upper() for elt in logs_actifs])
+    assert logs_actifs.issubset(logs_possibles)
+    for elt in logs_actifs:
+        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        f"ENABLE_{elt}_LOG", 'true')
+    for elt in logs_possibles-logs_actifs:
+        local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
+                                        f"ENABLE_{elt}_LOG", 'false')
+
     # Make logs_ns3 already for console.txt mapping
     local_shell.make_full_dir(run_dir + "/logs_ns3")
 
@@ -156,7 +166,6 @@ def main_step1(list_from_to):
 
     # udp_burst_schedule.csv
     if "udp" in protocol_chosen_name:
-        list_end_time=np.full(shape=nb_commodites,fill_value=duration_s*1e9,dtype=int)
         with open(run_dir + "/udp_burst_schedule.csv", "w+") as f_out:
             if 'tcp' in protocol_chosen_name:
                 #udp are aggressors
@@ -171,8 +180,7 @@ def main_step1(list_from_to):
                 #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [0, max]
                 duree_agresseurs=protocol_chosen.get('duree_agresseur_ms', 'min,max')
                 durees_agresseurs=value_or_random(duree_agresseurs, nb_agresseurs, minmax=[np.full(nb_agresseurs, duree_min_agresseur_ms), int(duration_s*1e3)-debuts_agresseurs_ns//int(1e6)])
-                list_end_time[:nb_agresseurs]=list_start_time[:nb_agresseurs]+durees_agresseurs
-                assert all(list_end_time<=duration_s*1e9)
+                assert all(list_start_time[:nb_agresseurs]+durees_agresseurs<=duration_s*1e9)
 
                 fdebit=protocol_chosen.get("fdebit_agresseurs", 1)
                 for i in range(nb_agresseurs):
@@ -181,9 +189,9 @@ def main_step1(list_from_to):
                             i,
                             list_from_to[i][0],
                             list_from_to[i][1],
-                            max(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s, data_rate_GSL_megabit_per_s/nb_commodites*2*duration_s/np.mean(durees_prevues)),
+                            min(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s),
                             list_start_time[i],
-                            list_end_time[i],
+                            durees_agresseurs[i],
                             protocol_chosen.get("metadata", "")
                         )
                     )
@@ -196,7 +204,7 @@ def main_step1(list_from_to):
                             list_from_to[i][1],
                             udp_list_flow_size_proportion[i],
                             list_start_time[i],
-                            list_end_time[i],
+                            durees_prevues[i],
                             protocol_chosen.get("metadata", "")
                         )
                     )
@@ -209,7 +217,7 @@ def value_or_random(param, nb, minmax):
     A function with different behaviours.
     param:
     """
-    if type(param) is str:#exemples: 'min,max', '3,5'
+    if type(param) == str:#exemples: 'min,max', '3,5'
         listeminmax = np.array(eval(param.replace('min', repr(minmax[0])).replace('max', repr(minmax[1]))))
     else:
         listeminmax = np.array(param)
@@ -220,6 +228,9 @@ def value_or_random(param, nb, minmax):
     elif listeminmax.shape == (2, nb):
         assert np.all(listeminmax>=minmax[0]) and np.all(listeminmax<=minmax[1])
         return np.array([np.random.randint(val[0]*1e6, val[1]*1e6) for val in listeminmax.transpose()], dtype=int)
+    elif listeminmax.shape == (nb,):
+        assert np.all(listeminmax>=minmax[0]) and np.all(listeminmax<=minmax[1])
+        return np.array(listeminmax*1e6, dtype=int)
     elif listeminmax.shape in [(2,), (2, 1)]:
         assert listeminmax[0]<listeminmax[1]
         assert np.all(listeminmax[0]>=minmax[0]) and np.all(listeminmax[1]<=minmax[1])

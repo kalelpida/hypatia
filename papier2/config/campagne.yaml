@@ -1,7 +1,7 @@
-tests-one-station: #classer par ordre
+one-station-paramel: #classer par ordre
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
-  duree: [ 16 ] #en s
+  duree: [ 60 ] #en s
   pas: [2000] #en ms
   isls: [ isls_plus_grid ]
   # examples of ISL deteriorators
@@ -11,11 +11,12 @@ tests-one-station: #classer par ordre
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
   deteriorISL: [ {} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   sol: [ users_and_main_stations ]
-  nb-UEs-sol: [ 30 ]
+  nb-UEs-sol: [ 500 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
-  threads: [4 ]
-  debit_isl: [ 30 ] #[ 3, 10 ]
-  debit_gsl: [ 30, 80]
+  threads: [ 4 ]
+  debit_isl: [ 10 ] #[ 3, 10 ]
+  debit_gsl: [ 10 ]
+  logs_actifs: [ ['rx', 'tx', 'drop'] ] #('rx', 'tx', 'drop')
   # examples of protocoles:
   # { 'nom':"udp", "metadata":"expInterPacket" }
   # { 'nom':"udp"}
@@ -23,7 +24,8 @@ tests-one-station: #classer par ordre
   # { 'nom': 'tcp_and_udp', 'debut_agresseur_ms': [1, 4],'duree_agresseur_ms': 'min,max'
   # 'debit_agresseur' is capped to debit_gsl*2/nb-UE-sol
   # a tcp flow is defined by its size, which is calculated with debit and duree_ms
-  protocoles: [ {'nom':'tcp', 'debut_ms':'min,max-5000', 'duree_ms':[2000,5000], 'debit': 5 }, { 'nom': "tcp_and_udp", 'debut_ms':'min,max-5000', 'duree_ms':[2000,5000], 'debit': 5, 'nb_agresseurs': 5,  'debut_agresseur_ms': 1000, 'duree_agresseur_ms': 2000, 'fdebit_agresseurs': 2} ] #{ 'nom': "tcp"} ]
+  # Débit Agresseur UDP : max(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s, data_rate_GSL_megabit_per_s/nb_commodites*2*duration_s/np.mean(durees_prevues))
+  protocoles: [ { 'nom': "tcp_and_udp", 'debut_ms':'0', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 20,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 1} ] #{ 'nom': "tcp"} ]
 
 
 info-sauvegarde:
@@ -43,6 +45,6 @@ actions: #[]
   - noeuds
   - commodites
   - routes
-  #- "analyse theorique"
+  - "analyse theorique"
   #- "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
   - simulation
