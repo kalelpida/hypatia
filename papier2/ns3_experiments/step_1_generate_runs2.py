@@ -64,7 +64,7 @@ def main_step1(list_from_to):
 
     #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [0, max]
     duree=protocol_chosen.get('duree_ms', 'min,max')
-    durees_prevues=value_or_random(duree, nb_commodites, minmax=[np.full(nb_commodites, duree_min_ms), int(duration_s*1e3)-list_start_time//int(1e6)])
+    durees_prevues=value_or_random(duree, nb_commodites, minmax=[np.full(nb_commodites, duree_min_ms), (int(duration_s*1e9)-list_start_time)//int(1e6)])
     assert all(list_start_time+durees_prevues<=duration_s*1e9)
 
     tcp_list_flow_size_byte = (durees_prevues*reference_rate/8e3).astype(int)
@@ -184,12 +184,13 @@ def main_step1(list_from_to):
 
                 fdebit=protocol_chosen.get("fdebit_agresseurs", 1)
                 for i in range(nb_agresseurs):
+                    udp_list_flow_size_proportion[i]=min(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s)
                     f_out.write(
                         "%d,%d,%d,%.10f,%d,%d,,%s\n" % (
                             i,
                             list_from_to[i][0],
                             list_from_to[i][1],
-                            min(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s),
+                            udp_list_flow_size_proportion[i],
                             list_start_time[i],
                             durees_agresseurs[i],
                             protocol_chosen.get("metadata", "")

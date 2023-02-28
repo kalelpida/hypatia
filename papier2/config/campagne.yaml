@@ -1,4 +1,4 @@
-one-station-paramel: #classer par ordre
+one-station-paramel50: #classer par ordre
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [ 60 ] #en s
@@ -11,7 +11,7 @@ one-station-paramel: #classer par ordre
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
   deteriorISL: [ {} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   sol: [ users_and_main_stations ]
-  nb-UEs-sol: [ 500 ]
+  nb-UEs-sol: [ 50 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [ 4 ]
   debit_isl: [ 10 ] #[ 3, 10 ]
@@ -25,7 +25,10 @@ one-station-paramel: #classer par ordre
   # 'debit_agresseur' is capped to debit_gsl*2/nb-UE-sol
   # a tcp flow is defined by its size, which is calculated with debit and duree_ms
   # Débit Agresseur UDP : max(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s, data_rate_GSL_megabit_per_s/nb_commodites*2*duration_s/np.mean(durees_prevues))
-  protocoles: [ { 'nom': "tcp_and_udp", 'debut_ms':'0', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 20,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 1} ] #{ 'nom': "tcp"} ]
+  protocoles:
+    - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0.1} 
+    - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0.01}
+    - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 1}  #{ 'nom': "tcp"} ]
 
 
 info-sauvegarde:

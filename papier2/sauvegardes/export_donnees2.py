@@ -11,7 +11,7 @@ import pickle
 import pandas as pd
 
 
-DOSSIER='one-station-paramel'
+DOSSIER='one-station-paramel50'
 if len(sys.argv)==2:
 	DOSSIER=sys.argv[1].strip('/')
 

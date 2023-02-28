@@ -34,10 +34,10 @@ except (ImportError, SystemError):
 import sys
 
 
-IN_UTIL_DIR='../../papier2/sauvegardes/test-congestion3'
+IN_UTIL_DIR='../../papier2/sauvegardes/one-station-paramel500'
 MODE = 1 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
 # Time in ms for which visualization will be generated
-GEN_TIME = 950  #ms
+GEN_TIME = 4000  #ms
 UTIL_INTERVAL = 50 #ms
 
 
