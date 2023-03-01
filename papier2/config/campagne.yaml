@@ -1,4 +1,4 @@
-one-station-paramel50: #classer par ordre
+one-station-paramel-test: #classer par ordre
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [ 60 ] #en s
@@ -14,8 +14,8 @@ one-station-paramel50: #classer par ordre
   nb-UEs-sol: [ 50 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [ 4 ]
-  debit_isl: [ 10 ] #[ 3, 10 ]
-  debit_gsl: [ 10 ]
+  debit_if_isl: [ 10 ] #[ 3, 10 ] #Mb/s
+  debit_if_gsl: [ {'ue':0.2, 'gateway':10, 'satellite':5} ] #Mb/s
   logs_actifs: [ ['rx', 'tx', 'drop'] ] #('rx', 'tx', 'drop')
   # examples of protocoles:
   # { 'nom':"udp", "metadata":"expInterPacket" }
@@ -25,10 +25,10 @@ one-station-paramel50: #classer par ordre
   # 'debit_agresseur' is capped to debit_gsl*2/nb-UE-sol
   # a tcp flow is defined by its size, which is calculated with debit and duree_ms
   # Débit Agresseur UDP : max(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s, data_rate_GSL_megabit_per_s/nb_commodites*2*duration_s/np.mean(durees_prevues))
-  protocoles:
-    - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0.1} 
-    - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0.01}
-    - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 1}  #{ 'nom': "tcp"} ]
+  protocoles: [{'nom': "tcp", 'debut_ms':[0, 100], 'duree_ms': 'max', 'debit': 20}]
+  #  - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0.1} 
+  #  - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0.01}
+  #  - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 1}  #{ 'nom': "tcp"} ]
 
 
 info-sauvegarde:

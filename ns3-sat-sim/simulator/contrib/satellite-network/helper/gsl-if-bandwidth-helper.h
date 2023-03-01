@@ -31,15 +31,16 @@ namespace ns3 {
     class GslIfBandwidthHelper
     {
     public:
-        GslIfBandwidthHelper(Ptr<BasicSimulation> basicSimulation, NodeContainer nodes);
+        GslIfBandwidthHelper(Ptr<BasicSimulation> basicSimulation, NodeContainer nodes, std::vector<std::pair<uint, std::string>>& devtypemap);
     private:
         void UpdateGslIfBandwidth(int64_t t);
 
         // Parameters
         Ptr<BasicSimulation> m_basicSimulation;
         NodeContainer m_nodes;
-        double m_gsl_data_rate_megabit_per_s;
+        std::map<std::string, std::string> m_gsl_data_rate_megabit_per_s_map;
         int64_t m_dynamicStateUpdateIntervalNs;
+        std::vector<std::pair<uint, std::string>> m_devtypemap;
 
     };
 

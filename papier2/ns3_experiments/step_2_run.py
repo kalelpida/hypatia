@@ -38,7 +38,7 @@ with open(config_file, 'r') as f:
 	    dico_params=yaml.load(f, Loader=yaml.Loader)
 
 graine=dico_params.pop('graine')
-data_rate_megabit_per_s=dico_params.get('debit_isl')
+data_rate_megabit_per_s=dico_params.get('debit_if_isl')
 duration_s=dico_params.get('duree')
 algo = dico_params.get('algo')
 

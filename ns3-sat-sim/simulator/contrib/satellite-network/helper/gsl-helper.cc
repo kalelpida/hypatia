@@ -45,15 +45,22 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("GSLHelper");
 
-GSLHelper::GSLHelper ()
+GSLHelper::GSLHelper (std::vector<std::pair<uint, std::string>>& nodetypes)
 {
-  m_queueFactory.SetTypeId ("ns3::DropTailQueue<Packet>");
-  m_deviceFactory.SetTypeId ("ns3::GSLNetDevice");
+  m_nodetypes = nodetypes;
+  for (auto attr : nodetypes){
+    // attr->second : nodetype attr->first : first node of next nodetype
+    m_queueFactories[attr.second] = ObjectFactory();
+    m_queueFactories[attr.second].SetTypeId ("ns3::DropTailQueue<Packet>");
+    m_deviceFactories[attr.second] = ObjectFactory();
+    m_deviceFactories[attr.second].SetTypeId ("ns3::GSLNetDevice");
+  }
+  
   m_channelFactory.SetTypeId ("ns3::GSLChannel");
 }
 
 void 
-GSLHelper::SetQueue (std::string type,
+GSLHelper::SetQueue (std::string nodetype, std::string type,
                      std::string n1, const AttributeValue &v1,
                      std::string n2, const AttributeValue &v2,
                      std::string n3, const AttributeValue &v3,
@@ -61,17 +68,17 @@ GSLHelper::SetQueue (std::string type,
 {
   QueueBase::AppendItemTypeIfNotPresent (type, "Packet");
 
-  m_queueFactory.SetTypeId (type);
-  m_queueFactory.Set (n1, v1);
-  m_queueFactory.Set (n2, v2);
-  m_queueFactory.Set (n3, v3);
-  m_queueFactory.Set (n4, v4);
+  m_queueFactories[nodetype].SetTypeId (type);
+  m_queueFactories[nodetype].Set (n1, v1);
+  m_queueFactories[nodetype].Set (n2, v2);
+  m_queueFactories[nodetype].Set (n3, v3);
+  m_queueFactories[nodetype].Set (n4, v4);
 }
 
 void 
-GSLHelper::SetDeviceAttribute (std::string n1, const AttributeValue &v1)
+GSLHelper::SetDeviceAttribute (std::string nodetype, std::string n1, const AttributeValue &v1)
 {
-  m_deviceFactory.Set (n1, v1);
+  m_deviceFactories[nodetype].Set (n1, v1);
 }
 
 void 
@@ -125,8 +132,17 @@ GSLHelper::Install (NodeContainer satellites, NodeContainer ground_stations, std
 Ptr<GSLNetDevice>
 GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
 
+    //choose device type
+    std::string nodetype;
+    for (auto attr: m_nodetypes){
+      if (attr.first > node->GetId()){
+        nodetype = attr.second;
+      }
+    }
+    NS_ABORT_IF(nodetype.empty());
+
     // Create device
-    Ptr<GSLNetDevice> dev = m_deviceFactory.Create<GSLNetDevice>();
+    Ptr<GSLNetDevice> dev = m_deviceFactories[nodetype].Create<GSLNetDevice>();
 
     // Set unique MAC address
     dev->SetAddress (Mac48Address::Allocate ());
@@ -135,7 +151,7 @@ GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
     node->AddDevice (dev);
 
     // Set device queue
-    Ptr<Queue<Packet> > queue = m_queueFactory.Create<Queue<Packet>>();
+    Ptr<Queue<Packet> > queue = m_queueFactories[nodetype].Create<Queue<Packet>>();
     dev->SetQueue (queue);
 
     // Aggregate NetDeviceQueueInterface objects to connect

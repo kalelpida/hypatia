@@ -21,11 +21,12 @@
 
 namespace ns3 {
 
-    GslIfBandwidthHelper::GslIfBandwidthHelper (Ptr<BasicSimulation> basicSimulation, NodeContainer nodes) {
+    GslIfBandwidthHelper::GslIfBandwidthHelper (Ptr<BasicSimulation> basicSimulation, NodeContainer nodes, std::vector<std::pair<uint, std::string>>& devtypemap) {
         std::cout << "SETUP GSL IF BANDWIDTH HELPER" << std::endl;
         m_basicSimulation = basicSimulation;
+        m_devtypemap = devtypemap;
         m_nodes = nodes;
-        m_gsl_data_rate_megabit_per_s = parse_positive_double(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
+        m_gsl_data_rate_megabit_per_s_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
 
         // Load first forwarding state
         m_dynamicStateUpdateIntervalNs = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("dynamic_state_update_interval_ns"));
@@ -57,6 +58,8 @@ namespace ns3 {
 
             // Go over each line
             size_t line_counter = 0;
+            auto devtypeiterator = m_devtypemap.begin();
+            double m_gsl_data_rate_megabit_per_s;
             while (getline(fstate_file, line)) {
 
                 // Split on ,
@@ -73,9 +76,15 @@ namespace ns3 {
                 // Check the interface
                 NS_ABORT_MSG_IF(if_id < 0 || if_id + 1 >= m_nodes.Get(node_id)->GetObject<Ipv4>()->GetNInterfaces(), "Invalid interface");
 
+                // Change the device type param (satellite, ue, gateway.)
+                while (node_id >= devtypeiterator->first){
+                    devtypeiterator++;
+                    m_gsl_data_rate_megabit_per_s = std::stod(m_gsl_data_rate_megabit_per_s_map[devtypeiterator->second]);
+                }
+
                 // Set data rate (the ->GetObject<GSLNetDevice>() will fail if it is not a GSL network device)
                 m_nodes.Get(node_id)->GetObject<Ipv4>()->GetNetDevice(1 + if_id)->GetObject<GSLNetDevice>()->SetDataRate(
-                        DataRate (std::to_string(m_gsl_data_rate_megabit_per_s * bandwidth_fraction) + "Mbps")
+                        DataRate (std::to_string( m_gsl_data_rate_megabit_per_s * bandwidth_fraction) + "Mbps")
                 );
 
                 // Next line

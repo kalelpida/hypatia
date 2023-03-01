@@ -25,10 +25,8 @@ from astropy import units as u
 import math
 import networkx as nx
 import numpy as np
-from .algorithm_free_one_only_gs_relays import algorithm_free_one_only_gs_relays
 from .algorithm_free_one_only_over_isls import algorithm_free_one_only_over_isls
 from .algorithm_paired_many_only_over_isls import algorithm_paired_many_only_over_isls
-from .algorithm_free_gs_one_sat_many_only_over_isls import algorithm_free_gs_one_sat_many_only_over_isls
 
 from .algorithm_free_one_only_over_isls2 import algorithm_free_one_only_over_isls2
 from .algorithm_free_one_only_over_isls2b import algorithm_free_one_only_over_isls2b
@@ -36,7 +34,6 @@ from .algorithm_free_one_only_over_isls2c import algorithm_free_one_only_over_is
 from .algorithm_free_one_only_over_isls2d import algorithm_free_one_only_over_isls2d
 from .algorithm_free_one_only_over_isls2e import algorithm_free_one_only_over_isls2e
 from .algorithm_paired_many_only_over_isls2 import algorithm_paired_many_only_over_isls2
-from .algorithm_free_gs_one_sat_many_only_over_isls2 import algorithm_free_gs_one_sat_many_only_over_isls2
 
 from .algorithm_free_one_only_over_isls3 import algorithm_free_one_only_over_isls3
 
@@ -379,21 +376,6 @@ def generate_dynamic_state_at(
             is_last
         )
 
-    elif dynamic_state_algorithm == "algorithm_free_gs_one_sat_many_only_over_isls":
-
-        return algorithm_free_gs_one_sat_many_only_over_isls(
-            output_dynamic_state_dir,
-            time_since_epoch_ns,
-            satellites,
-            ground_stations,
-            sat_net_graph_only_satellites_with_isls,
-            ground_station_satellites_in_range,
-            num_isls_per_sat,
-            sat_neighbor_to_if,
-            list_gsl_interfaces_info,
-            prev_output,
-            enable_verbose_logs
-        )
     
     elif dynamic_state_algorithm == "algorithm_free_gs_one_sat_many_only_over_isls2":
         raise("error : check and bring corrections to algorithm_free_gs_one_sat_many_only_over_isls2 function")
@@ -410,20 +392,6 @@ def generate_dynamic_state_at(
             prev_output,
             enable_verbose_logs,
             is_last
-        )
-
-    elif dynamic_state_algorithm == "algorithm_free_one_only_gs_relays":
-
-        return algorithm_free_one_only_gs_relays(
-            output_dynamic_state_dir,
-            time_since_epoch_ns,
-            satellites,
-            ground_stations,
-            sat_net_graph_all_with_only_gsls,
-            num_isls_per_sat,
-            list_gsl_interfaces_info,
-            prev_output,
-            enable_verbose_logs
         )
 
     elif dynamic_state_algorithm == "algorithm_paired_many_only_over_isls":

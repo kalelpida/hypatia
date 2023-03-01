@@ -29,7 +29,8 @@
 #include "ns3/net-device-container.h"
 #include "ns3/node-container.h"
 #include "ns3/gsl-net-device.h"
-
+#include "ns3/ptr.h"
+#include <map>
 
 namespace ns3 {
 
@@ -39,16 +40,16 @@ class Node;
 class GSLHelper
 {
 public:
-  GSLHelper ();
+  GSLHelper (std::vector<std::pair<uint, std::string>>& nodetypes);
   virtual ~GSLHelper () {}
 
   // Set device and channel attributes
-  void SetQueue (std::string type,
+  void SetQueue (std::string nodetype, std::string type,
                  std::string n1 = "", const AttributeValue &v1 = EmptyAttributeValue (),
                  std::string n2 = "", const AttributeValue &v2 = EmptyAttributeValue (),
                  std::string n3 = "", const AttributeValue &v3 = EmptyAttributeValue (),
                  std::string n4 = "", const AttributeValue &v4 = EmptyAttributeValue ());
-  void SetDeviceAttribute (std::string name, const AttributeValue &value);
+  void SetDeviceAttribute (std::string nodetype, std::string name, const AttributeValue &value);
   void SetChannelAttribute (std::string name, const AttributeValue &value);
 
   // Installers
@@ -56,9 +57,10 @@ public:
   Ptr<GSLNetDevice> Install (Ptr<Node> node, Ptr<GSLChannel> channel);
 
 private:
-  ObjectFactory m_queueFactory;         //!< Queue Factory
+  std::vector<std::pair<uint, std::string>> m_nodetypes;
+  std::map<std::string, ObjectFactory> m_queueFactories;         //!< Queue Factories
   ObjectFactory m_channelFactory;       //!< Channel Factory
-  ObjectFactory m_deviceFactory;        //!< Device Factory
+  std::map<std::string, ObjectFactory> m_deviceFactories;        //!< Device Factory
 };
 
 } // namespace ns3

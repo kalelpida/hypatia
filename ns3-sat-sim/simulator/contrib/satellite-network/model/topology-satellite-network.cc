@@ -311,8 +311,6 @@ namespace ns3 {
         }
 
         // All nodes
-        m_allNodes.Add(m_satelliteNodes);
-        m_allNodes.Add(m_groundStationNodes);
         std::cout << "  > Number of nodes............. " << m_allNodes.GetN() << std::endl;
 
         // Install internet stacks on all nodes
@@ -324,9 +322,9 @@ namespace ns3 {
 
         // Link settings
         m_isl_data_rate_megabit_per_s = parse_positive_double(m_basicSimulation->GetConfigParamOrFail("isl_data_rate_megabit_per_s"));
-        m_gsl_data_rate_megabit_per_s = parse_positive_double(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
-        m_isl_max_queue_size_pkts = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("isl_max_queue_size_pkts"));
-        m_gsl_max_queue_size_pkts = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("gsl_max_queue_size_pkts"));
+        m_isl_max_queue_size_kB = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("isl_max_queue_size_kB"));
+        m_gsl_max_queue_size_kB_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_max_queue_size_kB"));
+        m_gsl_data_rate_megabit_per_s_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
 
         // Utilization tracking settings
         m_enable_isl_utilization_tracking = parse_boolean(m_basicSimulation->GetConfigParamOrFail("enable_isl_utilization_tracking"));
@@ -427,6 +425,8 @@ namespace ns3 {
         }
 
         fs.close();
+        m_allNodes.Add(m_satelliteNodes);
+        m_devtypemap.push_back(std::make_pair(m_allNodes.GetN(), "satellite"));
     }
 
     void
@@ -440,6 +440,8 @@ namespace ns3 {
 
         // Read ground station from each line
         std::string line;
+        std::string old_type;
+        std::string type;
         while (std::getline(fs, line)) {
 
             std::vector<std::string> res = split_string(line, ",", 9);
@@ -454,7 +456,19 @@ namespace ns3 {
             double cartesian_y = parse_double(res[6]);
             double cartesian_z = parse_double(res[7]);
             Vector cartesian_position(cartesian_x, cartesian_y, cartesian_z);
-            //std::string type = res[8] //gateway, UE, etc..
+            type = res[8]; //gateway, ue
+            
+            //update type counter
+            if (old_type.empty()){
+                old_type=type;
+            } else if (old_type!=type){
+                // assert type has not been used
+                for (auto attr: m_devtypemap){
+                    NS_ASSERT_MSG(attr.second != type, "Ground devices must be grouped by type (gateway, ue)");                    
+                }
+                m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_groundStationNodes.GetN(), old_type));
+                old_type=type;
+            }
 
             // Create ground station data holder
             Ptr<GroundStation> gs = CreateObject<GroundStation>(
@@ -478,6 +492,12 @@ namespace ns3 {
         }
 
         fs.close();
+        m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_groundStationNodes.GetN(), type));
+        std::cout << "    > m_devtypemap:" << std::endl;
+        for (auto attr: m_devtypemap){
+            std::cout << attr.first << " " << attr.second << std::endl;
+        }
+        m_allNodes.Add(m_groundStationNodes);
     }
 
     void
@@ -493,11 +513,11 @@ namespace ns3 {
 
         // Link helper
         PointToPointLaserHelper p2p_laser_helper;
-        std::string max_queue_size_str = format_string("%" PRId64 "p", m_isl_max_queue_size_pkts);
+        std::string max_queue_size_str = format_string("%" PRId64 "kB", m_isl_max_queue_size_kB);
         p2p_laser_helper.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", QueueSizeValue(QueueSize(max_queue_size_str)));
         p2p_laser_helper.SetDeviceAttribute ("DataRate", DataRateValue (DataRate (std::to_string(m_isl_data_rate_megabit_per_s) + "Mbps")));
         std::cout << "    >> ISL data rate........ " << m_isl_data_rate_megabit_per_s << " Mbit/s" << std::endl;
-        std::cout << "    >> ISL max queue size... " << m_isl_max_queue_size_pkts << " packets" << std::endl;
+        std::cout << "    >> ISL max queue size... " << m_isl_max_queue_size_kB << " kB" << std::endl;
 
         // Traffic control helper
         TrafficControlHelper tch_isl;
@@ -596,13 +616,25 @@ namespace ns3 {
     void
     TopologySatelliteNetwork::CreateGSLs() {
 
-        // Link helper
-        GSLHelper gsl_helper;
-        std::string max_queue_size_str = format_string("%" PRId64 "p", m_gsl_max_queue_size_pkts);
-        gsl_helper.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", QueueSizeValue(QueueSize(max_queue_size_str)));
-        gsl_helper.SetDeviceAttribute ("DataRate", DataRateValue (DataRate (std::to_string(m_gsl_data_rate_megabit_per_s) + "Mbps")));
-        std::cout << "    >> GSL data rate........ " << m_gsl_data_rate_megabit_per_s << " Mbit/s" << std::endl;
-        std::cout << "    >> GSL max queue size... " << m_gsl_max_queue_size_pkts << " packets" << std::endl;
+        for (auto attr: m_devtypemap){
+            NS_ASSERT_MSG(m_gsl_data_rate_megabit_per_s_map.find(attr.second) != m_gsl_data_rate_megabit_per_s_map.end(), "undefined DataRate map for type"+attr.second);
+            NS_ASSERT_MSG(m_gsl_max_queue_size_kB_map.find(attr.second) != m_gsl_max_queue_size_kB_map.end(), "undefined DataRate map for type"+attr.second);
+        }
+        GSLHelper gsl_helper(m_devtypemap);
+        //std::string max_queue_size_str = format_string("%" PRId64 "p", m_gsl_max_queue_size_pkts);
+        for (auto attr: m_gsl_data_rate_megabit_per_s_map){
+            gsl_helper.SetDeviceAttribute(attr.first, "DataRate", DataRateValue (DataRate (attr.second + "Mbps")));
+            gsl_helper.SetQueue(attr.first, "ns3::DropTailQueue<Packet>", "MaxSize", 
+                    QueueSizeValue(QueueSize(m_gsl_max_queue_size_kB_map[attr.first]+ "kB")));
+        }
+        for (auto attr: m_gsl_data_rate_megabit_per_s_map){
+            std::cout << "    >> GSL data rate........ " << attr.first << " : " << attr.second << " Mbit/s" << std::endl;
+        }
+        for (auto attr: m_gsl_max_queue_size_kB_map){
+            std::cout << "    >> GSL max queue size... " << attr.first << " : " << attr.second << " kB" << std::endl;
+        }
+        
+        //std::cout << "    >> GSL max queue size... " << m_gsl_max_queue_size_pkts << " packets" << std::endl;
 
         // Traffic control helper
         TrafficControlHelper tch_gsl;
@@ -786,6 +818,11 @@ namespace ns3 {
 
     uint32_t TopologySatelliteNetwork::GetNumGroundStations() {
         return m_groundStationNodes.GetN();
+    }
+
+    
+    std::vector<std::pair<uint, std::string>>& TopologySatelliteNetwork::GetDevTypeVector(){
+        return m_devtypemap;
     }
 
     const NodeContainer& TopologySatelliteNetwork::GetNodes() {

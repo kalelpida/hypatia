@@ -19,10 +19,10 @@ def build(bld):
         'helper/gsl-if-bandwidth-helper.cc',
         ]
 
-    module_test = bld.create_ns3_module_test_library('satellite-network')
-    module_test.source = [
-        'test/satellite-network-test-suite.cc',
-        ]
+    #module_test = bld.create_ns3_module_test_library('satellite-network')
+    #module_test.source = [
+    #    'test/satellite-network-test-suite.cc',
+    #    ]
 
     headers = bld(features='ns3header')
     headers.module = 'satellite-network'

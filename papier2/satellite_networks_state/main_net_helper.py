@@ -27,7 +27,6 @@ import math
 import yaml
 
 from .input_data.constants import *
-TYPES_OBJETS_SOL = ('ue', 'gateway') # 'ue' type is used in generate_users
 
 class MainNetHelper:
 
@@ -48,7 +47,7 @@ class MainNetHelper:
         
         self.types_parametres={}
         for cle, val in cstl_dico.items():
-            if cle in TYPES_OBJETS_SOL:
+            if cle in cstl_dico['TYPES_OBJETS_SOL']:
                 #old approximation, false for low elevation angle
                 #sat_cone_radius_m= altitude/math.tan(math.radians(val['minElevation']))  # Considering an elevation angle of 35 degrees;
                 #max_gsl_m = math.sqrt(math.pow(sat_cone_radius_m, 2) + math.pow(altitude, 2))

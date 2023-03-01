@@ -423,6 +423,43 @@ std::vector<std::pair<std::string, std::string>> parse_map_string(const std::str
     return result;
 }
 
+
+/**
+ * Parse dict string (i.e., map(...)) into key-value pair list (which can be converted into a map later on).
+ * If it is incorrect format, throw an exception.
+ *
+ * @param str  Input string (e.g., "{a:b, c:d}"
+ *
+ * @return map of key-value pairs (e.g., {a:b, c:d} )
+ */
+std::map<std::string, std::string> parse_dict_string(const std::string str) {
+
+    // Check for encasing map(...)
+    if (!starts_with(str, "{") || !ends_with(str, "}")) {
+        throw std::invalid_argument(format_string( "Map %s is not encased in { x:y, ...}", str.c_str()));
+    }
+    std::string only_inside = str.substr(1, str.size() - 2);
+    std::map<std::string, std::string> final;
+
+    // If it is empty, just return an empty vector
+    if (trim(only_inside).empty()) {
+        return final;
+    }
+
+    // Split by comma to find all elements
+    std::vector<std::string> comma_split_list = split_string(only_inside, ",");
+    std::stringstream ss(only_inside);
+    std::string keyval, key, val;
+    std::vector<std::string> splitkeyval;
+
+    while (getline(ss, keyval, ',')){
+        splitkeyval= split_string(keyval, ":", 2);
+        final[trim(splitkeyval[0])] = trim(splitkeyval[1]);
+    }
+
+    return final;
+}
+
 /**
  * Throw an exception if not all items are less than a number.
  *

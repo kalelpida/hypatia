@@ -92,6 +92,7 @@ namespace ns3 {
         // Additional accessors
         uint32_t GetNumSatellites();
         uint32_t GetNumGroundStations();
+        std::vector<std::pair<uint, std::string>>& GetDevTypeVector();
         const NodeContainer& GetSatelliteNodes();
         const NodeContainer& GetGroundStationNodes();
         const std::vector<Ptr<GroundStation>>& GetGroundStations();
@@ -144,12 +145,13 @@ namespace ns3 {
 
         // Values
         double m_isl_data_rate_megabit_per_s;
-        double m_gsl_data_rate_megabit_per_s;
-        int64_t m_isl_max_queue_size_pkts;
-        int64_t m_gsl_max_queue_size_pkts;
+        std::map<std::string, std::string> m_gsl_data_rate_megabit_per_s_map;
+        int64_t m_isl_max_queue_size_kB;
+        std::map<std::string, std::string> m_gsl_max_queue_size_kB_map;
         bool m_enable_isl_utilization_tracking;
         bool m_enable_tx_log, m_enable_rx_log, m_enable_drop_log;
         int64_t m_isl_utilization_tracking_interval_ns;
+        std::vector<std::pair<uint, std::string>> m_devtypemap;
 
         Ptr<OutputStreamWrapper> m_drop_stream; //!< stream where to log drop events
         Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log transmission events

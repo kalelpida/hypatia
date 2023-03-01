@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
     // Read topology, and install routing arbiters
     Ptr<TopologySatelliteNetwork> topology = CreateObject<TopologySatelliteNetwork>(basicSimulation, Ipv4ArbiterRoutingHelper());
     ArbiterSingleForwardHelper arbiterHelper(basicSimulation, topology->GetNodes());
-    GslIfBandwidthHelper gslIfBandwidthHelper(basicSimulation, topology->GetNodes());
+    GslIfBandwidthHelper gslIfBandwidthHelper(basicSimulation, topology->GetNodes(), topology->GetDevTypeVector());
 
     // Schedule flows
     TcpFlowScheduler tcpFlowScheduler(basicSimulation, topology); // Requires enable_tcp_flow_scheduler=true

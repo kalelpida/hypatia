@@ -75,7 +75,7 @@ class Experiences():
             yaml.dump(self.courante, f)
         #save debitISL in a simple place for graph generation. Used by mcnf. #ToDo
         with open("satellite_networks_state/debitISL.temp", "w") as f:
-            f.write(str(self.courante['debit_isl']))
+            f.write(str(self.courante['debit_if_isl']))
 
         if cle==self.cles[-1] and self.indices_cles[-1]==0:
             return True

@@ -40,7 +40,7 @@ def main_step1(list_from_to):
         dico_params=yaml.load(f, Loader=yaml.Loader)
 
     graine=dico_params.pop('graine')
-    data_rate_megabit_per_s = dico_params.pop('debit_isl')
+    data_rate_megabit_per_s = dico_params.pop('debit_if_isl')
     #true_gsl_max_data_rate_megabit_per_s = data_rate_megabit_per_s*100 # used to generate bursty traffic. maybe admission control from the ground will change that 
     duration_s = int(dico_params['duree'])
     liste_params=('constellation', 'duree', 'pas', 'isls', 'sol', 'algo', 'threads')
@@ -54,7 +54,7 @@ def main_step1(list_from_to):
     # Both protocols
     protocol_chosen=dico_params['protocoles']
     reference_rate = protocol_chosen.get("debit", 1)# target sending rate in Mb/s
-    data_rate_GSL_megabit_per_s = dico_params.pop('debit_gsl')
+    data_rate_GSL_megabit_per_s = dico_params.pop('debit_if_gsl')
      #setting up different start times
     decalage=12/reference_rate/10/nb_commodites # 1 MTU-packet time in ms per 10 commodities
     list_start_time_param=protocol_chosen.get('debut_ms', None)
@@ -76,11 +76,12 @@ def main_step1(list_from_to):
     #ISL network device queue size pkt for TCP, GSL network device queue size pkt for TCP
     # TCP NewReno needs at least the BDP in queue size to fulfill bandwidth
     if "tcp" in protocol_chosen_name:
-        queue_size_isl_pkt = 10*data_rate_megabit_per_s
-        queue_size_gsl_pkt = 10*data_rate_megabit_per_s
+        queue_size_isl_kB = int(10*data_rate_megabit_per_s)
+        queue_size_gsl_kB = {cle: int(val*80/8) for cle, val in data_rate_GSL_megabit_per_s.items()} # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
+        queue_size_gsl_kB['gateway']=int(queue_size_gsl_kB['gateway']/np.sqrt(dico_params['nb-UEs-sol']))
     elif "udp" in protocol_chosen_name:  # UDP does not have this problem, so we cap it at 100 packets
-        queue_size_isl_pkt = min(10*data_rate_megabit_per_s, 100)
-        queue_size_gsl_pkt = min(10*data_rate_megabit_per_s, 100)
+        queue_size_isl_kB = min(10*data_rate_megabit_per_s, 100)
+        queue_size_gsl_kB = {cle: min(int(val*80/8), 100) for cle, val in data_rate_GSL_megabit_per_s.items()}
     else:
         raise ValueError("Unknown protocol chosen: " + protocol_chosen_name)
 
@@ -109,9 +110,9 @@ def main_step1(list_from_to):
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
                                         "[GSL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_GSL_megabit_per_s))# for ground station: /10 => a station can accept ~20% of users if gthere are 10 stations
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                        "[ISL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_isl_pkt))
+                                        "[ISL-MAX-QUEUE-SIZE-KB]", str(queue_size_isl_kB))
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
-                                        "[GSL-MAX-QUEUE-SIZE-PKTS]", str(queue_size_gsl_pkt))
+                                        "[GSL-MAX-QUEUE-SIZE-KB]", str(queue_size_gsl_kB))
     #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
     commodities_set='set(' + ', '.join(str(i) for i in range(nb_commodites)) + ')'
     local_shell.sed_replace_in_file_plain(run_dir + "/config_ns3.properties",
@@ -184,7 +185,7 @@ def main_step1(list_from_to):
 
                 fdebit=protocol_chosen.get("fdebit_agresseurs", 1)
                 for i in range(nb_agresseurs):
-                    udp_list_flow_size_proportion[i]=min(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s)
+                    udp_list_flow_size_proportion[i]=min(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s['ue'])
                     f_out.write(
                         "%d,%d,%d,%.10f,%d,%d,,%s\n" % (
                             i,
