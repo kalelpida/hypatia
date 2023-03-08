@@ -12,6 +12,7 @@
 #include <regex>
 #include "ns3/exp-util.h"
 #include "ns3/topology.h"
+#include "ns3/data-rate.h"
 
 namespace ns3 {
 
@@ -27,6 +28,16 @@ public:
             std::string additional_parameters,
             std::string metadata
     );
+    TcpFlowScheduleEntry(
+            int64_t tcp_flow_id,
+            int64_t from_node_id,
+            int64_t to_node_id,
+            int64_t size_byte,
+            int64_t start_time_ns,
+            DataRate pacingDataRate,
+            std::string additional_parameters,
+            std::string metadata
+    );
     int64_t GetTcpFlowId();
     int64_t GetFromNodeId();
     int64_t GetToNodeId();
@@ -34,12 +45,16 @@ public:
     int64_t GetStartTimeNs();
     std::string GetAdditionalParameters();
     std::string GetMetadata();
+
+    bool enable_pacing_datarate;
+    DataRate GetPacingDataRate();
 private:
     int64_t m_tcp_flow_id;
     int64_t m_from_node_id;
     int64_t m_to_node_id;
     int64_t m_size_byte;
     int64_t m_start_time_ns;
+    DataRate m_pacing_datarate;
     std::string m_additional_parameters;
     std::string m_metadata;
 };

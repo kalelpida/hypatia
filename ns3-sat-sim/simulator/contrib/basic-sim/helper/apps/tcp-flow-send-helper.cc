@@ -33,7 +33,7 @@ namespace ns3 {
 
 TcpFlowSendHelper::TcpFlowSendHelper (std::string protocol, Address address, uint64_t maxBytes, int64_t flowId, bool enableFlowLoggingToFile, std::string baseLogsDir, std::string additionalParameters)
 {
-  m_factory.SetTypeId ("ns3::TcpFlowSendApplication");
+  m_factory.SetTypeId ("ns3::TcpPacedFlowSendApplication");
   m_factory.Set ("Protocol", StringValue (protocol));
   m_factory.Set ("Remote", AddressValue (address));
   m_factory.Set ("MaxBytes", UintegerValue (maxBytes));
@@ -41,6 +41,10 @@ TcpFlowSendHelper::TcpFlowSendHelper (std::string protocol, Address address, uin
   m_factory.Set ("EnableTcpFlowLoggingToFile", BooleanValue (enableFlowLoggingToFile));
   m_factory.Set ("BaseLogsDir", StringValue (baseLogsDir));
   m_factory.Set ("AdditionalParameters", StringValue (additionalParameters));
+}
+
+void TcpFlowSendHelper::SetPacingDataRate(DataRate pacingdatarate){
+  m_factory.Set("PacingDataRate", DataRateValue(pacingdatarate));
 }
 
 ApplicationContainer

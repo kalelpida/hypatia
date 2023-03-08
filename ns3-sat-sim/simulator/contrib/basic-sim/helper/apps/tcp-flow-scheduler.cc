@@ -43,8 +43,16 @@ void TcpFlowScheduler::StartNextFlow(int i) {
     );
     ApplicationContainer app = source.Install(m_nodes.Get(entry.GetFromNodeId()));
     */
-  
-    Ptr<TcpFlowSendApplication> tcpApp=CreateObject<TcpFlowSendApplication>();
+    ApplicationContainer app;
+    Ptr<TcpFlowSendApplication> tcpApp;
+    if (entry.enable_pacing_datarate){
+        tcpApp=CreateObject<TcpPacedFlowSendApplication>();
+        tcpApp->SetAttribute("PacingDataRate", DataRateValue(entry.GetPacingDataRate()));
+        tcpApp->SetAttribute("SendSize", UintegerValue(2000));// in Bytes, 100kB in not paced version. This allows a finer grained control
+    } else {
+        tcpApp=CreateObject<TcpFlowSendApplication>();
+    }
+    
     tcpApp->SetAttribute ("MaxBytes", UintegerValue (entry.GetSizeByte()));
     tcpApp->SetAttribute ("Remote", AddressValue (InetSocketAddress(m_nodes.Get(entry.GetToNodeId())->GetObject<Ipv4>()->GetAddress(1,0).GetLocal(), 1024)));
     tcpApp->SetAttribute ("TcpFlowId", UintegerValue (entry.GetTcpFlowId()));
@@ -52,10 +60,12 @@ void TcpFlowScheduler::StartNextFlow(int i) {
     tcpApp->SetAttribute ("BaseLogsDir", StringValue (m_basicSimulation->GetLogsDir()));
     tcpApp->SetAttribute ("AdditionalParameters", StringValue (entry.GetAdditionalParameters()));
     tcpApp->setTopology(m_topology);
-
     // Install it on the node and start it right now
     m_nodes.Get(entry.GetFromNodeId())->AddApplication(tcpApp);
-    ApplicationContainer app = ApplicationContainer(tcpApp);
+    app = ApplicationContainer(tcpApp);
+    
+
+    
     app.Start(NanoSeconds(0));
     m_apps.push_back(app);
 

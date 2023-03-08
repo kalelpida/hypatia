@@ -264,6 +264,7 @@ GSLNetDevice::TransmitStart (Ptr<Packet> p, const Address dest)
 
   bool result = m_channel->TransmitStart (p, this, dest, txTime);
   m_phyTxBeginTrace (m_node, m_channel->GetDestDevice()->GetNode(),  m_currentPkt, txTime);
+  NS_ABORT_MSG_IF(txTime.GetNanoSeconds() == 0, txTime.GetNanoSeconds() << " src:" << m_node->GetId() << " taille:" << p->GetSize () << " debit:" << m_bps.GetBitRate());
   if (result == false)
     {
       m_phyTxDropTrace (m_node, m_channel->GetDestDevice()->GetNode(),  m_currentPkt, txTime);

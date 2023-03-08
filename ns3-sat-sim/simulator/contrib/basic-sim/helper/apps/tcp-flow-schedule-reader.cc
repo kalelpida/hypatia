@@ -10,12 +10,32 @@ TcpFlowScheduleEntry::TcpFlowScheduleEntry(
         int64_t start_time_ns,
         std::string additional_parameters,
         std::string metadata
-) {
+): enable_pacing_datarate(false) {
     m_tcp_flow_id = tcp_flow_id;
     m_from_node_id = from_node_id;
     m_to_node_id = to_node_id;
     m_size_byte = size_byte;
     m_start_time_ns = start_time_ns;
+    m_additional_parameters = additional_parameters;
+    m_metadata = metadata;
+}
+
+TcpFlowScheduleEntry::TcpFlowScheduleEntry(
+        int64_t tcp_flow_id,
+        int64_t from_node_id,
+        int64_t to_node_id,
+        int64_t size_byte,
+        int64_t start_time_ns,
+        DataRate pacingDataRate,
+        std::string additional_parameters,
+        std::string metadata
+): enable_pacing_datarate(true) {
+    m_tcp_flow_id = tcp_flow_id;
+    m_from_node_id = from_node_id;
+    m_to_node_id = to_node_id;
+    m_size_byte = size_byte;
+    m_start_time_ns = start_time_ns;
+    m_pacing_datarate = pacingDataRate;
     m_additional_parameters = additional_parameters;
     m_metadata = metadata;
 }
@@ -46,6 +66,11 @@ std::string TcpFlowScheduleEntry::GetAdditionalParameters() {
 
 std::string TcpFlowScheduleEntry::GetMetadata() {
     return m_metadata;
+}
+
+DataRate TcpFlowScheduleEntry::GetPacingDataRate(){
+    NS_ABORT_MSG_UNLESS(enable_pacing_datarate, "pacing data rate is not defined");
+    return m_pacing_datarate;
 }
 
 /**
@@ -120,8 +145,15 @@ std::vector<TcpFlowScheduleEntry> read_tcp_flow_schedule(const std::string& file
                 ));
             }
 
-            // Put into schedule
-            schedule.push_back(TcpFlowScheduleEntry(tcp_flow_id, from_node_id, to_node_id, size_byte, start_time_ns, additional_parameters, metadata));
+            std::smatch match;
+            const std::regex pDR("pacingDR(\\S+)");
+            if (std::regex_search(additional_parameters, match, pDR)){
+                schedule.push_back(TcpFlowScheduleEntry(tcp_flow_id, from_node_id, to_node_id, size_byte, start_time_ns, DataRate(match[1]), additional_parameters, metadata));
+            } else {
+                schedule.push_back(TcpFlowScheduleEntry(tcp_flow_id, from_node_id, to_node_id, size_byte, start_time_ns, additional_parameters, metadata));
+            }
+            
+            
 
         }
 

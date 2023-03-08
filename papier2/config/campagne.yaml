@@ -1,4 +1,4 @@
-one-station-paramel-test: #classer par ordre
+one-station-paramel100: #nom de la campagne
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [ 60 ] #en s
@@ -11,12 +11,12 @@ one-station-paramel-test: #classer par ordre
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
   deteriorISL: [ {} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   sol: [ users_and_main_stations ]
-  nb-UEs-sol: [ 50 ]
+  nb-UEs-sol: [ 100 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [ 4 ]
-  debit_if_isl: [ 10 ] #[ 3, 10 ] #Mb/s
-  debit_if_gsl: [ {'ue':0.2, 'gateway':10, 'satellite':5} ] #Mb/s
-  logs_actifs: [ ['rx', 'tx', 'drop'] ] #('rx', 'tx', 'drop')
+  debit-if-isl: [ 3 ] #[ 3, 10 ] #Mb/s
+  debit-if-gsl: [ {'ue':1, 'gateway':50, 'satellite':20} ] #Mb/s
+  logs-actifs: [ ['rx', 'tx', 'drop'] ] #('rx', 'tx', 'drop')
   # examples of protocoles:
   # { 'nom':"udp", "metadata":"expInterPacket" }
   # { 'nom':"udp"}
@@ -25,11 +25,15 @@ one-station-paramel-test: #classer par ordre
   # 'debit_agresseur' is capped to debit_gsl*2/nb-UE-sol
   # a tcp flow is defined by its size, which is calculated with debit and duree_ms
   # Débit Agresseur UDP : max(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s, data_rate_GSL_megabit_per_s/nb_commodites*2*duration_s/np.mean(durees_prevues))
-  protocoles: [{'nom': "tcp", 'debut_ms':[0, 100], 'duree_ms': 'max', 'debit': 20}]
-  #  - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0.1} 
-  #  - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0.01}
-  #  - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 50, 'nb_agresseurs': 5,  'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 1}  #{ 'nom': "tcp"} ]
-
+  protocoles: 
+    - {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max'} #, 'tcp_extra_parameters' : 'pacingDR0.9Mb/s' }
+    #- {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'debit': 20 }
+    #- { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 20, 'tcp_extra_parameters' : 'pacingDR0.9Mb/s', 'nb_agresseurs': 15, 'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0}  #{ 'nom': "tcp"} ]
+    - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 20, 'nb_agresseurs': 15, 'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 6000, 'fdebit_agresseurs': 0}
+    - { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 20, 'nb_agresseurs': 15, 'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 6000, 'fdebit_agresseurs': 0.1}
+  # debit: used by TCP, by default debit-if-gsl['ue']
+  # tcp_extra_parameters : string, thought as space-separated coefficients
+  # pacingDR[double][unit or default to bit per sec] is at application level, so only takes into account the payload
 
 info-sauvegarde:
   strdate: '%Y-%m-%d-%H%M'
@@ -39,7 +43,7 @@ info-sauvegarde:
     #directory: files or directory
     "satgenpy_analysis/data/{constellation}_{isls}_{sol}_{algo}/{pas}ms_for_{duree}s/": manual
     "satellite_networks_state/gen_data/{constellation}_{isls}_{sol}_{algo}": ground_stations.txt
-    ns3_experiments/runs: "run_loaded_tm_pairing_{debit_isl}_Mbps_for_{duree}s_with_{protocoles_nom}_{algo}"
+    ns3_experiments/runs: "run_loaded_tm_pairing_{debit-if-isl}_Mbps_for_{duree}s_with_{protocoles_nom}_{algo}"
     config: ^(?!campagne).*$ #all but starting with campagne
     satellite_networks_state: commodites.temp
   #currinfo: currlog #pour savoir où on en est, si lancé en arrière-plan
@@ -48,6 +52,6 @@ actions: #[]
   - noeuds
   - commodites
   - routes
-  - "analyse theorique"
+  #- "analyse theorique"
   #- "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
   - simulation

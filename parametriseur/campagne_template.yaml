@@ -1,0 +1,40 @@
+a-conserver-dans-campagne:
+  - info-sauvegarde
+  - actions
+  - paramTester
+
+paramTester:
+  graine: [0]
+  constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
+  duree: [ 8 ] #en s
+  pas: [2000] #en ms
+  isls: [ isls_plus_grid ]
+  # examples of ISL deteriorators
+  #      { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" }, 
+  #      { sel: topUtil10, errModel: "brstErrMdl-brstRate:0.01-brstSize:5" },
+  #      { sel: topUtil10, errModel: "recvErrRate:0.1"}
+  #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
+  deteriorISL: [ {} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
+  sol: [ users_and_main_stations ]
+  nb-UEs-sol: [ 10 ]
+  algo: [ "algorithm_free_one_only_over_isls" ]
+  threads: [ 4 ]
+  debit-if-isl: [ 15 ] #[ 3, 10 ] #Mb/s
+  debit-if-gsl: [ {'ue':10, 'gateway':90, 'satellite':40} ] #Mb/s
+  logs-actifs: [ ['tx' ] ] #('rx', 'tx', 'drop')
+  # examples of protocoles:
+  # { 'nom':"udp", "metadata":"expInterPacket" }
+  # { 'nom':"udp"}
+  # { 'nom': "tcp"}
+  # { 'nom': 'tcp_and_udp', 'debut_agresseur_ms': [1, 4],'duree_agresseur_ms': 'min,max'
+  # 'debit_agresseur' is capped to debit_gsl*2/nb-UE-sol
+  # a tcp flow is defined by its size, which is calculated with debit and duree_ms
+  # Débit Agresseur UDP : max(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s, data_rate_GSL_megabit_per_s/nb_commodites*2*duration_s/np.mean(durees_prevues))
+  protocoles: 
+    - {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'debit': 20 }
+
+actions: #[]
+  - noeuds
+  - commodites
+  - routes
+  - simulation

@@ -40,7 +40,7 @@ def main_step1(list_from_to):
         dico_params=yaml.load(f, Loader=yaml.Loader)
 
     graine=dico_params.pop('graine')
-    data_rate_megabit_per_s = dico_params.pop('debit_if_isl')
+    data_rate_megabit_per_s = dico_params.pop('debit-if-isl')
     #true_gsl_max_data_rate_megabit_per_s = data_rate_megabit_per_s*100 # used to generate bursty traffic. maybe admission control from the ground will change that 
     duration_s = int(dico_params['duree'])
     liste_params=('constellation', 'duree', 'pas', 'isls', 'sol', 'algo', 'threads')
@@ -53,8 +53,8 @@ def main_step1(list_from_to):
     np.random.seed(graine)
     # Both protocols
     protocol_chosen=dico_params['protocoles']
-    reference_rate = protocol_chosen.get("debit", 1)# target sending rate in Mb/s
-    data_rate_GSL_megabit_per_s = dico_params.pop('debit_if_gsl')
+    data_rate_GSL_megabit_per_s = dico_params.pop('debit-if-gsl')
+    reference_rate = protocol_chosen.get("debit", data_rate_GSL_megabit_per_s['ue'])# target sending rate in Mb/s
      #setting up different start times
     decalage=12/reference_rate/10/nb_commodites # 1 MTU-packet time in ms per 10 commodities
     list_start_time_param=protocol_chosen.get('debut_ms', None)
@@ -122,7 +122,7 @@ def main_step1(list_from_to):
                                         "[SET-OF-COMMODITY-PAIRS-PINGMESH]", 'set()')
     #configure logs
     logs_possibles=set(('RX', 'TX', 'DROP'))
-    logs_actifs=dico_params.get('logs_actifs', [])
+    logs_actifs=dico_params.get('logs-actifs', [])
     logs_actifs=set([elt.upper() for elt in logs_actifs])
     assert logs_actifs.issubset(logs_possibles)
     for elt in logs_actifs:
@@ -148,20 +148,20 @@ def main_step1(list_from_to):
         :param list_from_to:                List of (from, to)-tuples
         :param list_flow_size_byte:         List of integer flow size (byte)
         :param list_start_time_ns:          List of integer start times (ns)
-        :param list_extra_parameters:       List of strings (can be anything, just not containing a comma)
+        :tcp_extra_parameters:              String (can be anything, just not containing a comma)
         :param list_metadata:               List of strings (can be anything, just not containing a comma)
         """
-        list_extra_parameters=None
+        tcp_extra_parameters = protocol_chosen.get('tcp_extra_parameters', "")
         list_metadata=None
         with open(run_dir + "/tcp_flow_schedule.csv", "w+") as f_out:
-            for i in range(protocol_chosen.get('nb_agresseurs', 0), nb_commodites):
+            for i in range(nb_agresseurs, nb_commodites):
                 f_out.write("%d,%d,%d,%d,%d,%s,%s\n" % (
                     i,
                     list_from_to[i][0],
                     list_from_to[i][1],
                     tcp_list_flow_size_byte[i],
                     list_start_time[i],
-                    list_extra_parameters[i] if list_extra_parameters is not None else "",
+                    tcp_extra_parameters,
                     list_metadata[i] if list_metadata is not None else ""
                 ))
 
@@ -184,19 +184,20 @@ def main_step1(list_from_to):
                 assert all(list_start_time[:nb_agresseurs]+durees_agresseurs<=duration_s*1e9)
 
                 fdebit=protocol_chosen.get("fdebit_agresseurs", 1)
-                for i in range(nb_agresseurs):
-                    udp_list_flow_size_proportion[i]=min(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s['ue'])
-                    f_out.write(
-                        "%d,%d,%d,%.10f,%d,%d,,%s\n" % (
-                            i,
-                            list_from_to[i][0],
-                            list_from_to[i][1],
-                            udp_list_flow_size_proportion[i],
-                            list_start_time[i],
-                            durees_agresseurs[i],
-                            protocol_chosen.get("metadata", "")
+                if fdebit>0:
+                    for i in range(nb_agresseurs):
+                        udp_list_flow_size_proportion[i]=min(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s['ue'])
+                        f_out.write(
+                            "%d,%d,%d,%.10f,%d,%d,,%s\n" % (
+                                i,
+                                list_from_to[i][0],
+                                list_from_to[i][1],
+                                udp_list_flow_size_proportion[i],
+                                list_start_time[i],
+                                durees_agresseurs[i],
+                                protocol_chosen.get("metadata", "")
+                            )
                         )
-                    )
             else:
                 for i in range(nb_commodites):
                     f_out.write(

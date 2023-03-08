@@ -38,7 +38,7 @@ def genere_cles(campagne):
 #base
 class Experiences():
     def __init__(self, campagne, actions):
-        self.courante={'graine': 2, 'constellation': 'tas_700', 'duree': 8, 'pas': 2000, 'isls': 'isls_plus_grid', 'sol': 'ground_stations_top_100', 'algo': 'algorithm_free_one_only_over_isls', 'threads': 4, 'debit_isl': 10}
+        self.courante={}
         self.campagne=campagne
         self.cles=genere_cles(campagne)
         self.indices_cles=[0]*len(self.cles)
@@ -75,7 +75,7 @@ class Experiences():
             yaml.dump(self.courante, f)
         #save debitISL in a simple place for graph generation. Used by mcnf. #ToDo
         with open("satellite_networks_state/debitISL.temp", "w") as f:
-            f.write(str(self.courante['debit_if_isl']))
+            f.write(str(self.courante['debit-if-isl']))
 
         if cle==self.cles[-1] and self.indices_cles[-1]==0:
             return True
@@ -136,10 +136,16 @@ class Experiences():
         for dir, regex in sources.items():
             dir_str=dir.format(**str_courante)
             regex_str=regex.format(**str_courante)
-            sources_a_svgder+=[os.path.join(dir_str,x) for x in os.listdir(dir_str) if re.match(regex_str, x)]
+            if os.path.isdir(dir_str):
+                sources_a_svgder+=[os.path.join(dir_str,x) for x in os.listdir(dir_str) if re.match(regex_str, x) ]
+            else:
+                print(f"\n\n \t << {dir_str} >> is not a directory \n\n")
         subprocess.check_call(["mkdir", "-p", nomdestdir])
         for src in sources_a_svgder:
-            subprocess.check_call(["cp", "-R", '-t', nomdestdir, src])
+            if os.path.exists(src):
+                subprocess.check_call(["cp", "-R", '-t', nomdestdir, src])
+            else:
+                print(f"\n\n \t << {src} >> does not exists. Could not be saved \n\n")
 
 
 def str_recursif(dico, prefix=''):

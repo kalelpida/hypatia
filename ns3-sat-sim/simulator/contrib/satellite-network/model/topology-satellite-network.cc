@@ -135,6 +135,12 @@ namespace ns3 {
             } else {
                 analysePacket.dataSize = 0;
             }
+            while (it.HasNext()){
+                item = it.Next();
+                if (item.type == PacketMetadata::Item::ItemType::PAYLOAD){
+                    analysePacket.dataSize += item.currentSize;
+                }
+            }
             
         } else {
             p->Print(std::cerr);

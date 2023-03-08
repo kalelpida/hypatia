@@ -56,16 +56,16 @@ public:
   void FinalizeDetailedLogs();
   void setTopology(Ptr<Topology>);
 
-protected:
-  virtual void DoDispose (void);
 private:
   virtual void StartApplication (void);    // Called at time specified by Start
   virtual void StopApplication (void);     // Called at time specified by Stop
+  virtual void SendData ();                // To be redefined in daughter classes
+protected:
+  virtual void DoDispose (void);
 
   /**
    * Send data until the L4 transmission buffer is full.
    */
-  void SendData ();
 
   Ptr<Socket>     m_socket;       //!< Associated socket
   Address         m_peer;         //!< Peer address

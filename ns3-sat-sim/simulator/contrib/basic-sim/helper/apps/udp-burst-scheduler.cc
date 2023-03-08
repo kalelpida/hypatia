@@ -92,8 +92,8 @@ namespace ns3 {
 
             std::mt19937_64 gen(RngSeedManager::GetSeed());
             UdpBurstInfo::SetRandomGenerator(gen);
-            double gsl_data_rate_megabit_per_s = parse_positive_double(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
-
+            auto typedr_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
+            double gsl_data_rate_megabit_per_s = std::min(std::stod(typedr_map["ue"]), std::stod(typedr_map["gateway"]));
             for (int64_t endpoint : m_topology->GetEndpoints()) {
                 if (!m_enable_distributed || m_distributed_node_system_id_assignment[endpoint] == m_system_id) {
 
