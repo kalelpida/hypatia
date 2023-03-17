@@ -2,8 +2,8 @@ from estimFonc import fonction
 from paramExec import execution
 from paramEval import evaluation, ecriture_params, lecture_params
 
-PARAMS=["debit-if-gsl&ue", "debit-if-gsl&gateway", "debit-if-gsl&satellite", "debit-if-isl", "nb-UEs-sol"]
-valeurs=[[1, 50, 5, 5, 50], [1, 50, 20, 3, 100]]
+PARAMS=["nb-UEs-sol", "tascconf", "debit-if-gsl&gateway", "debit-if-gsl&satellite", "debit-if-gsl&ue", "debit-if-isl"]
+valeurs=[[100, "no-tc", 40, 20, 1, 5], [200,"no-tc", 40, 20, 1, 5]]
 def main():
     #selection param
     deja_testes=lecture_params()

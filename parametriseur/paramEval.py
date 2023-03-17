@@ -11,7 +11,7 @@ def evaluation():
     print("evaluation")
     dico_util = maj_resultats()
     dico_params= lecture_params()
-    for elt, util in dico_util.items():
+    for elt, util in sorted(dico_util.items()):
         print(f"\n\nExpérience {elt}\n")
         tableau(dico_params[elt], util.val3q, util.valmax)
 
@@ -23,7 +23,7 @@ def tableau(dico_param, dico_util3q, dico_utilmax):
     
     print('\n|{: <25} | {: ^8} | {: ^8} | {: ^8}'.format("champ", "capacité", "util Q3", "util max"))
     strformat='|{: <25} | {: ^8.1f} | {: ^8.1f} | {: ^8.1f}'
-    for p, val3q in dico_util3q.items():
+    for p, val3q in sorted(dico_util3q.items()):
         print(strformat.format(p, dico_param[p], dico_param[p]*val3q, dico_param[p]*dico_utilmax[p]))
 
 

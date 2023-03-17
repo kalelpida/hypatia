@@ -40,6 +40,7 @@ def read_isls(filename_isls, num_satellites):
             a = parse_positive_int(line_spl[0])
             b = parse_positive_int(line_spl[1])
             val = line_spl[2]
+            assert val in 'as' # adjacent, same orbit
 
             # Verify the input
             if a >= num_satellites:
