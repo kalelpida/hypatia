@@ -52,7 +52,7 @@ class MainNetHelper:
                 #sat_cone_radius_m= altitude/math.tan(math.radians(val['minElevation']))  # Considering an elevation angle of 35 degrees;
                 #max_gsl_m = math.sqrt(math.pow(sat_cone_radius_m, 2) + math.pow(altitude, 2))
                 t=EARTH_RADIUS*math.sin(math.radians(val['minElevation']))
-                max_gsl_m=(math.sqrt((EARTH_RADIUS+altitude)**2-EARTH_RADIUS**2+t**2) -t)*RADIO_K_FACTOR
+                max_gsl_m=(math.sqrt((EARTH_RADIUS+altitude)**2-EARTH_RADIUS**2+t**2) -t)*cstl_dico["RADIO_K_FACTOR"]
                 self.types_parametres[cle] = {"max_gsl_length_m": max_gsl_m}
                 
         # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions

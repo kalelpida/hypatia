@@ -174,7 +174,7 @@ namespace ns3 {
         uint64_t now_ns = Simulator::Now().GetNanoSeconds();
         UdpBurstInfo info = std::get<0>(m_outgoing_bursts[internal_burst_idx]);
         uint64_t packet_gap_nanoseconds;
-        if (info.GetMetadata().find("expInterPacket") != std::string::npos){
+        if (info.GetAdditionalParameters().find("expInterPacket") != std::string::npos){
             packet_gap_nanoseconds = m_min_std_packet_time + static_cast<uint64_t>(std::get<2>(m_outgoing_bursts[internal_burst_idx])(info.m_random_engine)); 
         } else {
             packet_gap_nanoseconds = std::ceil(1500.0 / (info.GetTargetRateMegabitPerSec() / 8000.0));

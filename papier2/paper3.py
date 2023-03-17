@@ -133,6 +133,7 @@ class Experiences():
         nomdestdir=destdir.format(strdate=time.strftime(self.strdate), **self.courante)
         sources_a_svgder=[]
         str_courante=str_recursif(self.courante)
+        str_courante['protocolesNom'] = '_and_'.join(sorted({dic['nom'] for dic in self.courante['protocoles'].values()}))
         for dir, regex in sources.items():
             dir_str=dir.format(**str_courante)
             regex_str=regex.format(**str_courante)

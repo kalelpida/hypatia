@@ -38,6 +38,8 @@
 #include "ns3/mpi-interface.h"
 #include "ns3/mpi-receiver.h"
 
+#include "ns3/rr-queue-disc.h"
+
 #include "ns3/trace-helper.h"
 #include "ns3/gsl-helper.h"
 
@@ -45,9 +47,10 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("GSLHelper");
 
-GSLHelper::GSLHelper (std::vector<std::pair<uint, std::string>>& nodetypes)
+GSLHelper::GSLHelper (const std::vector<std::pair<uint, std::string>>& nodetypes, std::map<std::string, std::string> tctypes, std::map<std::string, std::map<std::string, std::string>> tcattributes):
+m_nodetypes(nodetypes), m_tctypes(tctypes), m_tcattributes(tcattributes)
 {
-  m_nodetypes = nodetypes;
+  
   for (auto attr : nodetypes){
     // attr->second : nodetype attr->first : first node of next nodetype
     m_queueFactories[attr.second] = ObjectFactory();
@@ -56,7 +59,7 @@ GSLHelper::GSLHelper (std::vector<std::pair<uint, std::string>>& nodetypes)
     m_deviceFactories[attr.second].SetTypeId ("ns3::GSLNetDevice");
   }
   
-  m_channelFactory.SetTypeId ("ns3::GSLChannel");
+  m_channelFactory.SetTypeId ("ns3::GSLChannel");  
 }
 
 void 
@@ -137,6 +140,7 @@ GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
     for (auto attr: m_nodetypes){
       if (attr.first > node->GetId()){
         nodetype = attr.second;
+        break;
       }
     }
     NS_ABORT_IF(nodetype.empty());
@@ -156,9 +160,57 @@ GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
 
     // Aggregate NetDeviceQueueInterface objects to connect
     // the device queue to the interface (used by traffic control layer)
-    Ptr<NetDeviceQueueInterface> ndqi = CreateObject<NetDeviceQueueInterface>();
-    // ndqi->GetTxQueue (0)->ConnectQueueTraces (queue); the device handles its own queue, different from control layer
-    dev->AggregateObject (ndqi);
+    auto search = m_tctypes.find(nodetype);
+    if (search != m_tctypes.end()){
+      // Traffic control helper
+      if (m_tcattributes[nodetype].find("ChildQueueDisc")!=m_tcattributes[nodetype].end()){
+        m_tch_gsl.SetRootQueueDisc(m_tctypes[nodetype], "ChildQueueDisc", StringValue(m_tcattributes[nodetype].at("ChildQueueDisc")));
+        m_tcattributes[nodetype].erase("ChildQueueDisc");
+      } else{
+        m_tch_gsl.SetRootQueueDisc(m_tctypes[nodetype]);
+      }
+      //, "MaxSize", QueueSizeValue(QueueSize("100p")), "ChildQueueDisc", StringValue("ns3::ITbfQueueDisc"));//ns3::ITbfQueueDisc, ns3::FifoQueueDisc
+      
+      //m_tch_gsl.SetRootQueueDisc("ns3::FqCoDelQueueDisc", "DropBatchSize", UintegerValue(1), "Perturbation", UintegerValue(256));
+      Ptr<NetDeviceQueueInterface> ndqi = CreateObject<NetDeviceQueueInterface> ();
+      //ndqi->GetTxQueue (0)->ConnectQueueTraces (queue);
+      dev->AggregateObject (ndqi);
+      QueueDiscContainer qd = m_tch_gsl.Install(dev);
+      for (const auto&  pair : m_tcattributes[nodetype]){
+        size_t i;
+        std::string avant, suite(pair.second);
+        do {
+          i=suite.find(' ');
+          avant = suite.substr(0, i);
+          suite = suite.substr(i+1);
+        } while (i==0);
+        if ( avant ==  "QueueSize" ){
+            if (pair.first.rfind("Child", 0) == 0) { // pos=0 limits the search to the prefix
+            // s starts with prefix
+            //child queue factory, for RRQueue
+              qd.Get(0)->GetObject<RRQueueDisc>()->GetChildQueueFactory().Set(pair.first.substr(5), QueueSizeValue(QueueSize(suite)));
+            } else{
+              qd.Get(0)->SetAttribute(pair.first, QueueSizeValue(QueueSize(suite)));
+            }
+        } else if ( avant == "String"){
+            if (pair.first.rfind("Child", 0) == 0) {
+              qd.Get(0)->GetObject<RRQueueDisc>()->GetChildQueueFactory().Set(pair.first.substr(5),  StringValue(suite));
+            } else{
+              qd.Get(0)->SetAttribute(pair.first,  StringValue(suite));
+            }
+        } else if ( avant == "DataRate"){
+            if (pair.first.rfind("Child", 0) == 0) {
+              qd.Get(0)->GetObject<RRQueueDisc>()->GetChildQueueFactory().Set(pair.first.substr(5),  DataRateValue(DataRate(suite)));
+            } else{
+              qd.Get(0)->SetAttribute(pair.first,  DataRateValue(DataRate(suite)));
+            }
+        }  else {
+          NS_ABORT_MSG("Soucis avec attribut " << pair.first << " type non reconnu");
+        }
+      }
+    }
+        
+    
 
     // Aggregate MPI receivers // TODO: Why?
     Ptr<MpiReceiver> mpiRec = CreateObject<MpiReceiver> ();

@@ -175,10 +175,10 @@ static void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* c
 
 
 static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
-    static const std::regex rateErrModel("recvErrRate:(\\d*\\.?\\d*)");
-    static const std::regex brstErrModel("brstErrMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*)");
-    static const std::regex gilbertEliottModel("gilbertElliottMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*\\.?\\d*)");
-    static const std::regex periodicModel("periodicMdl-period:(\\d*\\.?\\d*)-recvErrRate:(\\d*\\.?\\d*)-drift:(\\d*\\.?\\d*)");
+    static const std::regex rateErrModel("recvErrRate:(\\d*\\.?\\d*)-interval:(\\d+),(\\d+)ms");
+    static const std::regex brstErrModel("brstErrMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*)-interval:(\\d+),(\\d+)ms");
+    static const std::regex gilbertEliottModel("gilbertElliottMdl-brstRate:(\\d*\\.?\\d*)-brstSize:(\\d*\\.?\\d*)-interval:(\\d+),(\\d+)ms");
+    //static const std::regex periodicModel("periodicMdl-period:(\\d*\\.?\\d*)-recvErrRate:(\\d*\\.?\\d*)-drift:(\\d*\\.?\\d*)"); //TODO ?
 
     std::smatch match;
     // Error Model
@@ -188,10 +188,19 @@ static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
         Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
         em->SetAttribute("ErrorRate", DoubleValue(errorRate));
         em->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
+        em->Disable();
+        Simulator::Schedule(MilliSeconds(std::stoi(match[2].str())), &ErrorModel::Enable, em);
+        Simulator::Schedule(MilliSeconds(std::stoi(match[3].str())), &ErrorModel::Disable, em);
         netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
         Ptr<RateErrorModel> em2 = CreateObject<RateErrorModel>();
         em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
         em2->SetUnit(ns3::RateErrorModel::ErrorUnit::ERROR_UNIT_PACKET);
+        em2->Disable();
+        Simulator::Schedule(MilliSeconds(std::stoi(match[2].str())), &ErrorModel::Enable, em2);
+        Simulator::Schedule(MilliSeconds(std::stoi(match[3].str())), &ErrorModel::Disable, em2);
+
+        std::cout << "activate Rate Error Model between nodes " << netDevices.Get(0)->GetNode()->GetId() 
+        << " and " << netDevices.Get(1)->GetNode()->GetId() << ", from " << match[2].str() << "ms until " << match[3].str() << "ms" << std::endl;
         netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
     } else if (std::regex_search(line, match, brstErrModel))
     {
@@ -209,11 +218,20 @@ static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
         Ptr<BurstErrorModel> em = CreateObject<BurstErrorModel>();
         em->SetAttribute("ErrorRate", DoubleValue(errorRate));
         em->SetAttribute("BurstSize", PointerValue(x));
+        em->Disable();
+        Simulator::Schedule(MilliSeconds(std::stoi(match[2].str())), &ErrorModel::Enable, em);
+        Simulator::Schedule(MilliSeconds(std::stoi(match[3].str())), &ErrorModel::Disable, em);
         netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
         Ptr<BurstErrorModel> em2 = CreateObject<BurstErrorModel>();//did not succeeded to copy
         em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
         em2->SetAttribute("BurstSize", PointerValue(x));
+        em2->Disable();
+        Simulator::Schedule(MilliSeconds(std::stoi(match[2].str())), &ErrorModel::Enable, em2);
+        Simulator::Schedule(MilliSeconds(std::stoi(match[3].str())), &ErrorModel::Disable, em2);
         netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
+
+        std::cout << "activate Burst Error Model between nodes " << netDevices.Get(0)->GetNode()->GetId() 
+        << " and " << netDevices.Get(1)->GetNode()->GetId() << ", from " << match[2].str() << "ms until " << match[3].str() << "ms" << std::endl;
     } else if (std::regex_search(line, match, gilbertEliottModel))
     {
         //create a Gilbert Elliott Model of the Channel.
@@ -232,34 +250,20 @@ static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
         Ptr<GilbEllErrorModel> em = CreateObject<GilbEllErrorModel>();
         em->SetAttribute("ErrorRate", DoubleValue(errorRate));
         em->SetAttribute("BurstSize", PointerValue(x));
+        em->Disable();
+        Simulator::Schedule(MilliSeconds(std::stoi(match[3].str())), &ErrorModel::Enable, em);
+        Simulator::Schedule(MilliSeconds(std::stoi(match[4].str())), &ErrorModel::Disable, em);
         netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
         Ptr<GilbEllErrorModel> em2 = CreateObject<GilbEllErrorModel>();
         em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
         em2->SetAttribute("BurstSize", PointerValue(x));
+        em2->Disable();
+        Simulator::Schedule(MilliSeconds(std::stoi(match[3].str())), &ErrorModel::Enable, em2);
+        Simulator::Schedule(MilliSeconds(std::stoi(match[4].str())), &ErrorModel::Disable, em2);
         netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
-    } else if (std::regex_search(line, match, periodicModel))
-    {
-        //create a Gilbert Elliott Model of the Channel.
-        // "ErrorRate" of Burst Model is the probability to switch from Good to Bad state
-        // "BurstSize" is the number of consecutive packets which will be lost. 
-        //              It corresponds to the expected number of times we remain in the Bad State.
 
-        // First, create an exponential random variable
-        // the integer part of this variable follows a geometric distribution that we use to characterize the burst size
-        Ptr<NormalRandomVariable> x = CreateObject<NormalRandomVariable> ();
-        //x->SetAttribute ("Shape", DoubleValue (1.)); //number of exponential laws, default to 1
-        double variance = std::pow(std::atof(match[2].str().c_str()), 2);
-        x->SetAttribute ("Variance", DoubleValue( variance ));
-        double errorRate = std::atof(match[1].str().c_str());
-        //create burst error models
-        Ptr<GilbEllErrorModel> em = CreateObject<GilbEllErrorModel>();
-        em->SetAttribute("ErrorRate", DoubleValue(errorRate));
-        em->SetAttribute("DriftModel", PointerValue(x));
-        netDevices.Get(0)->SetAttribute("ReceiveErrorModel", PointerValue(em));
-        Ptr<GilbEllErrorModel> em2 = CreateObject<GilbEllErrorModel>();
-        em2->SetAttribute("ErrorRate", DoubleValue(errorRate));
-        em2->SetAttribute("DriftModel", PointerValue(x));
-        netDevices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em2));
+        std::cout << "activate Gilbert Elliott Error Model between nodes " << netDevices.Get(0)->GetNode()->GetId() 
+        << " and " << netDevices.Get(1)->GetNode()->GetId() << ", from " << match[3].str() << "ms until " << match[4].str() << "ms" << std::endl;
     }
 }
 }
@@ -331,6 +335,14 @@ namespace ns3 {
         m_isl_max_queue_size_kB = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("isl_max_queue_size_kB"));
         m_gsl_max_queue_size_kB_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_max_queue_size_kB"));
         m_gsl_data_rate_megabit_per_s_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
+
+        // Traffic Controller Settings
+        // here values are gathered by object kind
+        m_tc_nodetype_qdisctype = parse_dict_string(m_basicSimulation->GetConfigParamOrDefault("tc_types", "{}"));
+        for (const auto& pair: m_tc_nodetype_qdisctype){
+            std::map<std::string, std::string> submap = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("tc_params_"+pair.first));//"attribute": "(type, value)"
+            m_tc_nodetype_attributemap[pair.first]= submap;
+        }
 
         // Utilization tracking settings
         m_enable_isl_utilization_tracking = parse_boolean(m_basicSimulation->GetConfigParamOrFail("enable_isl_utilization_tracking"));
@@ -544,7 +556,7 @@ namespace ns3 {
         while (std::getline(fs, line)) {
 
             // Retrieve satellite identifiers
-            NS_ABORT_MSG_UNLESS(std::regex_search(line, match, nodeIDs), "Error parsing satellite ISL. Abort");
+            NS_ABORT_MSG_UNLESS(std::regex_search(line, match, nodeIDs), "Error parsing satellite ISL. Abort line: " << line);
             int64_t sat0_id = parse_positive_int64(match[1].str());
             int64_t sat1_id = parse_positive_int64(match[2].str());
             
@@ -626,7 +638,7 @@ namespace ns3 {
             NS_ASSERT_MSG(m_gsl_data_rate_megabit_per_s_map.find(attr.second) != m_gsl_data_rate_megabit_per_s_map.end(), "undefined DataRate map for type"+attr.second);
             NS_ASSERT_MSG(m_gsl_max_queue_size_kB_map.find(attr.second) != m_gsl_max_queue_size_kB_map.end(), "undefined DataRate map for type"+attr.second);
         }
-        GSLHelper gsl_helper(m_devtypemap);
+        GSLHelper gsl_helper(m_devtypemap, m_tc_nodetype_qdisctype, m_tc_nodetype_attributemap);
         //std::string max_queue_size_str = format_string("%" PRId64 "p", m_gsl_max_queue_size_pkts);
         for (auto attr: m_gsl_data_rate_megabit_per_s_map){
             gsl_helper.SetDeviceAttribute(attr.first, "DataRate", DataRateValue (DataRate (attr.second + "Mbps")));
@@ -642,9 +654,9 @@ namespace ns3 {
         
         //std::cout << "    >> GSL max queue size... " << m_gsl_max_queue_size_pkts << " packets" << std::endl;
 
-        // Traffic control helper
-        TrafficControlHelper tch_gsl;
-        tch_gsl.SetRootQueueDisc("ns3::FifoQueueDisc", "MaxSize", QueueSizeValue(QueueSize("1p")));  // Will be removed later any case
+        // Traffic control helper: done in gsl_helper
+        //TrafficControlHelper tch_gsl;
+        //tch_gsl.SetRootQueueDisc("ns3::FifoQueueDisc", "MaxSize", QueueSizeValue(QueueSize("1p")));  // Will be removed later any case
 
         // Check that the file exists
         std::string filename = m_satellite_network_dir + "/gsl_interfaces_info.txt";
@@ -693,7 +705,7 @@ namespace ns3 {
         std::cout << "    >> Finished install GSL interfaces (interfaces, network devices, one shared channel)" << std::endl;
 
         // Install queueing disciplines
-        tch_gsl.Install(devices);
+        //tch_gsl.Install(devices);
         std::cout << "    >> Finished installing traffic control layer qdisc which will be removed later" << std::endl;
 
         // Assign IP addresses
@@ -733,12 +745,15 @@ namespace ns3 {
         std::cout << "    >> Finished assigning IPs" << std::endl;
 
         // Remove the traffic control layer (must be done here, else the Ipv4 helper will assign a default one)
+        // useless if there is not netdevicequeueInterface
+        /*
         TrafficControlHelper tch_uninstaller;
         std::cout << "    >> Removing traffic control layers (qdiscs)..." << std::endl;
         for (uint32_t i = 0; i < devices.GetN(); i++) {
             tch_uninstaller.Uninstall(devices.Get(i));
         }
         std::cout << "    >> Finished removing GSL queueing disciplines" << std::endl;
+        */
 
         // Check that all interfaces were created
         NS_ABORT_MSG_IF(total_num_gsl_ifs != devices.GetN(), "Not the expected amount of interfaces has been created.");

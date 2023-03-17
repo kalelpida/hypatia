@@ -105,12 +105,13 @@ std::vector<TcpFlowScheduleEntry> read_tcp_flow_schedule(const std::string& file
 
             // Fill entry
             int64_t tcp_flow_id = parse_positive_int64(comma_split[0]);
+            /*
             if (tcp_flow_id < (int64_t) line_counter) {
                 throw std::invalid_argument(format_string("TCP flow ID is not ascending by one each line (violation: %" PRId64 ")\n", tcp_flow_id));
             } else {
                 // Next line
                 line_counter = tcp_flow_id+1;
-            }
+            }*/
             int64_t from_node_id = parse_positive_int64(comma_split[1]);
             int64_t to_node_id = parse_positive_int64(comma_split[2]);
             int64_t size_byte = parse_positive_int64(comma_split[3]);

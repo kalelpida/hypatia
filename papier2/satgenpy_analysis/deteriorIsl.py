@@ -78,7 +78,7 @@ def casseISLs(dico):
             for l in liens_compromis_int:
                 liens_compromis_str.append((l[0][0], '{} {} '.format(*l[0])))
 
-    print("generation des liens compromis :", liens_compromis_str)
+    #print("generation des liens compromis :", liens_compromis_str)
     if not liens_compromis_str or not ajout_str_isl:
         #nothing to do, exit
         return
@@ -93,7 +93,7 @@ def casseISLs(dico):
         ligneval0=int(ligne[:ligne.find(' ')])
         for lv0, l in liens_compromis_str:
             if ligne.startswith(l):
-                vrai_lignes.append(l + ajout_str_isl + "\n")
+                vrai_lignes.append(ligne.rstrip() + ajout_str_isl + "\n")
                 modif=True
                 break
             if ligneval0 < lv0:
@@ -112,8 +112,4 @@ def casseISLs(dico):
         f.write("######### Liens compromis, paramètres:"+ajout_str_isl+"\n")
         for _, l in liens_compromis_str:
             f.write("# "+l+"\n") 
-
-
-    
-
 

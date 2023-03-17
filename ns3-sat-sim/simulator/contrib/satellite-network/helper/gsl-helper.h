@@ -29,7 +29,8 @@
 #include "ns3/net-device-container.h"
 #include "ns3/node-container.h"
 #include "ns3/gsl-net-device.h"
-#include "ns3/ptr.h"
+#include "ns3/object-factory.h"
+#include "ns3/traffic-control-helper.h"
 #include <map>
 
 namespace ns3 {
@@ -40,7 +41,7 @@ class Node;
 class GSLHelper
 {
 public:
-  GSLHelper (std::vector<std::pair<uint, std::string>>& nodetypes);
+  GSLHelper (const std::vector<std::pair<uint, std::string>>& nodetypes, std::map<std::string, std::string> tctypes, std::map<std::string, std::map<std::string, std::string>> tcattributes);
   virtual ~GSLHelper () {}
 
   // Set device and channel attributes
@@ -58,9 +59,13 @@ public:
 
 private:
   std::vector<std::pair<uint, std::string>> m_nodetypes;
+  std::map<std::string, std::string> m_tctypes;
+  std::map<std::string, std::map<std::string, std::string>> m_tcattributes;
+
   std::map<std::string, ObjectFactory> m_queueFactories;         //!< Queue Factories
   ObjectFactory m_channelFactory;       //!< Channel Factory
   std::map<std::string, ObjectFactory> m_deviceFactories;        //!< Device Factory
+  TrafficControlHelper m_tch_gsl;
 };
 
 } // namespace ns3

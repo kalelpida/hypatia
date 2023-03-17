@@ -161,7 +161,6 @@ GilbEllErrorModel::DoCorrupt (Ptr<Packet> p)
     {
       return false;
     }
-  
   if (m_currentBurstSz == 0)
     {
       // just get in Good mode, so no packet loss

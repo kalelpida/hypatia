@@ -449,11 +449,18 @@ std::map<std::string, std::string> parse_dict_string(const std::string str) {
     // Split by comma to find all elements
     std::vector<std::string> comma_split_list = split_string(only_inside, ",");
     std::stringstream ss(only_inside);
-    std::string keyval, key, val;
+    std::string keyval;
     std::vector<std::string> splitkeyval;
-
+    std::regex protection_re("::");
+    std::regex deprotection_re("##");
+    std::regex quotes("'|\"");
     while (getline(ss, keyval, ',')){
+        keyval = std::regex_replace(keyval, protection_re, "##");
+        keyval = std::regex_replace(keyval, quotes, "");//delete all quotes
         splitkeyval= split_string(keyval, ":", 2);
+        for (size_t i=0; i<splitkeyval.size(); i++){
+            splitkeyval[i] = std::regex_replace(splitkeyval[i], deprotection_re, "::");
+        }
         final[trim(splitkeyval[0])] = trim(splitkeyval[1]);
     }
 

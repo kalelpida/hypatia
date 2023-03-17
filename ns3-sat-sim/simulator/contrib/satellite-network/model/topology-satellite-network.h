@@ -58,6 +58,7 @@
 #include <regex>
 #include "ns3/id-seq-header.h"
 #include "states-error-model.h"
+#include "ns3/simulator.h" // for scheduling in SetErrorModel
 
 namespace ns3 {
     struct structacceptNodeObj { 
@@ -144,10 +145,16 @@ namespace ns3 {
         //std::map<std::pair<int32_t, int32_t>, Ptr<std::vector<double>>> m_map_FromTo_UtilizationVec;
 
         // Values
+        //Net Device
         double m_isl_data_rate_megabit_per_s;
         std::map<std::string, std::string> m_gsl_data_rate_megabit_per_s_map;
         int64_t m_isl_max_queue_size_kB;
         std::map<std::string, std::string> m_gsl_max_queue_size_kB_map;
+
+        //Traffic Controller
+        std::map<std::string, std::string> m_tc_nodetype_qdisctype;
+        std::map< std::string, std::map<std::string, std::string>> m_tc_nodetype_attributemap;
+
         bool m_enable_isl_utilization_tracking;
         bool m_enable_tx_log, m_enable_rx_log, m_enable_drop_log;
         int64_t m_isl_utilization_tracking_interval_ns;

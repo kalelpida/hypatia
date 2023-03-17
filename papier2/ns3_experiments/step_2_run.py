@@ -46,8 +46,8 @@ algo = dico_params.get('algo')
 unique_id = 0
 
 
-protocol_chosen=dico_params['protocoles'] #["tcp", "udp"]:
-protocol_chosen_name=protocol_chosen['nom']
+all_protocols_name = {dic['nom'] for dic in dico_params['protocoles'].values()} #["tcp", "udp"]:
+protocol_chosen_name= '_and_'.join(sorted(list(all_protocols_name)))
 
 if (unique_id % num_machines) == workload_id:
 
