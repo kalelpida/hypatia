@@ -156,8 +156,8 @@ RRQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
   }
 
   NS_LOG_DEBUG ("Packet enqueued into flow " << idflow << " success: " << result);
-
   //enqueue failed ? 
+  // DropBeforeEnqueue isalready called thanks to AddQueueDiscClass setting up the callbacks
   return result;
 }
 

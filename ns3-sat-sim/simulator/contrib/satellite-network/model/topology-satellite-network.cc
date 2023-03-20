@@ -333,7 +333,7 @@ namespace ns3 {
         // Link settings
         m_isl_data_rate_megabit_per_s = parse_positive_double(m_basicSimulation->GetConfigParamOrFail("isl_data_rate_megabit_per_s"));
         m_isl_max_queue_size_kB = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("isl_max_queue_size_kB"));
-        m_gsl_max_queue_size_kB_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_max_queue_size_kB"));
+        m_gsl_max_queue_size_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_max_queue_size"));
         m_gsl_data_rate_megabit_per_s_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
 
         // Traffic Controller Settings
@@ -636,20 +636,20 @@ namespace ns3 {
 
         for (auto attr: m_devtypemap){
             NS_ASSERT_MSG(m_gsl_data_rate_megabit_per_s_map.find(attr.second) != m_gsl_data_rate_megabit_per_s_map.end(), "undefined DataRate map for type"+attr.second);
-            NS_ASSERT_MSG(m_gsl_max_queue_size_kB_map.find(attr.second) != m_gsl_max_queue_size_kB_map.end(), "undefined DataRate map for type"+attr.second);
+            NS_ASSERT_MSG(m_gsl_max_queue_size_map.find(attr.second) != m_gsl_max_queue_size_map.end(), "undefined DataRate map for type"+attr.second);
         }
         GSLHelper gsl_helper(m_devtypemap, m_tc_nodetype_qdisctype, m_tc_nodetype_attributemap);
         //std::string max_queue_size_str = format_string("%" PRId64 "p", m_gsl_max_queue_size_pkts);
         for (auto attr: m_gsl_data_rate_megabit_per_s_map){
             gsl_helper.SetDeviceAttribute(attr.first, "DataRate", DataRateValue (DataRate (attr.second + "Mbps")));
             gsl_helper.SetQueue(attr.first, "ns3::DropTailQueue<Packet>", "MaxSize", 
-                    QueueSizeValue(QueueSize(m_gsl_max_queue_size_kB_map[attr.first]+ "kB")));
+                    QueueSizeValue(QueueSize(m_gsl_max_queue_size_map[attr.first]+ "kB")));
         }
         for (auto attr: m_gsl_data_rate_megabit_per_s_map){
             std::cout << "    >> GSL data rate........ " << attr.first << " : " << attr.second << " Mbit/s" << std::endl;
         }
-        for (auto attr: m_gsl_max_queue_size_kB_map){
-            std::cout << "    >> GSL max queue size... " << attr.first << " : " << attr.second << " kB" << std::endl;
+        for (auto attr: m_gsl_max_queue_size_map){
+            std::cout << "    >> GSL max queue size... " << attr.first << " : " << attr.second << std::endl;
         }
         
         //std::cout << "    >> GSL max queue size... " << m_gsl_max_queue_size_pkts << " packets" << std::endl;

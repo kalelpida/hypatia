@@ -85,7 +85,7 @@ def read_basic_csv(fic):
             raise ValueError("Ground station id must increment each line")
         ground_station_basic = {
             "gid": gid,
-            "name": ligne[1],
+            "name": ligne[1].replace(',', " ~"),
             "latitude_degrees_str": ligne[2],
             "longitude_degrees_str": ligne[3],
             "elevation_m_float": float(ligne[4]),

@@ -39,7 +39,7 @@ def main_step1(list_from_to):
     with open(config_file, 'r') as f:
         dico_params=yaml.load(f, Loader=yaml.Loader)
     constel_fic=dico_params.get('constellation')
-    constel_fic="../config/"+constel_fic+".yaml"
+    constel_fic="../config/temp."+constel_fic+".yaml"
     with open(constel_fic, 'r') as f:
         dico_constel=yaml.load(f, Loader=yaml.Loader)
 
@@ -80,6 +80,8 @@ def main_step1(list_from_to):
         if groupe_nb_commodites<=0:
             continue
         fin_groupe_commodites = offset_commodite+groupe_nb_commodites
+        if fin_groupe_commodites>len(list_from_to):
+            raise Exception("Error, too much commodities for the given src/dst pairs")
         #setting up different start times
         decalage=12/reference_rate/10/groupe_nb_commodites # 1 MTU-packet time in ms per 10 commodities
         list_start_time_param=groupe.get('debut_ms', None)
@@ -142,7 +144,7 @@ def main_step1(list_from_to):
             raise Exception('protocole non reconnu :',protocol_chosen_name)
         offset_commodite=fin_groupe_commodites #le groupe suivant commence là où termine ce groupe-ci
         all_protocols_name.append(protocol_chosen_name)
-    assert 2*nb_UEs == offset_commodite
+    assert len(list_from_to) == offset_commodite
     assert total_nb_commodites == offset_commodite
 
     tcp_vals.sort(key=lambda x:x[4])#sort by start time 
@@ -165,7 +167,9 @@ def main_step1(list_from_to):
                 f_out.write("{:d},{:d},{:d},{:f},{:d},{:d},{},{}\n".format(*vals))
     
     #write the commodity list in an easy place for path generation with mcnf
-    local_shell.write_file("../satellite_networks_state/commodites.temp", list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion)))
+    with open("../satellite_networks_state/commodites.temp", "w") as f:
+        f.write(str(list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion))))
+    #local_shell.write_file("../satellite_networks_state/commodites.temp", list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion)))
 
 def value_or_random(param, nb, minmax):
     """
@@ -195,17 +199,25 @@ def value_or_random(param, nb, minmax):
 
 
 def config_ns3_properties(cstl_dico, protocol_chosen_name, data_rate_megabit_per_s, data_rate_GSL_megabit_per_s, nb_UEs, params, list_from_to, logs_actifs):
+    # Net DeviceQueues
     #ISL network device queue size pkt for TCP, GSL network device queue size pkt for TCP
     # TCP NewReno needs at least the BDP in queue size to fulfill bandwidth
     if "tcp" in protocol_chosen_name:
         queue_size_isl_kB = int(10*data_rate_megabit_per_s)
         queue_size_gsl_kB = {cle: int(val*80/8) for cle, val in data_rate_GSL_megabit_per_s.items()} # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
-        queue_size_gsl_kB['gateway']=int(queue_size_gsl_kB['gateway']/np.sqrt(nb_UEs))
+        if 'gateway' in queue_size_gsl_kB:
+            queue_size_gsl_kB['gateway']=int(queue_size_gsl_kB['gateway']/np.sqrt(nb_UEs))
     elif "udp" in protocol_chosen_name:  # UDP does not have this problem, so we cap it at 100 packets
         queue_size_isl_kB = min(10*data_rate_megabit_per_s, 100)
         queue_size_gsl_kB = {cle: min(int(val*80/8), 100) for cle, val in data_rate_GSL_megabit_per_s.items()}
     else:
         raise ValueError("Unknown protocol chosen: " + protocol_chosen_name)
+
+    #Traffic Control
+    tc_obj= {obj: cstl_dico[obj]['TrafficControl'].pop('type') for obj in cstl_dico['TYPES_OBJETS_SOL'] if cstl_dico[obj].get('TrafficControl', False)}
+    for cle in tc_obj:#minimal netdev queue size, the buffer is handled by the traffic controller
+        queue_size_gsl_kB[cle]=2
+    tc_params = [f"tc_params_{obj}={cstl_dico[obj]['TrafficControl']}" for obj in tc_obj]
 
     # Prepare run directory
     run_dir = "runs/run_loaded_tm_pairing_{}_Mbps_for_{}s_with_{}_{}".format(
@@ -227,13 +239,9 @@ def config_ns3_properties(cstl_dico, protocol_chosen_name, data_rate_megabit_per
     replace_in_lines(lignes,     "[SIMULATION-END-TIME-NS]", str(params[1] * 1000 * 1000 * 1000))
     replace_in_lines(lignes,     "[ISL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
     replace_in_lines(lignes,     "[GSL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_GSL_megabit_per_s))# for ground station: /10 => a station can accept ~20% of users if gthere are 10 stations
-    replace_in_lines(lignes,     "[ISL-MAX-QUEUE-SIZE-KB]", str(queue_size_isl_kB))
-    replace_in_lines(lignes,     "[GSL-MAX-QUEUE-SIZE-KB]", str(queue_size_gsl_kB))
+    replace_in_lines(lignes,     "[ISL-MAX-QUEUE-SIZE]", str(queue_size_isl_kB)+'kB')
+    replace_in_lines(lignes,     "[GSL-MAX-QUEUE-SIZE]", str(queue_size_gsl_kB)+'kB')
 
-    #Traffic Control
-    
-    tc_obj= {obj: cstl_dico[obj]['TrafficControl'].pop('type') for obj in cstl_dico['TYPES_OBJETS_SOL'] if cstl_dico[obj].get('TrafficControl', False)}
-    tc_params = [f"tc_params_{obj}={cstl_dico[obj]['TrafficControl']}" for obj in tc_obj]
     replace_in_lines(lignes,     "[TC-TYPES]", str(tc_obj))
     replace_in_lines(lignes,     "[TC-PARAMS-]", "\n".join(tc_params))
     #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"

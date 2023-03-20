@@ -1,4 +1,4 @@
-test: #nom de la campagne
+paramela: #nom de la campagne
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [ 6 ] #en s
@@ -10,13 +10,13 @@ test: #nom de la campagne
   #      { sel: topUtil10, errModel: "recvErrRate:0.1-interval:[20000,26000]ms"}
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
   deteriorISL: [ { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:2000,4000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
-  sol: [ users_and_main_stations ]
+  sol: [ users_and_main_stations ] #main_cities (only ue, keep in mind not to create parameters for gateway if-gsl), users_and_main_stations
   nb-UEs-sol: [ 50 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [ 4 ]
   debit-if-isl: [ 3 ] #[ 3, 10 ] #Mb/s
-  debit-if-gsl: [ {'ue':1, 'gateway':20, 'satellite':5} ] #Mb/s
-  logs-actifs: [ ['rx', 'tx', 'drop'] ] #('rx', 'tx', 'drop')
+  debit-if-gsl: [ {'ue':1, 'gateway':20, 'satellite':5} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
+  logs-actifs: [ ['rx', 'tx', 'drop'] ] #('rx', 'tx', 'drop') # 'drop' callbacks won't be effective when Traffic Control is set 
   # examples of protocoles:
   # { 'nom':"udp", "extra_parameters":"expInterPacket" }
   # { 'nom':"udp"}
@@ -35,6 +35,12 @@ test: #nom de la campagne
   # debit: by default debit-if-gsl['ue'] for UDP. used to compute the size of the data sent by TCP
   # extra_parameters : string, thought as space-separated coefficients
   # pacingDR[double][unit or default to bit per sec] is at application level, so only takes into account the payload
+  gwTrafficControl:
+    - type: "ns3::RRQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
+      MaxSize: QueueSize 100p #type value
+      ChildQueueDisc: "ns3::ITbfQueueDisc"
+      ChildRate: DataRate 1Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
+    - {}
 
 info-sauvegarde:
   strdate: '%Y-%m-%d-%H%M'

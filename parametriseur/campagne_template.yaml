@@ -27,6 +27,7 @@ paramTester:
   # Débit Agresseur UDP : max(udp_list_flow_size_proportion[i]*fdebit, 0.999*data_rate_GSL_megabit_per_s, data_rate_GSL_megabit_per_s/nb_commodites*2*duration_s/np.mean(durees_prevues))
   protocoles: 
     - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'debit': 20 }
+  gwTrafficControl: [ {} ]
 
 actions: #[]
   - noeuds

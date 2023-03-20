@@ -65,7 +65,6 @@ private:
   std::map<std::string, ObjectFactory> m_queueFactories;         //!< Queue Factories
   ObjectFactory m_channelFactory;       //!< Channel Factory
   std::map<std::string, ObjectFactory> m_deviceFactories;        //!< Device Factory
-  TrafficControlHelper m_tch_gsl;
 };
 
 } // namespace ns3

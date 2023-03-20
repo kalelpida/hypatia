@@ -57,6 +57,16 @@ class Experiences():
     def setStrDate(self, strdate):
         self.strdate=strdate
 
+    def updateCstlInfo(self):
+        cstl_config_fic = os.path.join('config', self.courante['constellation']+'.yaml')
+        assert os.path.isfile(cstl_config_fic)
+        with open(cstl_config_fic, 'r') as f:
+            dico_cstl=yaml.load(f, Loader=yaml.Loader)
+        remplace(dico_cstl, self.courante)
+        tmp_cstl_config_fic = os.path.join('config', 'temp.'+self.courante['constellation']+'.yaml')
+        with open(tmp_cstl_config_fic, 'w') as f:
+            yaml.dump(dico_cstl, f)
+            
     def paramExperience(self):
         for i,cle in enumerate(self.cles):
             self.courante[cle]=self.campagne[cle][self.indices_cles[i]]
@@ -70,13 +80,14 @@ class Experiences():
             self.courante[cle] = self.campagne[cle][self.indices_cles[i]]
             if self.indices_cles[i] > 0:
                 break
+        #update missing information in constellation config file
+        self.updateCstlInfo()
         # save current config
         with open(nomfic_courante, 'w') as f:
             yaml.dump(self.courante, f)
         #save debitISL in a simple place for graph generation. Used by mcnf. #ToDo
         with open("satellite_networks_state/debitISL.temp", "w") as f:
             f.write(str(self.courante['debit-if-isl']))
-
         if cle==self.cles[-1] and self.indices_cles[-1]==0:
             return True
         # si ce n'est pas le dernier cas, on sait quelle cle a été modifiée, donc optimisation
@@ -91,7 +102,7 @@ class Experiences():
         #create ground nodes
         if 'noeuds' in self.actions:
             os.chdir("satellite_networks_state")
-            mh=MainNetHelper(self.courante, os.path.join(configdir, self.courante['constellation']+'.yaml'), "gen_data")
+            mh=MainNetHelper(self.courante, os.path.join(configdir, 'temp.'+self.courante['constellation']+'.yaml'), "gen_data")
             list_from_to=mh.init_ground_stations()
             os.chdir(basedir)
 
@@ -159,7 +170,19 @@ def str_recursif(dico, prefix=''):
             dic.update(str_recursif(val, prefix=prefix+cle+'_'))
     return dic
 
+def remplace(dic_to, dic_from, prefix='config/', sep='/'):
+        """replace "prefix..." values of dic_to with related fields from dic_from"""
+        for cle, val in dic_to.items():
+            if isinstance(val, str) and val.startswith(prefix):
+                liste=val.split(sep)[1:]
+                rempl_val=dic_from
+                for u in liste:
+                    rempl_val=rempl_val[u]
+                dic_to[cle]=rempl_val
+            elif isinstance(val, dict):
+                remplace(val, dic_from, prefix=prefix, sep=sep)
 
+        
 def main():
     with open(nomfic_campagne, 'r') as f:
         dico_campagne=yaml.load(f, Loader=yaml.Loader)
@@ -195,6 +218,10 @@ def main():
         with open(os.path.join(cd,'variations.txt'), "w") as f:
             f.write(str(cles_variantes))
         subprocess.check_call(["cp", '-t', cd, nomfic_campagne]) #finally save campagne config itself
+    for glob in os.listdir(configdir):#clean temp files in config
+        x=os.path.join(configdir, glob)
+        if os.path.isfile(x) and glob.startswith('temp.'):
+            subprocess.check_call(["rm",x])
             
 
 if __name__ == '__main__':

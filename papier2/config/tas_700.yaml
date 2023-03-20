@@ -44,17 +44,20 @@ ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE: 75
 # ou entre -ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE et ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE-180
 # Todo: différencier désactivations à droite et à gauche
 RADIO_K_FACTOR: 1.33 
-# The K-factor varies a lot according to temperature, humidity
+# The K-factor varies according to temperature, humidity..
+# It was written here so that it can be easily noticed.
+# If you have any better definitive value, you can move it to satellite_networks_state/input_data/constants.py
+# Then call RADIO_K_FACTOR instead of cstl_dico["RADIO_K_FACTOR"] in satellite_networks_state/main_net_helper.py 
 
 #same names as in debit_gsl
 TYPES_OBJETS_SOL: ['ue', 'gateway']
 
 gateway: 
-  type: Lille # topCitiesHypatia: 100 biggest cities, Hypatia base file; topCitiesUN: +300k cities, United Nations estimate
+  type: Lille #Lille # topCitiesHypatia: 100 biggest cities, Hypatia base file; topCitiesUN: +300k cities, United Nations estimate
   nombre: 1 #random, give IDs and place them, or set it in config?
   minElevation: 10 #degrees above horizon
   q_factor: 1 # to change gsl if setting. #TODO consider reading it in step1
-  #TrafficControl: 
+  TrafficControl: config/gwTrafficControl
   #          type: "ns3::RRQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
   #          MaxSize: QueueSize 100p #type value
   #          ChildQueueDisc: "ns3::ITbfQueueDisc"

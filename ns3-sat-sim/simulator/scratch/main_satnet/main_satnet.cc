@@ -57,13 +57,13 @@ int main(int argc, char *argv[]) {
         printf("Usage: ./waf --run=\"main_satnet --run_dir='<path/to/run/directory>'\"");
         return 0;
     }
-    /*
+    ///*
     //used to get time to attach debug
     std::cout << "entree";
     std::string valid;
     std::cin >> valid;
     std::cout << " suite:" << valid << std::endl;
-    */
+    //*/
     // Load basic simulation environment
     Ptr<BasicSimulation> basicSimulation = CreateObject<BasicSimulation>(run_dir);
 

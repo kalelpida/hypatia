@@ -149,7 +149,7 @@ namespace ns3 {
         double m_isl_data_rate_megabit_per_s;
         std::map<std::string, std::string> m_gsl_data_rate_megabit_per_s_map;
         int64_t m_isl_max_queue_size_kB;
-        std::map<std::string, std::string> m_gsl_max_queue_size_kB_map;
+        std::map<std::string, std::string> m_gsl_max_queue_size_map;
 
         //Traffic Controller
         std::map<std::string, std::string> m_tc_nodetype_qdisctype;

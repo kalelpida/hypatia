@@ -47,6 +47,43 @@ def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_st
                 )
             )
 
+def extend_stations(graine, NbUEs, cstl_config, filename_ground_stations_out):
+    np.random.seed(graine)
+    if cstl_config['gateway']['type'] == 'topCitiesHypatia':
+        ues = read_ground_stations_basic("input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt")
+    elif cstl_config['gateway']['type'] == 'topCitiesUN':
+        ues = read_ground_stations_basic("input_data/ground_stations_cities_by_estimated_2025_pop_300k_UN.csv")
+    elif cstl_config['gateway']['type'] == 'Lille':
+        ues = read_ground_stations_basic("input_data/ground_stations_Lille.csv")
+    else: # autres cas à faire
+        ues = read_ground_stations_basic("input_data/UEs_{}.txt".format(cstl_config['ue']['type']))
+    with open(filename_ground_stations_out, "w+") as f_out:
+        for ground_station in ues[:NbUEs]:
+            cartesian = geodetic2cartesian(
+                float(ground_station["latitude_degrees_str"]),
+                float(ground_station["longitude_degrees_str"]),
+                ground_station["elevation_m_float"]
+            )
+            f_out.write(
+                "%d,%s,%f,%f,%f,%f,%f,%f,ue\n" % (
+                    ground_station["gid"],
+                    ground_station["name"],
+                    float(ground_station["latitude_degrees_str"]),
+                    float(ground_station["longitude_degrees_str"]),
+                    ground_station["elevation_m_float"],
+                    cartesian[0],
+                    cartesian[1],
+                    cartesian[2]
+                )
+            )
+    nbsats=cstl_config['nb_sats']
+    liste_paires= np.random.choice(NbUEs, size=(NbUEs//2, 2), replace=False)
+    list_from_to=[]
+    for (src, dst) in liste_paires:
+        list_from_to.append([src+nbsats, dst+nbsats])
+        list_from_to.append([dst+nbsats, src+nbsats])
+    return list_from_to
+
 def extend_stations_and_users(graine, NbGateways, NbUEs, cstl_config, filename_ground_out):
     np.random.seed(graine)
     #gather ground bodies 

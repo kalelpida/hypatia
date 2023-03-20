@@ -163,20 +163,23 @@ GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
     auto search = m_tctypes.find(nodetype);
     if (search != m_tctypes.end()){
       // Traffic control helper
+      TrafficControlHelper tch_gsl;
       if (m_tcattributes[nodetype].find("ChildQueueDisc")!=m_tcattributes[nodetype].end()){
-        m_tch_gsl.SetRootQueueDisc(m_tctypes[nodetype], "ChildQueueDisc", StringValue(m_tcattributes[nodetype].at("ChildQueueDisc")));
-        m_tcattributes[nodetype].erase("ChildQueueDisc");
+        tch_gsl.SetRootQueueDisc(m_tctypes[nodetype], "ChildQueueDisc", StringValue(m_tcattributes[nodetype].at("ChildQueueDisc")));
       } else{
-        m_tch_gsl.SetRootQueueDisc(m_tctypes[nodetype]);
+        tch_gsl.SetRootQueueDisc(m_tctypes[nodetype]);
       }
       //, "MaxSize", QueueSizeValue(QueueSize("100p")), "ChildQueueDisc", StringValue("ns3::ITbfQueueDisc"));//ns3::ITbfQueueDisc, ns3::FifoQueueDisc
       
       //m_tch_gsl.SetRootQueueDisc("ns3::FqCoDelQueueDisc", "DropBatchSize", UintegerValue(1), "Perturbation", UintegerValue(256));
       Ptr<NetDeviceQueueInterface> ndqi = CreateObject<NetDeviceQueueInterface> ();
-      //ndqi->GetTxQueue (0)->ConnectQueueTraces (queue);
+      ndqi->GetTxQueue (0)->ConnectQueueTraces (queue);//if connected, packets will never be dropped in the netdevice, but before. 
       dev->AggregateObject (ndqi);
-      QueueDiscContainer qd = m_tch_gsl.Install(dev);
+      QueueDiscContainer qd = tch_gsl.Install(dev);
       for (const auto&  pair : m_tcattributes[nodetype]){
+        if (pair.first=="ChildQueueDisc"){
+          continue;
+        }
         size_t i;
         std::string avant, suite(pair.second);
         do {

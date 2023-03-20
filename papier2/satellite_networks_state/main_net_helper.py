@@ -65,15 +65,6 @@ class MainNetHelper:
         self.NUM_SATS_PER_ORB = cstl_dico['NUM_SATS_PER_ORB']
         self.cstl_config['nb_sats'] = self.NUM_ORBS * self.NUM_SATS_PER_ORB
         self.INCLINATION_DEGREE = cstl_dico['INCLINATION_DEGREE']
-    
-    def getCstlInfo(self, *attributs):
-        info=self.cstl_config
-        liste=list(reversed(attributs))
-        while liste:
-            info=info[liste.pop()]
-        if type(info) is str and info.startswith("config/"):
-            return self.config[info.removeprefix("config/")]
-        return info
 
     def init_ground_stations(self):
         # Add base name to setting
@@ -93,18 +84,23 @@ class MainNetHelper:
                 self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
             )
             #TODO
-            #list_from_to
+            #list_from_to=...
         elif self.config['sol'] == "ground_stations_paris_moscow_grid":
             satgen.extend_ground_stations(
                 "input_data/ground_stations_paris_moscow_grid.basic.txt",
                 self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
             )
             #TODO
-            #list_from_to
+            #list_from_to=...
         elif self.config['sol'] == "users_and_main_stations":
-            NbGateways = self.getCstlInfo("gateway", "nombre")
-            NbUEs = self.getCstlInfo('ue', "nombre")
+            NbGateways = self.cstl_config["gateway"]["nombre"]
+            NbUEs = self.cstl_config["ue"]["nombre"]
             list_from_to=satgen.extend_stations_and_users(self.config['graine'], NbGateways, NbUEs, self.cstl_config,
+                self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
+            )
+        elif self.config['sol'] == "main_cities":
+            NbGateways = self.cstl_config["ue"]["nombre"]
+            list_from_to=satgen.extend_stations(self.config['graine'], NbGateways, self.cstl_config,
                 self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
             )
         else:
