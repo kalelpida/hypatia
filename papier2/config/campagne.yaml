@@ -1,7 +1,7 @@
 paramela: #nom de la campagne
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
-  duree: [ 6 ] #en s
+  duree: [ 60 ] #en s
   pas: [2000] #en ms
   isls: [ isls_plus_grid ]
   # examples of ISL deteriorators
@@ -9,13 +9,13 @@ paramela: #nom de la campagne
   #      { sel: topUtil10, errModel: "brstErrMdl-brstRate:0.01-brstSize:5-interval:[20000,26000]ms" },
   #      { sel: topUtil10, errModel: "recvErrRate:0.1-interval:[20000,26000]ms"}
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
-  deteriorISL: [ { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:2000,4000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
+  deteriorISL: [ {}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:10000,16000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:10000,16000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   sol: [ users_and_main_stations ] #main_cities (only ue, keep in mind not to create parameters for gateway if-gsl), users_and_main_stations
-  nb-UEs-sol: [ 50 ]
+  nb-UEs-sol: [ 70 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [ 4 ]
-  debit-if-isl: [ 3 ] #[ 3, 10 ] #Mb/s
-  debit-if-gsl: [ {'ue':1, 'gateway':20, 'satellite':5} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
+  debit-if-isl: [ 8 ] #[ 3, 10 ] #Mb/s
+  debit-if-gsl: [ {'ue':1, 'gateway':50, 'satellite':10} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
   logs-actifs: [ ['rx', 'tx', 'drop'] ] #('rx', 'tx', 'drop') # 'drop' callbacks won't be effective when Traffic Control is set 
   # examples of protocoles:
   # { 'nom':"udp", "extra_parameters":"expInterPacket" }
@@ -26,8 +26,8 @@ paramela: #nom de la campagne
   # a tcp flow is defined by its size, which is calculated with debit and duree_ms
   # Débit UDP : max(udp_list_flow_size_proportion[i], 0.999*data_rate_GSL_megabit_per_s))
   protocoles: 
-    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'nb': 70} #, 'extra_parameters' : 'pacingDR0.9Mb/s' }
-      agresseurs: { 'nom': "tcp", 'nb': 30, 'debut_ms': [2000, 2010], 'duree_ms': 2000 }
+    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'nb': 50} #, 'extra_parameters' : 'pacingDR0.9Mb/s' }
+      agresseurs: { 'nom': "tcp", 'nb': 20, 'debut_ms': [30000, 31000], 'duree_ms': 6000 }
     #- {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'debit': 20 }
     #- { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 20, 'extra_parameters' : 'pacingDR0.9Mb/s', 'nb_agresseurs': 15, 'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0}  #{ 'nom': "tcp"} ]
     #- { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 20, 'nb_agresseurs': 15, 'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 6000, 'fdebit_agresseurs': 0}
@@ -37,10 +37,11 @@ paramela: #nom de la campagne
   # pacingDR[double][unit or default to bit per sec] is at application level, so only takes into account the payload
   gwTrafficControl:
     - type: "ns3::RRQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
-      MaxSize: QueueSize 100p #type value
+      MaxSize: QueueSize 30p #type value
       ChildQueueDisc: "ns3::ITbfQueueDisc"
       ChildRate: DataRate 1Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
     - {}
+    - {"type": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 30p", "Interval": "String 200ms", "Target": "String 20ms"} 
 
 info-sauvegarde:
   strdate: '%Y-%m-%d-%H%M'
@@ -59,6 +60,6 @@ actions: #[]
   - noeuds
   - commodites
   - routes
-  #- "analyse theorique"
-  #- "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
+  - "analyse theorique"
+  - "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
   - simulation
