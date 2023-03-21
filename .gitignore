@@ -12,3 +12,5 @@ papier2/ns3_experiments/runs/*
 satviz/viz_output_*
 satviz/viz_output/*
 !satviz/viz_output/README.md
+
+parametriseur/*.pickle

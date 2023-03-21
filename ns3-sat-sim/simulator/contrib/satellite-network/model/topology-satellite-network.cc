@@ -332,7 +332,7 @@ namespace ns3 {
 
         // Link settings
         m_isl_data_rate_megabit_per_s = parse_positive_double(m_basicSimulation->GetConfigParamOrFail("isl_data_rate_megabit_per_s"));
-        m_isl_max_queue_size_kB = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("isl_max_queue_size_kB"));
+        m_isl_max_queue_size = m_basicSimulation->GetConfigParamOrFail("isl_max_queue_size");
         m_gsl_max_queue_size_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_max_queue_size"));
         m_gsl_data_rate_megabit_per_s_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
 
@@ -531,11 +531,10 @@ namespace ns3 {
 
         // Link helper
         PointToPointLaserHelper p2p_laser_helper;
-        std::string max_queue_size_str = format_string("%" PRId64 "kB", m_isl_max_queue_size_kB);
-        p2p_laser_helper.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", QueueSizeValue(QueueSize(max_queue_size_str)));
+        p2p_laser_helper.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", QueueSizeValue(QueueSize(m_isl_max_queue_size)));
         p2p_laser_helper.SetDeviceAttribute ("DataRate", DataRateValue (DataRate (std::to_string(m_isl_data_rate_megabit_per_s) + "Mbps")));
         std::cout << "    >> ISL data rate........ " << m_isl_data_rate_megabit_per_s << " Mbit/s" << std::endl;
-        std::cout << "    >> ISL max queue size... " << m_isl_max_queue_size_kB << " kB" << std::endl;
+        std::cout << "    >> ISL max queue size... " << m_isl_max_queue_size << std::endl;
 
         // Traffic control helper
         TrafficControlHelper tch_isl;
@@ -643,7 +642,7 @@ namespace ns3 {
         for (auto attr: m_gsl_data_rate_megabit_per_s_map){
             gsl_helper.SetDeviceAttribute(attr.first, "DataRate", DataRateValue (DataRate (attr.second + "Mbps")));
             gsl_helper.SetQueue(attr.first, "ns3::DropTailQueue<Packet>", "MaxSize", 
-                    QueueSizeValue(QueueSize(m_gsl_max_queue_size_map[attr.first]+ "kB")));
+                    QueueSizeValue(QueueSize(m_gsl_max_queue_size_map[attr.first])));
         }
         for (auto attr: m_gsl_data_rate_megabit_per_s_map){
             std::cout << "    >> GSL data rate........ " << attr.first << " : " << attr.second << " Mbit/s" << std::endl;

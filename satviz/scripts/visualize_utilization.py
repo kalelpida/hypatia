@@ -34,11 +34,11 @@ except (ImportError, SystemError):
 import sys
 
 
-IN_UTIL_DIR='../../papier2/sauvegardes/one-station-paramel500'
-MODE = 1 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
+IN_UTIL_DIR='../../papier2/sauvegardes/paramTester'
+MODE = 2 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
 # Time in ms for which visualization will be generated
 GEN_TIME = 4000  #ms
-UTIL_INTERVAL = 50 #ms
+UTIL_INTERVAL = 100 #ms
 
 
 # For all end-end paths, visualize link utilization at a specific time instance
@@ -106,7 +106,6 @@ if len(sys.argv)>1:
     IN_UTIL_DIR = sys.argv[1]
 
 
-tous_objs = []
 time_wise_util = {}
 liste_commodites=[]
 
@@ -175,7 +174,7 @@ def generate_link_util_at_time():
             if idcom%2==MODE:
                 continue
             txtime_ns=min(txtime_ns,fin_interval_ns-t_ns)
-            assert txtime_ns > 0
+            assert txtime_ns >= 0
             #bandwidth is shared in emission for gs links
             if type_lien.startswith("GSL"):
                 if src in dico_links_src_gsl:
@@ -225,13 +224,18 @@ def generate_link_util_at_time():
             raise Exception("utilisation supérieure à ressources disponibles")
         
         link_width = 0.1 + 5 * utilization
-        if utilization >= 0.5:
+        blue_weight=0
+        if utilization < 0.5:
+            green_weight = 255
+            red_weight = 255 - round(255 * (0.5 - utilization) / 0.5)
+        elif utilization < 0.95:
             red_weight = 255
             green_weight = 0 + round(255 * (1 - utilization) / 0.5)
         else:
-            green_weight = 255
-            red_weight = 255 - round(255 * (0.5 - utilization) / 0.5)
-        hex_col = '%02x%02x%02x' % (red_weight, green_weight, 0)
+            green_weight=0
+            red_weight = 255 - round(255 * (1 - utilization) *10)
+            blue_weight = round(255 * (1 - utilization) *8)
+        hex_col = '%02x%02x%02x' % (red_weight, green_weight, blue_weight)
         #print(sat1, sat2, utilization, hex_col)
         viz_string += "viewer.entities.add({name : '', polyline: { positions: Cesium.Cartesian3.fromDegreesArrayHeights([" \
                         + str(tous_objs[src]["lon"]) + "," \

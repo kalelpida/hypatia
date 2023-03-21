@@ -28,9 +28,3 @@ paramTester:
   protocoles: 
     - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'debit': 20 }
   gwTrafficControl: [ {} ]
-
-actions: #[]
-  - noeuds
-  - commodites
-  - routes
-  - simulation

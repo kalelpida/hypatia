@@ -220,6 +220,7 @@ def config_ns3_properties(cstl_dico, protocol_chosen_name, data_rate_megabit_per
     tc_params = [f"tc_params_{obj}={cstl_dico[obj]['TrafficControl']}" for obj in tc_obj]
 
     # Prepare run directory
+    queue_size_gsl={cle: str(val)+'kB' for cle, val in queue_size_gsl_kB.items() }
     run_dir = "runs/run_loaded_tm_pairing_{}_Mbps_for_{}s_with_{}_{}".format(
         data_rate_megabit_per_s, params[1], protocol_chosen_name, params[5]
     )
@@ -240,7 +241,7 @@ def config_ns3_properties(cstl_dico, protocol_chosen_name, data_rate_megabit_per
     replace_in_lines(lignes,     "[ISL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_megabit_per_s))
     replace_in_lines(lignes,     "[GSL-DATA-RATE-MEGABIT-PER-S]", str(data_rate_GSL_megabit_per_s))# for ground station: /10 => a station can accept ~20% of users if gthere are 10 stations
     replace_in_lines(lignes,     "[ISL-MAX-QUEUE-SIZE]", str(queue_size_isl_kB)+'kB')
-    replace_in_lines(lignes,     "[GSL-MAX-QUEUE-SIZE]", str(queue_size_gsl_kB)+'kB')
+    replace_in_lines(lignes,     "[GSL-MAX-QUEUE-SIZE]", str(queue_size_gsl))
 
     replace_in_lines(lignes,     "[TC-TYPES]", str(tc_obj))
     replace_in_lines(lignes,     "[TC-PARAMS-]", "\n".join(tc_params))
