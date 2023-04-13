@@ -42,6 +42,7 @@
 
 #include "ns3/trace-helper.h"
 #include "ns3/gsl-helper.h"
+#include "ns3/specie.h"
 
 namespace ns3 {
 
@@ -136,13 +137,15 @@ Ptr<GSLNetDevice>
 GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
 
     //choose device type
-    std::string nodetype;
+    std::string nodetype= node->GetObject<Specie>()->GetName();
+    /*
     for (auto attr: m_nodetypes){
       if (attr.first > node->GetId()){
         nodetype = attr.second;
         break;
       }
-    }
+    }*/
+    
     NS_ABORT_IF(nodetype.empty());
 
     // Create device
@@ -207,7 +210,13 @@ GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
             } else{
               qd.Get(0)->SetAttribute(pair.first,  DataRateValue(DataRate(suite)));
             }
-        }  else {
+        } else if ( avant == "Uinteger"){
+            if (pair.first.rfind("Child", 0) == 0) {
+              qd.Get(0)->GetObject<RRQueueDisc>()->GetChildQueueFactory().Set(pair.first.substr(5),  UintegerValue(std::stoul(suite)));
+            } else{
+              qd.Get(0)->SetAttribute(pair.first,  UintegerValue(std::stoul(suite)));
+            }
+        } else {
           NS_ABORT_MSG("Soucis avec attribut " << pair.first << " type non reconnu");
         }
       }

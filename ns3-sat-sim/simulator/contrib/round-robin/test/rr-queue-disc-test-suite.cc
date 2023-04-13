@@ -135,15 +135,6 @@ RRQueueDiscTestCase::RRQueueDiscTestCase ()
 {
 }
 
-static 
-Ptr<Packet> createSrcIpv4Packet(uint32_t pktSize, const char* src_addr){
-  Ptr<Packet> p=Create<Packet>();
-  Ipv4Header h;
-  h.SetSource(Ipv4Address(src_addr));
-  p->AddHeader(h);
-  return p;
-}
-
 void
 RRQueueDiscTestCase::DoRunRRQueueTestOneDest (Ptr<RRQueueDisc> q, uint32_t qSize, uint32_t pktSize)
 {
@@ -173,7 +164,7 @@ RRQueueDiscTestCase::DoRunRRQueueTestOneDest (Ptr<RRQueueDisc> q, uint32_t qSize
   for (uint32_t i = 1; i <= numPackets; i++)
     {
       item = q->Dequeue ();
-      NS_TEST_EXPECT_MSG_EQ ((item != 0),true, "A packet should have been dequeued");
+      NS_ASSERT_MSG (!item == false, "A packet should have been dequeued");
       NS_TEST_EXPECT_MSG_EQ (q->GetCurrentSize ().GetValue (), (numPackets-i) * modeSize, "There should be " << numPackets-i << " packet(s) in there");
       NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), uids[i-1], "was this the right packet?");
     }
@@ -202,9 +193,9 @@ RRQueueDiscTestCase::DoRunRRQueueTestManyDests (Ptr<RRQueueDisc> q, uint32_t qSi
     for(uint32_t dst = 0; dst<n_dests; dst++){
       qIt = createIpv4Qitem(pktSize, ("10.0.0."+std::to_string(dst)).c_str());
       uids.push_back (qIt->GetPacket()->GetUid ());
-      q->Enqueue (qIt);
+      NS_ASSERT_MSG(q->Enqueue (qIt), "enqueue failure");
       expectedNumPackets = (i*n_dests+dst+1);
-      NS_TEST_EXPECT_MSG_EQ (q->GetCurrentSize ().GetValue (), expectedNumPackets*modeSize, "There should be " << expectedNumPackets << " packet(s) in there");  
+      NS_ASSERT_MSG (q->GetCurrentSize ().GetValue ()== expectedNumPackets*modeSize, "There should be " << expectedNumPackets << " packet(s) in there");  
       }
      
     }
@@ -221,7 +212,7 @@ RRQueueDiscTestCase::DoRunRRQueueTestManyDests (Ptr<RRQueueDisc> q, uint32_t qSi
     for(uint32_t dst = 0; dst<n_dests; dst++){
       item = q->Dequeue ();
       expectedNumPackets = ((numPackets-i)*n_dests-dst-1);
-      NS_TEST_EXPECT_MSG_EQ ((item != 0),true, "A packet should have been dequeued");
+      NS_ASSERT_MSG (!item == false, "A packet should have been dequeued");
       NS_TEST_EXPECT_MSG_EQ (q->GetCurrentSize ().GetValue (), expectedNumPackets*modeSize, "There should be " << expectedNumPackets << " packet(s) in there, real " << q->GetCurrentSize ().GetValue () << " i" << i << " dst" <<dst);
       NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), uids[numPackets*n_dests-expectedNumPackets-1], "was this the right packet?");
     }
@@ -272,6 +263,11 @@ RRQueueDiscTestCase::RunRRQueueTest (QueueSizeUnit mode)
 }
 void
 RRQueueDiscTestCase::DoRun (void){
+  /*//for debug
+  std::string attente;
+  std::cout << "attente ";
+  std::cin >> attente;
+  */
   RunRRQueueTest (QueueSizeUnit::PACKETS);
   RunRRQueueTest (QueueSizeUnit::BYTES);
   Simulator::Destroy ();

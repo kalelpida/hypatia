@@ -34,10 +34,10 @@ except (ImportError, SystemError):
 import sys
 
 
-IN_UTIL_DIR='../../papier2/sauvegardes/paramTester'
-MODE = 2 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
+IN_UTIL_DIR='../../papier2/sauvegardes/paramelae'
+MODE = 1 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
 # Time in ms for which visualization will be generated
-GEN_TIME = 4000  #ms
+GEN_TIME = 29000  #ms
 UTIL_INTERVAL = 100 #ms
 
 
@@ -224,18 +224,7 @@ def generate_link_util_at_time():
             raise Exception("utilisation supérieure à ressources disponibles")
         
         link_width = 0.1 + 5 * utilization
-        blue_weight=0
-        if utilization < 0.5:
-            green_weight = 255
-            red_weight = 255 - round(255 * (0.5 - utilization) / 0.5)
-        elif utilization < 0.95:
-            red_weight = 255
-            green_weight = 0 + round(255 * (1 - utilization) / 0.5)
-        else:
-            green_weight=0
-            red_weight = 255 - round(255 * (1 - utilization) *10)
-            blue_weight = round(255 * (1 - utilization) *8)
-        hex_col = '%02x%02x%02x' % (red_weight, green_weight, blue_weight)
+        hex_col = util.utilcolor(utilization)
         #print(sat1, sat2, utilization, hex_col)
         viz_string += "viewer.entities.add({name : '', polyline: { positions: Cesium.Cartesian3.fromDegreesArrayHeights([" \
                         + str(tous_objs[src]["lon"]) + "," \
@@ -268,5 +257,5 @@ if __name__ == "__main__":
     for svgde, (CITIES_AND_USERS_DETAIL_FILE, IN_UTIL_FILE) in trouves.items():
         tous_objs = sat_objs + util.generate_sol_obj_position_list(CITIES_AND_USERS_DETAIL_FILE)
         viz_string = generate_link_util_at_time()
-        OUT_HTML_FILE = f"{OUT_DIR}{NAME}_util_{MODE}{svgde}.html"
+        OUT_HTML_FILE = f"{OUT_DIR}{NAME}_util_{MODE}{svgde}_a_{int(GEN_TIME/1e3)}s.html"
         util.write_viz_files(viz_string, topFile, bottomFile, OUT_HTML_FILE)

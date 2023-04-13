@@ -261,6 +261,24 @@ def generate_sol_obj_position_list(nom_fic):
     assert int(idSolObj) == len(liste)-1
     return liste
 
+def utilcolor(utilization):
+    blue_weight=0
+    seuil_haut=0.9
+    seuil_bas=seuil_haut/2
+    if utilization < seuil_bas:
+        green_weight = 255
+        red_weight = 255 - round(255 * (seuil_bas - utilization) / seuil_bas)
+    elif utilization < seuil_haut:
+        red_weight = 255
+        green_weight = 0 + round(255 * (seuil_haut - utilization) / seuil_bas)
+    else:
+        green_weight=0
+        coeff=(utilization - seuil_haut)/(1 -seuil_haut)
+        bleu=2 #between 0 (max red) and 4 (max blue), reached at mean([seuil_haut, 1])
+        clarte=0.7 # between 0 (violet, full blue+red) and +inf (black)
+        red_weight = round(255 * (1 - coeff)**clarte)
+        blue_weight = round(255 * (bleu*coeff*(1 - coeff))**clarte)
+    return '%02x%02x%02x' % (red_weight, green_weight, blue_weight) #hex_col 
 
 def write_viz_files(viz_string, top_file, bottom_file, out_file):
     """
@@ -278,3 +296,21 @@ def write_viz_files(viz_string, top_file, bottom_file, out_file):
     with open(bottom_file, 'r') as fb:
         writer_html.write(fb.read())
     writer_html.close()
+
+if __name__ =='__main__':
+    import matplotlib.pyplot as plt
+    from matplotlib.collections import LineCollection
+    import numpy as np
+    nb=300
+    x0=np.linspace(0, 1, nb, endpoint=False)
+    x1=1/nb+x0
+    fig, axs = plt.subplots(figsize=(5, 1))
+    cols=['#'+utilcolor(u) for u in (x0+x1)/2]
+    lc= LineCollection( [[[v1,0], [100*v2, 0]] for v1, v2 in zip(x0, x1)],  colors=cols, lw=500)
+    axs.add_collection(lc)
+    axs.set_ylim(-0.01, 0.01)
+    axs.axes.get_yaxis().set_visible(False)
+    axs.set_xlabel("utilisation (%)")
+    fig.tight_layout()
+    plt.savefig("colorscale.png")
+    plt.show()

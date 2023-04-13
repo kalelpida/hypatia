@@ -49,31 +49,6 @@ public:
   UserFlow ();
 
   virtual ~UserFlow ();
-
-  /**
-   * \enum FlowStatus
-   * \brief Used to determine the status of this flow queue
-   */
-  enum FlowStatus
-    {
-      EMPTY,
-      ACTIVE
-    };
-
-  /**
-   * \brief Set the status of this flow
-   * \param status the status for this flow
-   */
-  void SetStatus (FlowStatus status);
-  /**
-   * \brief Get the status of this flow
-   * \return the status of this flow
-   */
-  FlowStatus GetStatus (void) const;
-  /**
-   * \brief Set the index for this flow
-   * \param index the index for this flow
-   */
   void SetIndex (uint32_t index);
   /**
    * \brief Get the index of this flow
@@ -81,8 +56,20 @@ public:
    */
   uint32_t GetIndex (void) const;
 
-protected:
-  FlowStatus m_status;  //!< the status of this flow
+  /**
+   * \brief Set the priority of this flow
+   * \param prio the new priority of this flow
+   *
+  */
+  void SetPrio (uint32_t prio);
+  /**
+   * \brief Get the priority of this flow
+   * \return the priority of this flow
+   */
+  uint32_t GetPrio (void) const;
+
+private:
+  uint32_t m_prio;     //!< the index for this flow
   uint32_t m_index;     //!< the index for this flow
 };
 
@@ -118,18 +105,19 @@ public:
   static constexpr const char* UNCLASSIFIED_DROP = "Unclassified drop";  //!< No packet filter able to classify packet
   static constexpr const char* OVERLIMIT_DROP = "Overlimit drop";        //!< Overlimit dropped packets
 
-private:
+protected:
   virtual bool DoEnqueue (Ptr<QueueDiscItem> item);
   virtual Ptr<QueueDiscItem> DoDequeue (void);
   virtual bool CheckConfig (void);
   virtual void InitializeParams (void);
 
-  std::vector<Ptr<UserFlow> > m_flows;                      //!< The list of flows
+  std::vector<Ptr<UserFlow>> m_flowsDequeue;          //!< The liste of flows, used to dequeue packets
+  std::map<uint32_t, Ptr<UserFlow>> m_flowsEnqueue;    //!< Map with the index of class for each flow. Helps tp enqueue a packet
+  // TODO Think about deleting unused flows. Update filter 
   size_t m_flow_it_id;                                     //!< The associated iterator
   Ptr<Ipv4DstPacketFilter> m_filter;                      //!< The ipv4 filter
   bool m_waiting;                                         //!< the net device has called
 
-  std::map<uint32_t, uint32_t> m_flowsIndices;    //!< Map with the index of class for each flow
   std::string m_child_qdisc_str;                              //<! child qdisc
 
   ObjectFactory m_flowFactory;         //!< Factory to create a new flow

@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import numpy as np
 
 def generate_simple_gsl_interfaces_info(filename_gsl_interfaces_info, number_of_satellites, number_of_ground_stations,
                                         num_gsl_interfaces_per_satellite, num_gsl_interfaces_per_ground_station,
@@ -49,3 +50,55 @@ def generate_simple_gsl_interfaces_info(filename_gsl_interfaces_info, number_of_
                 agg_max_bandwidth_satellite if node_id < number_of_satellites
                 else agg_max_bandwidth_ground_station,
             ))
+
+def generate_simple_gsl_tl_interfaces_info(filename_gsl_interfaces_info: str, number_of_satellites: int, ground_stations: list, cstl_config: dict):
+    """
+                                        num_gsl_interfaces_per_satellite, num_gsl_interfaces_per_ground_station,
+                                        agg_max_bandwidth_satellite, agg_max_bandwidth_ground_station):
+    Read for each node the GSL interface information.
+
+    Note: the unit of the aggregate max bandwidth per satellite is not known, but they both must be the same unit.
+
+    :param filename_gsl_interfaces_info: Filename of GSL interfaces info file to write to
+                                         (typically /path/to/gsl_interfaces_info.txt)
+                                         Line format: <node id>,<number of interfaces>,<aggregate max. bandwidth Mbit/s>
+    :param number_of_satellites:                    Number of satellites
+    :param ground_stations:                         List of ground stations. describe their position and type
+    :param cstl_config                              parameters for each interface depending on its type
+
+    """
+    configs={}
+    configs['satellite']=cstl_config['satellite']['ifs']
+    for elt in cstl_config['TYPES_OBJETS_SOL']:
+        configs[elt]=cstl_config[elt]['ifs']
+    
+    objdic={}
+    with open(filename_gsl_interfaces_info + "/gsl_interfaces_info.txt", 'w+') as fgsl:
+        for node_id in range(number_of_satellites):
+            for conf in configs['satellite']:
+                if conf[0]=='gsl':
+                    fgsl.write("{},{},{}\n".format(node_id, conf[2], conf[1].get("agg_max_bandwidth", 1.0)))
+
+        for objsol in ground_stations:
+            if objsol['type'] in objdic:
+                assert objsol['gid']==sum(objdic[objsol['type']]) # assert device are grouped by type 
+                objdic[objsol['type']][1]+=1
+            else:
+                objdic[objsol['type']]=[objsol['gid'], 1]
+            for conf in configs[objsol['type']]:
+                if conf[0]=='gsl':
+                    fgsl.write("{},{},{}\n".format(number_of_satellites+objsol['gid'], conf[2], conf[1].get("agg_max_bandwidth", 1.0)))
+    
+    if not 'server' in objdic:
+        return
+    assert objdic['server'][1]==objdic['gateway'][1]
+    with open(filename_gsl_interfaces_info + "/tl_interfaces_info.txt", 'w+') as ftl:            
+        for nb in range(objdic['gateway'][1]):
+            for conf in configs[objsol['type']]:
+                if conf[0]=='tl':
+                    delay=conf[1].get("delay", "5ms")
+                    if delay=='real' or delay=='reel':
+                        raise Exception('todo: compute distance')
+                    elif delay=='random':
+                        delay=f"{np.random.randint(1, 20)}ms"
+                    ftl.write("{},{},{},{},{}\n".format(number_of_satellites+objdic['gateway'][0]+nb, number_of_satellites+objdic['server'][0]+nb, delay, conf[1].get("datarate", "50Mbps"), conf[1].get("Qsize", "20p")))

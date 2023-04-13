@@ -50,11 +50,14 @@ RADIO_K_FACTOR: 1.33
 # Then call RADIO_K_FACTOR instead of cstl_dico["RADIO_K_FACTOR"] in satellite_networks_state/main_net_helper.py 
 
 #same names as in debit_gsl
-TYPES_OBJETS_SOL: ['ue', 'gateway']
+TYPES_OBJETS_SOL: ['ue', 'gateway', 'server']
+
+#interface allocation: lo, isl, gsl, finally terrestrial links
+#a change in interface configuration must be reflected in the system configuration (topology-satellite-network files)
 
 gateway: 
-  type: Lille #Lille # topCitiesHypatia: 100 biggest cities, Hypatia base file; topCitiesUN: +300k cities, United Nations estimate
-  nombre: 1 #random, give IDs and place them, or set it in config?
+  type: topCitiesUN #Lille # topCitiesHypatia: 100 biggest cities, Hypatia base file; topCitiesUN: +300k cities, United Nations estimate
+  nombre: 7 #random, give IDs and place them, or set it in config?
   minElevation: 10 #degrees above horizon
   q_factor: 1 # to change gsl if setting. #TODO consider reading it in step1
   TrafficControl: config/gwTrafficControl
@@ -63,8 +66,22 @@ gateway:
   #          ChildQueueDisc: "ns3::ITbfQueueDisc"
   #          ChildRate: DataRate 1Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
             ## connectQueueTraces?
+  ifs:
+    - ["gsl", { agg_max_bandwidth: 1}, 1] #delay auto, 
+    #- "tl", {agg_max_bandwidth: 1}, 1 #one-one, with 1 server
 
 ue:
-  type: 1ville_tas700 #randomGlobe_tas700 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
+  type: villesGlobe_tas700 #1ville_tas700 #randomGlobe_tas700 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
   minElevation: 35 #degrees above horizon
   nombre: config/nb-UEs-sol #voir dans config
+  ifs:
+    - ["gsl", {}, 1] # satellite
+  
+server:
+  ifs:
+    - ["tl", {agg_max_bandwidth: 1}, 1] # gateway
+
+satellite:
+  ifs:
+    # - "isl", {}, 4 #with satellite. added by plus_grid
+    - ["gsl", {}, "will_be_replaced_by_algo"] #with ue,with gateway

@@ -124,7 +124,7 @@ class Experiences():
         # and 'list_update_interval_ms' in perform_full_analysis according to `liste_arguments`
         if "analyse theorique" in self.actions:
             os.chdir("satgenpy_analysis")
-            subprocess.check_call(["python", "perform_full_analysis.py", nomfic_courante])
+            subprocess.check_call(["python", "perform_full_analysis.py", nomfic_courante], stdout=sys.stdout, stderr=sys.stderr)
             os.chdir(basedir)
         
         if "casse liens sat" in self.actions:
@@ -136,7 +136,7 @@ class Experiences():
         # NS-3 EXPERIMENTS
         if "simulation" in self.actions:
             os.chdir("ns3_experiments")
-            subprocess.check_call(["python", "step_2_run.py", "0", nomfic_courante])
+            subprocess.check_call(["python", "step_2_run.py", "0", nomfic_courante], stdout=sys.stdout, stderr=sys.stderr)
             os.chdir(basedir)
 
     
@@ -155,7 +155,7 @@ class Experiences():
         subprocess.check_call(["mkdir", "-p", nomdestdir])
         for src in sources_a_svgder:
             if os.path.exists(src):
-                subprocess.check_call(["cp", "-R", '-t', nomdestdir, src])
+                subprocess.check_call(["cp", "-R", '-t', nomdestdir, src], stdout=sys.stdout, stderr=sys.stderr)
             else:
                 print(f"\n\n \t << {src} >> does not exists. Could not be saved \n\n")
 
@@ -190,6 +190,7 @@ def main():
     dic=dico_campagne.pop('info-sauvegarde',{})  
     if 'currinfo' in dic:
         sys.stdout=open(dic['currinfo'], 'w')
+        sys.stderr=open('err'+dic['currinfo'], 'w')
     strdate=dic.get('strdate', "%Y-%m-%d-%H%M")
     campagnedir=dic.get('campagnedir', '').rstrip('/') #"sauvegardes/{nom_campagne}"
     expedir=dic.get('expedir', '').lstrip('/')

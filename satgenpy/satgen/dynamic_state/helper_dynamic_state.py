@@ -106,7 +106,7 @@ def help_dynamic_state(
         list_gsl_interfaces_info = read_gsl_interfaces_info(
             output_generated_data_dir + "/" + name + "/gsl_interfaces_info.txt",
             len(satellites),
-            len(ground_stations)
+            len([elt for elt in ground_stations if elt['type']!='server'])
         )
         epoch = tles["epoch"]
 

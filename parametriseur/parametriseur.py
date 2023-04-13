@@ -2,11 +2,11 @@ from estimFonc import fonction
 from paramExec import execution
 from paramEval import evaluation, ecriture_params, lecture_params
 
-PARAMS=["nb-UEs-sol", "gwTrafficControl", "debit-if-gsl&gateway", "debit-if-gsl&satellite", "debit-if-gsl&ue", "debit-if-isl", "deteriorISL"]
+PARAMS=["nb-UEs-sol", "gwTrafficControl", "debit-if-gsl&gateway", "debit-if-gsl&satellite", "debit-if-gsl&ue", "debit-if-isl", "info"]
 gwTrafficControl1 = {"type": "ns3::RRQueueDisc", "MaxSize": "QueueSize 60p", "ChildQueueDisc": "ns3::ITbfQueueDisc", "ChildRate": "DataRate 2Mbps"} 
-gwTrafficControl2 = {"type": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 400ms", "Target": "String 200ms"} 
+gwTrafficControl2 = {"type": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 100ms", "Target": "String 300ms"} 
 deterior_dico={ "sel": "topUtil50", "errModel": "gilbertElliottMdl-brstRate:0.1-brstSize:5-interval:0,7999ms"}
-valeurs=[[100, gwTrafficControl1, 180, 80, 2, 20, deterior_dico], [100, gwTrafficControl2, 180, 80, 2, 20]]
+valeurs=[[300, gwTrafficControl2, 10, 80, 2, 15, "7 villes Globe compImpDesactiv"]]#, [300, gwTrafficControl2, 150, 80, 2, 20,deterior_dico, 3]]
 def main():
     #selection param
     deja_testes=lecture_params()

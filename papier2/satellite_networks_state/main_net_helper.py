@@ -47,7 +47,7 @@ class MainNetHelper:
         
         self.types_parametres={}
         for cle, val in cstl_dico.items():
-            if cle in cstl_dico['TYPES_OBJETS_SOL']:
+            if cle in cstl_dico['TYPES_OBJETS_SOL'] and any([conf_if[0]=='gsl' for conf_if in val['ifs']]):
                 #old approximation, false for low elevation angle
                 #sat_cone_radius_m= altitude/math.tan(math.radians(val['minElevation']))  # Considering an elevation angle of 35 degrees;
                 #max_gsl_m = math.sqrt(math.pow(sat_cone_radius_m, 2) + math.pow(altitude, 2))
@@ -95,7 +95,13 @@ class MainNetHelper:
         elif self.config['sol'] == "users_and_main_stations":
             NbGateways = self.cstl_config["gateway"]["nombre"]
             NbUEs = self.cstl_config["ue"]["nombre"]
-            list_from_to=satgen.extend_stations_and_users(self.config['graine'], NbGateways, NbUEs, self.cstl_config,
+            list_from_to=satgen.extend_users_and_stations(self.config['graine'], NbGateways, NbUEs, self.cstl_config,
+                self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
+            )
+        elif self.config['sol'] == "users_stations_and_servers":
+            NbGateways = self.cstl_config["gateway"]["nombre"]
+            NbUEs = self.cstl_config["ue"]["nombre"]
+            list_from_to=satgen.extend_users_stations_and_servers(self.config['graine'], NbGateways, NbUEs, self.cstl_config,
                 self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
             )
         elif self.config['sol'] == "main_cities":
@@ -140,6 +146,7 @@ class MainNetHelper:
                 isl_shift=0,
                 idx_offset=0
             )
+            self.cstl_config['satellite']['ifs']=[('isl', {}, 4)]+self.cstl_config['satellite']['ifs']
         elif self.config['isls'] == "isls_none":
             satgen.generate_empty_isls(
                 self.output_generated_data_dir + "/" + name + "/isls.txt"
@@ -166,21 +173,31 @@ class MainNetHelper:
                 or self.config['algo'] == "algorithm_free_one_only_over_isls3"\
                 or self.config['algo'] == "algorithm_free_one_only_over_isls4":
             gsl_interfaces_per_satellite = 1
+        elif self.config['algo'] == "algorithm_free_two_only_over_isls5pp":
+            gsl_interfaces_per_satellite=2
         elif self.config['algo'] == "algorithm_paired_many_only_over_isls":
             gsl_interfaces_per_satellite = len(ground_stations)
         else:
             raise ValueError("Unknown dynamic state algorithm: " + self.config['algo'])
+        for i, elt in enumerate(self.cstl_config['satellite']['ifs']):
+            if elt[0]=='gsl':
+                self.cstl_config['satellite']['ifs'][i][2]=gsl_interfaces_per_satellite
+        #print("Generating GSL interfaces info..")
+        #satgen.generate_simple_gsl_interfaces_info(
+        #    self.output_generated_data_dir + "/" + name + "/gsl_interfaces_info.txt",
+        #    self.NUM_ORBS * self.NUM_SATS_PER_ORB,
+        #    len(ground_stations),
+        #    gsl_interfaces_per_satellite,  # GSL interfaces per satellite
+        #    1,  # (GSL) Interfaces per ground station
+        #    1,  # Aggregate max. bandwidth satellite (unit unspecified)
+        #    1   # Aggregate max. bandwidth ground station (same unspecified unit)
+        #)
 
-        print("Generating GSL interfaces info..")
-        satgen.generate_simple_gsl_interfaces_info(
-            self.output_generated_data_dir + "/" + name + "/gsl_interfaces_info.txt",
+        print("Generating TerrestrialLink interfaces info..")
+        satgen.generate_simple_gsl_tl_interfaces_info(self.output_generated_data_dir + "/" + name ,
             self.NUM_ORBS * self.NUM_SATS_PER_ORB,
-            len(ground_stations),
-            gsl_interfaces_per_satellite,  # GSL interfaces per satellite
-            1,  # (GSL) Interfaces per ground station
-            1,  # Aggregate max. bandwidth satellite (unit unspecified)
-            1   # Aggregate max. bandwidth ground station (same unspecified unit)
-        )
+            ground_stations, 
+            self.cstl_config)
 
         # Forwarding state
         print("Generating forwarding state...")

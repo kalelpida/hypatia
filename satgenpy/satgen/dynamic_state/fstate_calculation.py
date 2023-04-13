@@ -1,7 +1,7 @@
 import math
 import networkx as nx
 from ..dynamic_mcnf_paper_code.interface import calcul_paths
-KPPROCHES=3 # A station must choose between the KPPROCHES closest neighbours 
+KPPROCHES=3 # A station must choose between the KPPROCHES closest neighbours used in calculate_fstate_shortest_path_without_gs_relaying4, not calculate_fstate_shortest_path_without_gs_relaying3
 
 def calculate_fstate_shortest_path_without_gs_relaying(
         output_dynamic_state_dir,
@@ -268,9 +268,13 @@ def calculate_fstate_shortest_path_without_gs_relaying3(
         sat_neighbor_to_if,
         prev_fstate,
         enable_verbose_logs,
-        is_last
+        is_last,
+        kpproches=3, # A station must choose between the KPPROCHES closest neighbours,
+        offset_server=0 # offset for routing from server to ue and vice-versa. To be adapeted if there is more than 1 server. Here it also corresponds to the number of users
 ):
 
+    assert offset_server>0
+    num_gateways=num_ground_stations-offset_server
     # Calculate shortest path distances
     if enable_verbose_logs:
         print("  > Calculating Floyd-Warshall for graph without ground-station relays")
@@ -291,12 +295,12 @@ def calculate_fstate_shortest_path_without_gs_relaying3(
         # select the one which promises the shortest path to the destination ground station (getting there + last hop)
         dist_satellite_to_ground_station = {}
         for curr in range(num_satellites):
-            for dst_gid in range(num_ground_stations):
+            for dst_gid in range(offset_server):
                 dst_gs_node_id = num_satellites + dst_gid
 
                 # Among the satellites in range of the destination ground station,
                 # find the one which promises the shortest distance
-                possible_dst_sats = sorted(ground_station_satellites_in_range_candidates[dst_gid])[:KPPROCHES]
+                possible_dst_sats = sorted(ground_station_satellites_in_range_candidates[dst_gid])[:kpproches]
                 possibilities = []
                 for b in possible_dst_sats:
                     if not math.isinf(dist_sat_net_without_gs[(curr, b[1])]):  # Must be reachable
@@ -348,28 +352,49 @@ def calculate_fstate_shortest_path_without_gs_relaying3(
                 # when we calculate ground station to ground station forwarding
                 dist_satellite_to_ground_station[(curr, dst_gs_node_id)] = distance_to_ground_station_m
 
-                # Write to forwarding state
-                if not prev_fstate or prev_fstate[(curr, dst_gs_node_id)] != next_hop_decision:
-                    f_out.write("%d,%d,%d,%d,%d\n" % (
-                        curr,
-                        dst_gs_node_id,
-                        next_hop_decision[0],
-                        next_hop_decision[1],
-                        next_hop_decision[2]
-                    ))
-                fstate[(curr, dst_gs_node_id)] = next_hop_decision
+                if dst_gid<num_gateways:#station case
+                    # we have to deal with the last hop between station and server
+                    if not prev_fstate or prev_fstate[(curr, dst_gs_node_id+offset_server)] != next_hop_decision:
+                        f_out.write("%d,%d,%d,%d,%d\n" % (
+                            curr,
+                            dst_gs_node_id+offset_server,
+                            next_hop_decision[0],
+                            next_hop_decision[1],
+                            next_hop_decision[2]
+                        ))
+                    fstate[(curr, dst_gs_node_id+offset_server)] = next_hop_decision
+                    if not prev_fstate:
+                        f_out.write("%d,%d,%d,%d,%d\n" % (
+                            dst_gs_node_id,
+                            dst_gs_node_id+offset_server,
+                            dst_gs_node_id+offset_server,
+                            1,
+                            0
+                        ))
+                    fstate[(dst_gs_node_id, dst_gs_node_id+offset_server)] = (dst_gs_node_id+offset_server, 1, 0)
+                else:#this is a ue
+                    # Write to forwarding state
+                    if not prev_fstate or prev_fstate[(curr, dst_gs_node_id)] != next_hop_decision:
+                        f_out.write("%d,%d,%d,%d,%d\n" % (
+                            curr,
+                            dst_gs_node_id,
+                            next_hop_decision[0],
+                            next_hop_decision[1],
+                            next_hop_decision[2]
+                        ))
+                    fstate[(curr, dst_gs_node_id)] = next_hop_decision
 
         # Ground stations to ground stations
         # Choose the source satellite which promises the shortest path
-        for src_gid in range(num_ground_stations):
-            for dst_gid in range(num_ground_stations):
-                if src_gid != dst_gid:
+        for src_gid in range(offset_server):
+            for dst_gid in range(offset_server):
+                if (src_gid<num_gateways)!=(dst_gid<num_gateways):
                     src_gs_node_id = num_satellites + src_gid
                     dst_gs_node_id = num_satellites + dst_gid
 
                     # Among the satellites in range of the source ground station,
                     # find the one which promises the shortest distance
-                    possible_src_sats = sorted(ground_station_satellites_in_range_candidates[src_gid])[:KPPROCHES]
+                    possible_src_sats = sorted(ground_station_satellites_in_range_candidates[src_gid])[:kpproches]
                     possibilities = []
                     for a in possible_src_sats:
                         best_distance_offered_m = dist_satellite_to_ground_station[(a[1], dst_gs_node_id)]
@@ -392,6 +417,11 @@ def calculate_fstate_shortest_path_without_gs_relaying3(
                             0,
                             num_isls_per_sat[src_sat_id] + gid_to_sat_gsl_if_idx[src_gid]
                         )
+                    
+                    if src_gid < num_gateways:
+                        src_gs_node_id +=offset_server
+                    if dst_gid < num_gateways:
+                        dst_gs_node_id +=offset_server
 
                     # Update forwarding state
                     if not prev_fstate or prev_fstate[(src_gs_node_id, dst_gs_node_id)] != next_hop_decision:

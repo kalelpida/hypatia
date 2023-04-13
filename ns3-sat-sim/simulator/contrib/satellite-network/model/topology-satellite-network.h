@@ -57,8 +57,9 @@
 #include "ns3/ipv4.h"
 #include <regex>
 #include "ns3/id-seq-header.h"
-#include "states-error-model.h"
+#include "ns3/states-error-model.h"
 #include "ns3/simulator.h" // for scheduling in SetErrorModel
+#include "ns3/specie.h"
 
 namespace ns3 {
     struct structacceptNodeObj { 
@@ -111,11 +112,12 @@ namespace ns3 {
         // Build functions
         void ReadConfig();
         void Build(const Ipv4RoutingHelper& ipv4RoutingHelper);
-        void ReadGroundStations();
+        void ReadGroundObjects();
         void ReadSatellites();
         void InstallInternetStacks(const Ipv4RoutingHelper& ipv4RoutingHelper);
         void ReadISLs();
         void CreateGSLs();
+        void CreateTLs();
 
         // Helper
         void EnsureValidNodeId(uint32_t node_id);
@@ -134,6 +136,7 @@ namespace ns3 {
         // Generated state
         NodeContainer m_allNodes;                           //!< All nodes
         NodeContainer m_groundStationNodes;                 //!< Ground station nodes
+        NodeContainer m_otherGroundNodes;                 //!< Ground station nodes
         NodeContainer m_satelliteNodes;                     //!< Satellite nodes
         std::vector<Ptr<GroundStation> > m_groundStations;  //!< Ground stations
         std::vector<Ptr<Satellite>> m_satellites;           //<! Satellites

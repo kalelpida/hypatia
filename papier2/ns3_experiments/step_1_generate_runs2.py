@@ -72,7 +72,7 @@ def main_step1(list_from_to):
 
     for nom_groupe, groupe in sorted(groupes.items()):
         #protocol_chosen=dico_params['protocoles']
-        reference_rate = groupe.get("debit", data_rate_GSL_megabit_per_s['ue'])# target sending rate in Mb/s
+        reference_rate = float(groupe.get("debit", data_rate_GSL_megabit_per_s['ue']))# target sending rate in Mb/s
         try:
             groupe_nb_commodites = int(groupe['nb'])
         except Exception:
@@ -122,7 +122,7 @@ def main_step1(list_from_to):
                     i,
                     list_from_to[i][0],
                     list_from_to[i][1],
-                    tcp_list_flow_size_byte[i],
+                    tcp_list_flow_size_byte[i] if i%2==0 else 100,
                     list_start_time[i],
                     extra_parameters,
                     metadata

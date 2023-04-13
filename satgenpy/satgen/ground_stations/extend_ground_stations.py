@@ -84,7 +84,7 @@ def extend_stations(graine, NbUEs, cstl_config, filename_ground_stations_out):
         list_from_to.append([dst+nbsats, src+nbsats])
     return list_from_to
 
-def extend_stations_and_users(graine, NbGateways, NbUEs, cstl_config, filename_ground_out):
+def extend_users_and_stations(graine, NbGateways, NbUEs, cstl_config, filename_ground_out):
     np.random.seed(graine)
     #gather ground bodies 
     if cstl_config['gateway']['type'] == 'topCitiesHypatia':
@@ -161,3 +161,99 @@ def extend_stations_and_users(graine, NbGateways, NbUEs, cstl_config, filename_g
     
     return list_from_to
         
+def extend_users_stations_and_servers(graine, NbGateways, NbUEs, cstl_config, filename_ground_out):
+    np.random.seed(graine)
+    #gather ground bodies 
+    if cstl_config['gateway']['type'] == 'topCitiesHypatia':
+        gateways = read_ground_stations_basic("input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt")
+    elif cstl_config['gateway']['type'] == 'topCitiesUN':
+        gateways = read_ground_stations_basic("input_data/ground_stations_cities_by_estimated_2025_pop_300k_UN.csv")
+    elif cstl_config['gateway']['type'] == 'Lille':
+        gateways = read_ground_stations_basic("input_data/ground_stations_Lille.csv")
+    else: # autres cas à faire
+        raise Exception("config not recognised")
+    UEs = read_ground_stations_basic("input_data/UEs_{}.txt".format(cstl_config['ue']['type']))
+    if NbUEs > len(UEs):
+        raise Exception('please, generate more users. This can be done using `generate_users.py` in satellite_networks_state/input_data/')
+    
+    list_from_to=[]
+    nbsats=cstl_config['nb_sats']
+
+    #save ground bodies for simulation
+    ground_objects_positions=[]
+    for gid, ground_station in enumerate(gateways[:NbGateways]):
+        cartesian = geodetic2cartesian(
+            float(ground_station["latitude_degrees_str"]),
+            float(ground_station["longitude_degrees_str"]),
+            ground_station["elevation_m_float"]
+        )
+        ground_objects_positions.append(
+            "%d,%s,%f,%f,%f,%f,%f,%f,gateway\n" % (
+                gid,
+                ground_station["name"],
+                float(ground_station["latitude_degrees_str"]),
+                float(ground_station["longitude_degrees_str"]),
+                ground_station["elevation_m_float"],
+                cartesian[0],
+                cartesian[1],
+                cartesian[2]
+            )
+        )
+
+    for gid, ground_station in enumerate(UEs[:NbUEs]):
+        cartesian = geodetic2cartesian(
+            float(ground_station["latitude_degrees_str"]),
+            float(ground_station["longitude_degrees_str"]),
+            ground_station["elevation_m_float"]
+        )
+        
+        # add source and dest of commodities 
+        if gid < 0.2*NbUEs:#20% flots longs
+            dest=np.random.randint(0, NbGateways)
+        else: #80% flots courts
+            dest=sorted([(geodesic_distance_m_between_ground_stations(ground_station, gateway), sid) for sid, gateway in enumerate(gateways[:NbGateways])])[0][1]
+        
+        gid+=NbGateways
+        ground_objects_positions.append(
+            "%d,%s,%f,%f,%f,%f,%f,%f,ue\n" % (
+                gid,
+                ground_station["name"],
+                float(ground_station["latitude_degrees_str"]),
+                float(ground_station["longitude_degrees_str"]),
+                ground_station["elevation_m_float"],
+                cartesian[0],
+                cartesian[1],
+                cartesian[2]
+            )
+        )
+
+        # remember that for convenience in later routing, IDs in commodities are allocated from 0 to infinite
+        # begin by satellites, then ground gateways, finally users
+        list_from_to.append([gid+nbsats, dest+nbsats+NbUEs])
+        list_from_to.append([dest+nbsats+NbUEs, gid+nbsats])
+
+    #for now, a gateway is linked to 1 server, located at the very same place. 
+    for gid, ground_station in enumerate(gateways[:NbGateways]):
+        gid+=NbGateways+NbUEs
+        cartesian = geodetic2cartesian(
+            float(ground_station["latitude_degrees_str"]),
+            float(ground_station["longitude_degrees_str"]),
+            ground_station["elevation_m_float"]
+        )
+        ground_objects_positions.append(
+            "%d,%s,%f,%f,%f,%f,%f,%f,server\n" % (
+                gid,
+                ground_station["name"],
+                float(ground_station["latitude_degrees_str"]),
+                float(ground_station["longitude_degrees_str"]),
+                ground_station["elevation_m_float"],
+                cartesian[0],
+                cartesian[1],
+                cartesian[2]
+            )
+        )
+    #save config
+    with open(filename_ground_out, "w+") as f_out:
+        f_out.writelines(ground_objects_positions)
+    
+    return list_from_to

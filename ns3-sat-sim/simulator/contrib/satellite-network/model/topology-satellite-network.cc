@@ -312,7 +312,7 @@ namespace ns3 {
         std::cout << "  > Number of satellites........ " << m_satelliteNodes.GetN() << std::endl;
 
         // Initialize ground stations
-        ReadGroundStations();
+        ReadGroundObjects();
         std::cout << "  > Number of ground stations... " << m_groundStationNodes.GetN() << std::endl;
 
         // Only ground stations are valid endpoints
@@ -364,6 +364,10 @@ namespace ns3 {
         std::cout << "  > Creating GSLs" << std::endl;
         CreateGSLs();
 
+        // Create TLs
+        std::cout << "  > Creating Terrestrial Links" << std::endl;
+        CreateTLs();
+
         // ARP caches
         std::cout << "  > Populating ARP caches" << std::endl;
         PopulateArpCaches();
@@ -391,6 +395,11 @@ namespace ns3 {
 
         // Create the nodes
         m_satelliteNodes.Create(num_orbits * satellites_per_orbit);
+        for (NodeContainer::Iterator n= m_satelliteNodes.Begin(); n!=m_satelliteNodes.End(); ++n){
+            if (true){
+                (*n)->AggregateObject(CreateObject<Specie>("satellite")); //cannot use the same object for all sats
+            }
+        }
 
         // Associate satellite mobility model with each node
         int64_t counter = 0;
@@ -448,7 +457,7 @@ namespace ns3 {
     }
 
     void
-    TopologySatelliteNetwork::ReadGroundStations()
+    TopologySatelliteNetwork::ReadGroundObjects()
     {
 
         // Create a new file stream to open the file
@@ -458,8 +467,8 @@ namespace ns3 {
 
         // Read ground station from each line
         std::string line;
-        std::string old_type;
-        std::string type;
+        std::string old_type, type;
+        Ptr<Node> node;
         while (std::getline(fs, line)) {
 
             std::vector<std::string> res = split_string(line, ",", 9);
@@ -495,33 +504,49 @@ namespace ns3 {
             m_groundStations.push_back(gs);
 
             // Create the node
+            ///*
+            node =CreateObject<Node>();
+            if (type=="server"){
+                m_otherGroundNodes.Add(node);
+            } else {
+                m_groundStationNodes.Add(node);
+            }
+            node->AggregateObject(CreateObject<Specie>(type));
+            //*/
+            /*
             m_groundStationNodes.Create(1);
-            if (m_groundStationNodes.GetN() != gid + 1) {
+            */
+            if (m_groundStationNodes.GetN()+m_otherGroundNodes.GetN() != gid + 1) {
                 throw std::runtime_error("GID is not incremented each line");
             }
 
             // Install the constant mobility model on the node
             MobilityHelper mobility;
             mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-            mobility.Install(m_groundStationNodes.Get(gid));
-            Ptr<MobilityModel> mobilityModel = m_groundStationNodes.Get(gid)->GetObject<MobilityModel>();
+            //mobility.Install(m_groundStationNodes.Get(gid));
+            //Ptr<MobilityModel> mobilityModel = m_groundStationNodes.Get(gid)->GetObject<MobilityModel>();
+            mobility.Install(node);
+            Ptr<MobilityModel> mobilityModel = node->GetObject<MobilityModel>();
             mobilityModel->SetPosition(cartesian_position);
 
         }
 
         fs.close();
         m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_groundStationNodes.GetN(), type));
+        m_allNodes.Add(m_groundStationNodes);
+        m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_otherGroundNodes.GetN(), "autres"));
+        m_allNodes.Add(m_otherGroundNodes);
         std::cout << "    > m_devtypemap:" << std::endl;
         for (auto attr: m_devtypemap){
             std::cout << attr.first << " " << attr.second << std::endl;
         }
-        m_allNodes.Add(m_groundStationNodes);
     }
 
     void
     TopologySatelliteNetwork::InstallInternetStacks(const Ipv4RoutingHelper& ipv4RoutingHelper) {
         InternetStackHelper internet;
         internet.SetRoutingHelper(ipv4RoutingHelper);
+        std::cout << " install stack " << std::endl;
         internet.Install(m_allNodes);
     }
 
@@ -633,10 +658,10 @@ namespace ns3 {
     void
     TopologySatelliteNetwork::CreateGSLs() {
 
-        for (auto attr: m_devtypemap){
-            NS_ASSERT_MSG(m_gsl_data_rate_megabit_per_s_map.find(attr.second) != m_gsl_data_rate_megabit_per_s_map.end(), "undefined DataRate map for type"+attr.second);
-            NS_ASSERT_MSG(m_gsl_max_queue_size_map.find(attr.second) != m_gsl_max_queue_size_map.end(), "undefined DataRate map for type"+attr.second);
-        }
+        //for (auto attr: m_devtypemap){
+        //    NS_ASSERT_MSG(m_gsl_data_rate_megabit_per_s_map.find(attr.second) != m_gsl_data_rate_megabit_per_s_map.end(), "undefined DataRate map for type"+attr.second);
+        //    NS_ASSERT_MSG(m_gsl_max_queue_size_map.find(attr.second) != m_gsl_max_queue_size_map.end(), "undefined DataRate map for type"+attr.second);
+        //}
         GSLHelper gsl_helper(m_devtypemap, m_tc_nodetype_qdisctype, m_tc_nodetype_attributemap);
         //std::string max_queue_size_str = format_string("%" PRId64 "p", m_gsl_max_queue_size_pkts);
         for (auto attr: m_gsl_data_rate_megabit_per_s_map){
@@ -689,8 +714,26 @@ namespace ns3 {
         std::cout << "    >> Read all GSL interfaces information for the " << node_gsl_if_info.size() << " nodes" << std::endl;
         std::cout << "    >> Number of GSL interfaces to create... " << total_num_gsl_ifs << std::endl;
 
-        // Create and install GSL network devices
-        NetDeviceContainer devices = gsl_helper.Install(m_satelliteNodes, m_groundStationNodes, node_gsl_if_info);
+        // Create and install GSL network devices for UEs
+        NetDeviceContainer devices;
+        NodeContainer uenodes;
+        for (auto n = uenodes.Begin (); n != uenodes.End (); ++n)
+        {
+          if ((*n)->GetObject<Specie>()->GetName()=="ue"){
+            uenodes.Add(*n);
+          } 
+        }
+        // Create and install GSL network devices for Gateways
+        gsl_helper.Install(m_satelliteNodes, uenodes, node_gsl_if_info);
+        NodeContainer gwnodes;
+        for (auto n = gwnodes.Begin (); n != gwnodes.End (); ++n)
+        {
+          if ((*n)->GetObject<Specie>()->GetName()=="gateway"){
+            gwnodes.Add(*n);
+          } 
+        }
+        gsl_helper.Install(m_satelliteNodes, gwnodes, node_gsl_if_info);
+        devices.Add(gsl_helper.Install(m_satelliteNodes, m_groundStationNodes, node_gsl_if_info));
         // Add callbacks. Dirty to set it here but easier than in the gsl_helper
         // uint32_t nb_sats = GetNumSatellites();
         if (m_enable_rx_log || m_enable_tx_log || m_enable_drop_log){
@@ -758,6 +801,70 @@ namespace ns3 {
         NS_ABORT_MSG_IF(total_num_gsl_ifs != devices.GetN(), "Not the expected amount of interfaces has been created.");
 
         std::cout << "    >> GSL interfaces are setup" << std::endl;
+
+    }
+
+    void
+    TopologySatelliteNetwork::CreateTLs() {
+
+        std::string filename = m_satellite_network_dir + "/tl_interfaces_info.txt";
+        if (!file_exists(filename)) {
+            throw std::runtime_error(format_string("File %s does not exist.", filename.c_str()));
+        }
+
+        // Read file contents
+        std::string line;
+        std::ifstream fstate_file(filename);
+        std::vector<std::tuple<int32_t, double>> node_gsl_if_info;
+        uint32_t total_num_gsl_ifs = 0;
+        std::smatch match;
+        if (fstate_file) {
+            size_t line_counter = 0;
+            while (getline(fstate_file, line)) {
+                std::vector<std::string> comma_split = split_string(line, ",", 5);
+                PointToPointHelper p2p_helper;
+                p2p_helper.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", QueueSizeValue(QueueSize(comma_split[4])));
+                p2p_helper.SetDeviceAttribute ("DataRate", DataRateValue (DataRate (comma_split[3])));
+                p2p_helper.SetChannelAttribute("Delay", TimeValue(Time(comma_split[2])));
+
+                NodeContainer p2pNodes;
+                p2pNodes.Add(m_allNodes.Get(parse_positive_int64(comma_split[0])));
+                p2pNodes.Add(m_allNodes.Get(parse_positive_int64(comma_split[1])));
+
+                NetDeviceContainer p2pDevices;
+                p2pDevices = p2p_helper.Install(p2pNodes);
+                // Install traffic control helper
+                //tch_isl.Install(p2pDevices.Get(0));
+                //tch_isl.Install(p2pDevices.Get(1));
+
+                // Assign some IP address (nothing smart, no aggregation, just some IP address)
+                m_ipv4_helper.Assign(p2pDevices);
+                m_ipv4_helper.NewNetwork();
+
+                // Remove the traffic control layer (must be done here, else the Ipv4 helper will assign a default one)
+                //TrafficControlHelper tch_uninstaller;
+                //tch_uninstaller.Uninstall(p2pDevices.Get(0));
+                //tch_uninstaller.Uninstall(p2pDevices.Get(1));
+
+                if (m_enable_rx_log && false){
+                    p2pDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "TL-rx"));
+                    //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
+                    p2pDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "TL-rx"));
+                }
+                if (m_enable_tx_log && false){
+                    p2pDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
+                    p2pDevices.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
+                }
+
+                // Tracking
+                if (m_enable_drop_log && false){
+                    //const std::string str_sat0 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat0_id);//could be a buffer overflow as well as a disabled link
+                    p2pDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
+                    //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
+                    p2pDevices.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
+                }
+            }
+        }
 
     }
 

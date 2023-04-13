@@ -37,7 +37,14 @@ public:
     NodeContainer allNodes; //!< All nodes
 
     ManualTwoSatTwoGsTest(std::string s) : TestCase(s) {};
-    std::vector<std::pair<uint, std::string>> m_nodetypes;
+    std::vector<std::pair<uint, std::string>> m_devtypemap;
+    /* example of TC parameters
+    Here TC is removed, so change that before setting other parameters
+    m_tc_nodetype_qdisctype ={'gateway': 'ns3::RRFQueueDisc'}
+    m_tc_nodetype_attributemap= {'gateway': {'ChildQueueDisc': 'ns3::FifoQueueDisc', 'MaxSize': 'QueueSize 60p'}}
+    */
+    std::map<std::string, std::string> m_tc_nodetype_qdisctype; //no tc controller
+    std::map< std::string, std::map<std::string, std::string>> m_tc_nodetype_attributemap;
 
     void setup_scenario(double distance_multiplier, bool new_prop_speed, double new_prop_speed_m_per_s) {
 
@@ -153,13 +160,13 @@ public:
             ASSERT_EQUAL(qs.GetUnit(), ns3::PACKETS);
             ASSERT_EQUAL(qs.GetValue(), 100);
         }
-        m_nodetypes.push_back(std::make_pair(2, "satellite"));
-        m_nodetypes.push_back(std::make_pair(4, "gateway"));
+        m_devtypemap.push_back(std::make_pair(2, "satellite"));
+        m_devtypemap.push_back(std::make_pair(4, "gateway"));
         //////////////////////
         // GSLs
 
         // Link helper
-        GSLHelper gsl_helper(m_nodetypes);
+        GSLHelper gsl_helper(m_devtypemap, m_tc_nodetype_qdisctype, m_tc_nodetype_attributemap);
         if (new_prop_speed) {
             gsl_helper.SetChannelAttribute ( "PropagationSpeed", DoubleValue(new_prop_speed_m_per_s));
         }
@@ -1479,7 +1486,7 @@ public:
         ArbiterSingleForwardHelper arbiterHelper(basicSimulation, allNodes);
 
         // Load in GSL interface bandwidth helper
-        GslIfBandwidthHelper gslIfBandwidthHelper(basicSimulation, allNodes, m_nodetypes);
+        GslIfBandwidthHelper gslIfBandwidthHelper(basicSimulation, allNodes, m_devtypemap);
 
         // Get the arbiter of node 2
         Ptr<Arbiter> arbiter = allNodes.Get(2)->GetObject<Ipv4>()->GetRoutingProtocol()->GetObject<Ipv4ArbiterRouting>()->GetArbiter();

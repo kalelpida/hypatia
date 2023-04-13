@@ -43,8 +43,7 @@ TypeId UserFlow::GetTypeId (void)
 }
 
 UserFlow::UserFlow ()
-  : m_status (EMPTY),
-    m_index (0)
+  : m_index (0), m_prio(0)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -55,17 +54,16 @@ UserFlow::~UserFlow ()
 }
 
 void
-UserFlow::SetStatus (FlowStatus status)
+UserFlow::SetPrio (uint32_t prio)
 {
   NS_LOG_FUNCTION (this);
-  m_status = status;
+  m_prio = prio;
 }
 
-UserFlow::FlowStatus
-UserFlow::GetStatus (void) const
+uint32_t
+UserFlow::GetPrio (void) const
 {
-  NS_LOG_FUNCTION (this);
-  return m_status;
+  return m_prio;
 }
 
 void
@@ -132,24 +130,22 @@ RRQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       NS_LOG_ERROR ("No filter has been able to classify this packet, drop it.");
       DropBeforeEnqueue (item, UNCLASSIFIED_DROP);
       return false;
-  } 
+  }
   size_t idflow = static_cast<size_t>(ret);
   bool result;
-  if (idflow < m_flows.size()) {
-    if (m_flows[idflow]->GetStatus() == UserFlow::EMPTY){
-      m_flows[idflow]->SetStatus(UserFlow::ACTIVE);
-    }
-    result = m_flows[idflow]->GetQueueDisc()->Enqueue(item);
-  } else if (idflow == m_flows.size()) {
+  if (idflow < m_flowsEnqueue.size()) {
+    NS_ASSERT_MSG(m_flowsDequeue.size()==m_flowsEnqueue.size(), "both mflows should share the same size");
+    result = m_flowsEnqueue.at(idflow)->GetQueueDisc()->Enqueue(item);
+  } else if (idflow == m_flowsEnqueue.size()) {
       Ptr<UserFlow> flow = m_flowFactory.Create<UserFlow> ();
       Ptr<QueueDisc> qd = m_queueDiscFactory.Create<QueueDisc> ();
       qd->Initialize ();
       flow->SetQueueDisc (qd);
       flow->SetIndex (idflow);
       AddQueueDiscClass (flow);
-      m_flows.push_back(flow); // cheating, to access more easily to qdisc classes than via QueueDisc Class methods. m_classes attribute is private
-      result=m_flows[idflow]->GetQueueDisc()->Enqueue(item);
-      m_flows[idflow]->SetStatus(UserFlow::ACTIVE);
+      m_flowsDequeue.push_back(flow); // cheating, to access more easily to qdisc classes than via QueueDisc Class methods. m_classes attribute is private
+      m_flowsEnqueue[idflow] = flow;
+      result=m_flowsEnqueue.at(idflow)->GetQueueDisc()->Enqueue(item);
   } else {
     DropBeforeEnqueue (item, UNCLASSIFIED_DROP);
     return false;
@@ -171,19 +167,16 @@ RRQueueDisc::DoDequeue (void)
   Ptr<UserFlow> flow;
   m_waiting = true;
 
-  for (size_t i=0; i<m_flows.size(); i++){
-    flow=m_flows[m_flow_it_id];
+  for (size_t i=0; i<m_flowsDequeue.size(); i++){
+    flow=m_flowsDequeue[m_flow_it_id];
     qd = flow->GetQueueDisc();
     //set for next iteration
     m_flow_it_id++;
-    if (m_flow_it_id>=m_flows.size()){
+    if (m_flow_it_id>=m_flowsDequeue.size()){
       m_flow_it_id=0;
     }
-    if (flow->GetStatus() == UserFlow::ACTIVE){
+    if (qd->GetCurrentSize().GetValue() != 0){
       item = qd->Dequeue();
-      if (qd->GetCurrentSize().GetValue() == 0){
-        flow->SetStatus(UserFlow::EMPTY);
-      }
       if (item!=0){
         m_waiting = false;
         break;
@@ -238,7 +231,8 @@ void
 RRQueueDisc::Clean(){
   NS_LOG_FUNCTION(this);
   m_filter->clearAssociationMap();
-  m_flows.clear();
+  m_flowsDequeue.clear();
+  m_flowsEnqueue.clear();
   m_flow_it_id = 0;
 }
 

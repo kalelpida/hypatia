@@ -11,17 +11,22 @@ def build(bld):
     module.source = [
         "model/ipv4-dst-packet-filter.cc",
         "model/rr-queue-disc.cc",
+        "model/rr-fqueue-disc.cc",
         "model/itbf-queue-disc.cc"
     ]
 
     module_test = bld.create_ns3_module_test_library('round-robin')
-    module_test.source = ['test/rr-queue-disc-test-suite.cc',]
+    module_test.source = [
+        'test/rr-queue-disc-test-suite.cc',
+        'test/rr-fqueue-disc-test-suite.cc',
+    ]
 
     headers = bld(features='ns3header')
     headers.module = 'round-robin'
     headers.source = [
         "model/ipv4-dst-packet-filter.h",
         "model/rr-queue-disc.h",
+        "model/rr-fqueue-disc.h",
         "model/itbf-queue-disc.h"
     ]
 
