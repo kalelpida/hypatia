@@ -315,9 +315,19 @@ namespace ns3 {
         ReadGroundObjects();
         std::cout << "  > Number of ground stations... " << m_groundStationNodes.GetN() << std::endl;
 
-        // Only ground stations are valid endpoints
-        for (uint32_t i = 0; i < m_groundStations.size(); i++) {
-            m_endpoints.insert(m_satelliteNodes.GetN() + i);
+        // Only some ground nodes are valid endpoints
+        if (m_otherGroundNodes.GetN() == 0){
+            for (uint32_t i = 0; i < m_groundEntities.size(); i++) {
+                m_endpoints.insert(m_satelliteNodes.GetN() + i);
+            }
+        } else {
+            auto gnd_it =m_groundEntities.begin();
+            for (uint32_t i = 0; i < m_groundEntities.size(); i++) {
+                if ((*gnd_it)->GetSpecie()!="gateway"){
+                    m_endpoints.insert(m_satelliteNodes.GetN() + i);
+                }
+                gnd_it++;
+            }
         }
 
         // All nodes
@@ -467,7 +477,7 @@ namespace ns3 {
 
         // Read ground station from each line
         std::string line;
-        std::string old_type, type;
+        std::string prev_specie, specie;
         Ptr<Node> node;
         while (std::getline(fs, line)) {
 
@@ -483,35 +493,35 @@ namespace ns3 {
             double cartesian_y = parse_double(res[6]);
             double cartesian_z = parse_double(res[7]);
             Vector cartesian_position(cartesian_x, cartesian_y, cartesian_z);
-            type = res[8]; //gateway, ue
+            specie = res[8]; //gateway, ue
             
             //update type counter
-            if (old_type.empty()){
-                old_type=type;
-            } else if (old_type!=type){
+            if (prev_specie.empty()){
+                prev_specie=specie;
+            } else if (prev_specie!=specie){
                 // assert type has not been used
                 for (auto attr: m_devtypemap){
-                    NS_ASSERT_MSG(attr.second != type, "Ground devices must be grouped by type (gateway, ue)");                    
+                    NS_ASSERT_MSG(attr.second != specie, "Ground devices must be grouped by type (gateway, ue)");                    
                 }
-                m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_groundStationNodes.GetN(), old_type));
-                old_type=type;
+                m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_groundStationNodes.GetN(), prev_specie));
+                prev_specie=specie;
             }
 
             // Create ground station data holder
             Ptr<GroundStation> gs = CreateObject<GroundStation>(
-                    gid, name, latitude, longitude, elevation, cartesian_position
+                    gid, name, specie, latitude, longitude, elevation, cartesian_position
             );
-            m_groundStations.push_back(gs);
+            m_groundEntities.push_back(gs);
 
             // Create the node
             ///*
             node =CreateObject<Node>();
-            if (type=="server"){
+            if (specie=="server"){
                 m_otherGroundNodes.Add(node);
             } else {
                 m_groundStationNodes.Add(node);
             }
-            node->AggregateObject(CreateObject<Specie>(type));
+            node->AggregateObject(CreateObject<Specie>(specie));
             //*/
             /*
             m_groundStationNodes.Create(1);
@@ -532,7 +542,7 @@ namespace ns3 {
         }
 
         fs.close();
-        m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_groundStationNodes.GetN(), type));
+        m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_groundStationNodes.GetN(), specie));
         m_allNodes.Add(m_groundStationNodes);
         m_devtypemap.push_back(std::make_pair(m_allNodes.GetN()+m_otherGroundNodes.GetN(), "autres"));
         m_allNodes.Add(m_otherGroundNodes);
@@ -815,14 +825,10 @@ namespace ns3 {
         // Read file contents
         std::string line;
         std::ifstream fstate_file(filename);
-        std::vector<std::tuple<int32_t, double>> node_gsl_if_info;
-        uint32_t total_num_gsl_ifs = 0;
-        std::smatch match;
         if (fstate_file) {
-            size_t line_counter = 0;
             while (getline(fstate_file, line)) {
                 std::vector<std::string> comma_split = split_string(line, ",", 5);
-                PointToPointHelper p2p_helper;
+                PointToPointTracenHelper p2p_helper;
                 p2p_helper.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", QueueSizeValue(QueueSize(comma_split[4])));
                 p2p_helper.SetDeviceAttribute ("DataRate", DataRateValue (DataRate (comma_split[3])));
                 p2p_helper.SetChannelAttribute("Delay", TimeValue(Time(comma_split[2])));
@@ -846,18 +852,18 @@ namespace ns3 {
                 //tch_uninstaller.Uninstall(p2pDevices.Get(0));
                 //tch_uninstaller.Uninstall(p2pDevices.Get(1));
 
-                if (m_enable_rx_log && false){
+                if (m_enable_rx_log){
                     p2pDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "TL-rx"));
                     //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
                     p2pDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "TL-rx"));
                 }
-                if (m_enable_tx_log && false){
+                if (m_enable_tx_log){
                     p2pDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
                     p2pDevices.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
                 }
 
                 // Tracking
-                if (m_enable_drop_log && false){
+                if (m_enable_drop_log){
                     //const std::string str_sat0 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat0_id);//could be a buffer overflow as well as a disabled link
                     p2pDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
                     //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
@@ -969,7 +975,7 @@ namespace ns3 {
     }
 
     const std::vector<Ptr<GroundStation>>& TopologySatelliteNetwork::GetGroundStations() {
-        return m_groundStations;
+        return m_groundEntities;
     }
 
     const std::vector<Ptr<Satellite>>& TopologySatelliteNetwork::GetSatellites() {
@@ -977,7 +983,7 @@ namespace ns3 {
     }
 
     void TopologySatelliteNetwork::EnsureValidNodeId(uint32_t node_id) {
-        if (node_id < 0 || node_id >= m_satellites.size() + m_groundStations.size()) {
+        if (node_id < 0 || node_id >= m_satellites.size() + m_groundEntities.size()) {
             throw std::runtime_error("Invalid node identifier.");
         }
     }

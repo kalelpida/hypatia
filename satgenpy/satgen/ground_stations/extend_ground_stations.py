@@ -178,7 +178,7 @@ def extend_users_stations_and_servers(graine, NbGateways, NbUEs, cstl_config, fi
     
     list_from_to=[]
     nbsats=cstl_config['nb_sats']
-
+    decalage_serveur=NbUEs+NbGateways
     #save ground bodies for simulation
     ground_objects_positions=[]
     for gid, ground_station in enumerate(gateways[:NbGateways]):
@@ -229,8 +229,8 @@ def extend_users_stations_and_servers(graine, NbGateways, NbUEs, cstl_config, fi
 
         # remember that for convenience in later routing, IDs in commodities are allocated from 0 to infinite
         # begin by satellites, then ground gateways, finally users
-        list_from_to.append([gid+nbsats, dest+nbsats+NbUEs])
-        list_from_to.append([dest+nbsats+NbUEs, gid+nbsats])
+        list_from_to.append([gid+nbsats, dest+nbsats+decalage_serveur])
+        list_from_to.append([dest+nbsats+decalage_serveur, gid+nbsats])
 
     #for now, a gateway is linked to 1 server, located at the very same place. 
     for gid, ground_station in enumerate(gateways[:NbGateways]):

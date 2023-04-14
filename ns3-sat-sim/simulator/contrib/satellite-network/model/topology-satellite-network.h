@@ -32,7 +32,7 @@
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
-#include "ns3/point-to-point-module.h"
+//#include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/command-line.h"
@@ -45,21 +45,27 @@
 #include "ns3/type-id.h"
 #include "ns3/vector.h"
 #include "ns3/satellite-position-helper.h"
-#include "ns3/point-to-point-laser-helper.h"
-#include "ns3/gsl-helper.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"
 #include "ns3/ipv4-static-routing-helper.h"
 #include "ns3/ipv4-static-routing.h"
 #include "ns3/ipv4-routing-table-entry.h"
 #include "ns3/wifi-net-device.h"
-#include "ns3/point-to-point-laser-net-device.h"
 #include "ns3/ipv4.h"
 #include <regex>
 #include "ns3/id-seq-header.h"
 #include "ns3/states-error-model.h"
 #include "ns3/simulator.h" // for scheduling in SetErrorModel
 #include "ns3/specie.h"
+
+//devices
+#include "ns3/point-to-point-laser-net-device.h"
+#include "ns3/point-to-point-laser-helper.h"
+#include "ns3/gsl-helper.h"
+#include "ns3/point-to-point-tracen-helper.h"
+#include "ns3/point-to-point-tracen-net-device.h"
+#include "ns3/point-to-point-tracen-channel.h"
+#include "point-to-point-tracen-remote-channel.h"
 
 namespace ns3 {
     struct structacceptNodeObj { 
@@ -135,10 +141,10 @@ namespace ns3 {
 
         // Generated state
         NodeContainer m_allNodes;                           //!< All nodes
-        NodeContainer m_groundStationNodes;                 //!< Ground station nodes
+        NodeContainer m_groundStationNodes;                 //!< GSL capable nodes
         NodeContainer m_otherGroundNodes;                 //!< Ground station nodes
         NodeContainer m_satelliteNodes;                     //!< Satellite nodes
-        std::vector<Ptr<GroundStation> > m_groundStations;  //!< Ground stations
+        std::vector<Ptr<GroundStation> > m_groundEntities;  //!< all ground entities
         std::vector<Ptr<Satellite>> m_satellites;           //<! Satellites
         std::set<int64_t> m_endpoints;                      //<! Endpoint ids = ground station ids
 

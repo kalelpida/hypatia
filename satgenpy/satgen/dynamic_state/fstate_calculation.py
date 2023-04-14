@@ -363,15 +363,6 @@ def calculate_fstate_shortest_path_without_gs_relaying3(
                             next_hop_decision[2]
                         ))
                     fstate[(curr, dst_gs_node_id+offset_server)] = next_hop_decision
-                    if not prev_fstate:
-                        f_out.write("%d,%d,%d,%d,%d\n" % (
-                            dst_gs_node_id,
-                            dst_gs_node_id+offset_server,
-                            dst_gs_node_id+offset_server,
-                            1,
-                            0
-                        ))
-                    fstate[(dst_gs_node_id, dst_gs_node_id+offset_server)] = (dst_gs_node_id+offset_server, 1, 0)
                 else:#this is a ue
                     # Write to forwarding state
                     if not prev_fstate or prev_fstate[(curr, dst_gs_node_id)] != next_hop_decision:
@@ -419,9 +410,34 @@ def calculate_fstate_shortest_path_without_gs_relaying3(
                         )
                     
                     if src_gid < num_gateways:
-                        src_gs_node_id +=offset_server
-                    if dst_gid < num_gateways:
+                        true_src_gs_node_id=src_gs_node_id+offset_server
+
+                        #update true_src->gw forwarding path
+                        gw_hop_decision = (src_gs_node_id, 0, 1)
+                        if not prev_fstate or prev_fstate[(true_src_gs_node_id, dst_gs_node_id)] != gw_hop_decision:
+                            f_out.write("%d,%d,%d,%d,%d\n" % (
+                                true_src_gs_node_id,
+                                dst_gs_node_id,
+                                gw_hop_decision[0],
+                                gw_hop_decision[1],
+                                gw_hop_decision[2]
+                            ))
+                        fstate[(true_src_gs_node_id, dst_gs_node_id)] = gw_hop_decision
+                    else:
+                        gateway_id=dst_gs_node_id
                         dst_gs_node_id +=offset_server
+                    
+                        #update gw->true_dest forwarding path
+                        gw_hop_decision = (dst_gs_node_id, 1, 0)
+                        if not prev_fstate or prev_fstate[(gateway_id, dst_gs_node_id)] != gw_hop_decision:
+                            f_out.write("%d,%d,%d,%d,%d\n" % (
+                                gateway_id,
+                                dst_gs_node_id,
+                                gw_hop_decision[0],
+                                gw_hop_decision[1],
+                                gw_hop_decision[2]
+                            ))
+                        fstate[(src_gs_node_id, dst_gs_node_id)] = gw_hop_decision
 
                     # Update forwarding state
                     if not prev_fstate or prev_fstate[(src_gs_node_id, dst_gs_node_id)] != next_hop_decision:

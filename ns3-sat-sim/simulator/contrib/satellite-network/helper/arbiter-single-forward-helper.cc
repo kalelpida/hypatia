@@ -118,7 +118,7 @@ void ArbiterSingleForwardHelper::UpdateForwardingState(int64_t t) {
                 // It must be either GSL or ISL
                 bool source_is_gsl = m_nodes.Get(current_node_id)->GetObject<Ipv4>()->GetNetDevice(1 + my_if_id)->GetObject<GSLNetDevice>() != 0;
                 bool source_is_isl = m_nodes.Get(current_node_id)->GetObject<Ipv4>()->GetNetDevice(1 + my_if_id)->GetObject<PointToPointLaserNetDevice>() != 0;
-                bool source_is_tl = m_nodes.Get(current_node_id)->GetObject<Ipv4>()->GetNetDevice(1 + my_if_id)->GetObject<PointToPointNetDevice>() != 0;
+                bool source_is_tl = m_nodes.Get(current_node_id)->GetObject<Ipv4>()->GetNetDevice(1 + my_if_id)->GetObject<PointToPointTracenNetDevice>() != 0;
                 NS_ABORT_MSG_IF((!source_is_gsl) && (!source_is_isl) && (!source_is_tl), "Only GSL and ISL network devices are supported");
 
                 // If current is a GSL interface, the destination must also be a GSL interface
@@ -131,7 +131,7 @@ void ArbiterSingleForwardHelper::UpdateForwardingState(int64_t t) {
                 // If current is a TL interface, the destination must also be a TL interface
                 NS_ABORT_MSG_IF(
                     source_is_tl &&
-                    m_nodes.Get(next_hop_node_id)->GetObject<Ipv4>()->GetNetDevice(1 + next_if_id)->GetObject<PointToPointNetDevice>() == 0,
+                    m_nodes.Get(next_hop_node_id)->GetObject<Ipv4>()->GetNetDevice(1 + next_if_id)->GetObject<PointToPointTracenNetDevice>() == 0,
                     "Destination interface must be attached to a TL network device"
                 );
 
