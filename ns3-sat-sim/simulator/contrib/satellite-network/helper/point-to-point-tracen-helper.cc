@@ -23,11 +23,16 @@
 #include "ns3/simulator.h"
 #include "ns3/point-to-point-tracen-net-device.h"
 #include "ns3/point-to-point-tracen-channel.h"
+#include "ns3/string.h"
 #include "ns3/queue.h"
 #include "ns3/net-device-queue-interface.h"
 #include "ns3/config.h"
 #include "ns3/packet.h"
 #include "ns3/names.h"
+#include "ns3/specie.h"
+#include "ns3/traffic-control-helper.h"
+#include "ns3/device-factory-helper.h"
+
 
 #ifdef NS3_MPI
 #include "ns3/mpi-interface.h"
@@ -35,43 +40,45 @@
 #include "ns3/point-to-point-tracen-remote-channel.h"
 #endif
 
-#include "ns3/trace-helper.h"
 #include "point-to-point-tracen-helper.h"
 
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("PointToPointTracenHelper");
 
-PointToPointTracenHelper::PointToPointTracenHelper ()
+PointToPointTracenHelper::PointToPointTracenHelper(const std::map<std::string, std::map<std::string, std::string>> node_if_params, const std::map<std::string, std::string> channel_params): 
+  m_node_if_params(node_if_params)
 {
-  m_queueFactory.SetTypeId ("ns3::DropTailQueue<Packet>");
-  m_deviceFactory.SetTypeId ("ns3::PointToPointTracenNetDevice");
+  for (auto attr : node_if_params){
+    // attr->second : nodetype attr->first : first node of next nodetype
+    m_queueFactories[attr.first] = ObjectFactory();
+    m_queueFactories.at(attr.first).SetTypeId ("ns3::DropTailQueue<Packet>");
+    m_deviceFactories[attr.first] = ObjectFactory();
+    m_deviceFactories.at(attr.first).SetTypeId ("ns3::PointToPointTracenNetDevice");
+    setObjFactoryParams(m_deviceFactories.at(attr.first), attr.second);
+  }
+  
   m_channelFactory.SetTypeId ("ns3::PointToPointTracenChannel");
+  setObjFactoryParams(m_channelFactory, channel_params);
 #ifdef NS3_MPI
   m_remoteChannelFactory.SetTypeId ("ns3::PointToPointTracenRemoteChannel");
 #endif
 }
 
 void 
-PointToPointTracenHelper::SetQueue (std::string type,
-                              std::string n1, const AttributeValue &v1,
-                              std::string n2, const AttributeValue &v2,
-                              std::string n3, const AttributeValue &v3,
-                              std::string n4, const AttributeValue &v4)
+PointToPointTracenHelper::SetQueue (std::string nodetype, std::string type,
+                     std::string n1, const AttributeValue &v1,
+                     std::string n2, const AttributeValue &v2,
+                     std::string n3, const AttributeValue &v3,
+                     std::string n4, const AttributeValue &v4)
 {
   QueueBase::AppendItemTypeIfNotPresent (type, "Packet");
 
-  m_queueFactory.SetTypeId (type);
-  m_queueFactory.Set (n1, v1);
-  m_queueFactory.Set (n2, v2);
-  m_queueFactory.Set (n3, v3);
-  m_queueFactory.Set (n4, v4);
-}
-
-void 
-PointToPointTracenHelper::SetDeviceAttribute (std::string n1, const AttributeValue &v1)
-{
-  m_deviceFactory.Set (n1, v1);
+  m_queueFactories[nodetype].SetTypeId (type);
+  m_queueFactories[nodetype].Set (n1, v1);
+  m_queueFactories[nodetype].Set (n2, v2);
+  m_queueFactories[nodetype].Set (n3, v3);
+  m_queueFactories[nodetype].Set (n4, v4);
 }
 
 void 
@@ -81,147 +88,6 @@ PointToPointTracenHelper::SetChannelAttribute (std::string n1, const AttributeVa
 #ifdef NS3_MPI
   m_remoteChannelFactory.Set (n1, v1);
 #endif
-}
-
-void 
-PointToPointTracenHelper::EnablePcapInternal (std::string prefix, Ptr<NetDevice> nd, bool promiscuous, bool explicitFilename)
-{
-  //
-  // All of the Pcap enable functions vector through here including the ones
-  // that are wandering through all of devices on perhaps all of the nodes in
-  // the system.  We can only deal with devices of type PointToPointTracenNetDevice.
-  //
-  Ptr<PointToPointTracenNetDevice> device = nd->GetObject<PointToPointTracenNetDevice> ();
-  if (device == 0)
-    {
-      NS_LOG_INFO ("PointToPointTracenHelper::EnablePcapInternal(): Device " << device << " not of type ns3::PointToPointTracenNetDevice");
-      return;
-    }
-
-  PcapHelper pcapHelper;
-
-  std::string filename;
-  if (explicitFilename)
-    {
-      filename = prefix;
-    }
-  else
-    {
-      filename = pcapHelper.GetFilenameFromDevice (prefix, device);
-    }
-
-  Ptr<PcapFileWrapper> file = pcapHelper.CreateFile (filename, std::ios::out, 
-                                                     PcapHelper::DLT_PPP);
-  pcapHelper.HookDefaultSink<PointToPointTracenNetDevice> (device, "PromiscSniffer", file);
-}
-
-void 
-PointToPointTracenHelper::EnableAsciiInternal (
-  Ptr<OutputStreamWrapper> stream, 
-  std::string prefix, 
-  Ptr<NetDevice> nd,
-  bool explicitFilename)
-{
-  //
-  // All of the ascii enable functions vector through here including the ones
-  // that are wandering through all of devices on perhaps all of the nodes in
-  // the system.  We can only deal with devices of type PointToPointTracenNetDevice.
-  //
-  Ptr<PointToPointTracenNetDevice> device = nd->GetObject<PointToPointTracenNetDevice> ();
-  if (device == 0)
-    {
-      NS_LOG_INFO ("PointToPointTracenHelper::EnableAsciiInternal(): Device " << device << 
-                   " not of type ns3::PointToPointTracenNetDevice");
-      return;
-    }
-
-  //
-  // Our default trace sinks are going to use packet printing, so we have to 
-  // make sure that is turned on.
-  //
-  Packet::EnablePrinting ();
-
-  //
-  // If we are not provided an OutputStreamWrapper, we are expected to create 
-  // one using the usual trace filename conventions and do a Hook*WithoutContext
-  // since there will be one file per context and therefore the context would
-  // be redundant.
-  //
-  if (stream == 0)
-    {
-      //
-      // Set up an output stream object to deal with private ofstream copy 
-      // constructor and lifetime issues.  Let the helper decide the actual
-      // name of the file given the prefix.
-      //
-      AsciiTraceHelper asciiTraceHelper;
-
-      std::string filename;
-      if (explicitFilename)
-        {
-          filename = prefix;
-        }
-      else
-        {
-          filename = asciiTraceHelper.GetFilenameFromDevice (prefix, device);
-        }
-
-      Ptr<OutputStreamWrapper> theStream = asciiTraceHelper.CreateFileStream (filename);
-
-      //
-      // The MacRx trace source provides our "r" event.
-      //
-      asciiTraceHelper.HookDefaultReceiveSinkWithoutContext<PointToPointTracenNetDevice> (device, "MacRx", theStream);
-
-      //
-      // The "+", '-', and 'd' events are driven by trace sources actually in the
-      // transmit queue.
-      //
-      Ptr<Queue<Packet> > queue = device->GetQueue ();
-      asciiTraceHelper.HookDefaultEnqueueSinkWithoutContext<Queue<Packet> > (queue, "Enqueue", theStream);
-      asciiTraceHelper.HookDefaultDropSinkWithoutContext<Queue<Packet> > (queue, "Drop", theStream);
-      asciiTraceHelper.HookDefaultDequeueSinkWithoutContext<Queue<Packet> > (queue, "Dequeue", theStream);
-
-      // PhyRxDrop trace source for "d" event
-      asciiTraceHelper.HookDefaultDropSinkWithoutContext<PointToPointTracenNetDevice> (device, "PhyRxDrop", theStream);
-
-      return;
-    }
-
-  //
-  // If we are provided an OutputStreamWrapper, we are expected to use it, and
-  // to providd a context.  We are free to come up with our own context if we
-  // want, and use the AsciiTraceHelper Hook*WithContext functions, but for 
-  // compatibility and simplicity, we just use Config::Connect and let it deal
-  // with the context.
-  //
-  // Note that we are going to use the default trace sinks provided by the 
-  // ascii trace helper.  There is actually no AsciiTraceHelper in sight here,
-  // but the default trace sinks are actually publicly available static 
-  // functions that are always there waiting for just such a case.
-  //
-  uint32_t nodeid = nd->GetNode ()->GetId ();
-  uint32_t deviceid = nd->GetIfIndex ();
-  std::ostringstream oss;
-
-  oss << "/NodeList/" << nd->GetNode ()->GetId () << "/DeviceList/" << deviceid << "/$ns3::PointToPointTracenNetDevice/MacRx";
-  Config::Connect (oss.str (), MakeBoundCallback (&AsciiTraceHelper::DefaultReceiveSinkWithContext, stream));
-
-  oss.str ("");
-  oss << "/NodeList/" << nodeid << "/DeviceList/" << deviceid << "/$ns3::PointToPointTracenNetDevice/TxQueue/Enqueue";
-  Config::Connect (oss.str (), MakeBoundCallback (&AsciiTraceHelper::DefaultEnqueueSinkWithContext, stream));
-
-  oss.str ("");
-  oss << "/NodeList/" << nodeid << "/DeviceList/" << deviceid << "/$ns3::PointToPointTracenNetDevice/TxQueue/Dequeue";
-  Config::Connect (oss.str (), MakeBoundCallback (&AsciiTraceHelper::DefaultDequeueSinkWithContext, stream));
-
-  oss.str ("");
-  oss << "/NodeList/" << nodeid << "/DeviceList/" << deviceid << "/$ns3::PointToPointTracenNetDevice/TxQueue/Drop";
-  Config::Connect (oss.str (), MakeBoundCallback (&AsciiTraceHelper::DefaultDropSinkWithContext, stream));
-
-  oss.str ("");
-  oss << "/NodeList/" << nodeid << "/DeviceList/" << deviceid << "/$ns3::PointToPointTracenNetDevice/PhyRxDrop";
-  Config::Connect (oss.str (), MakeBoundCallback (&AsciiTraceHelper::DefaultDropSinkWithContext, stream));
 }
 
 NetDeviceContainer 
@@ -234,27 +100,28 @@ PointToPointTracenHelper::Install (NodeContainer c)
 NetDeviceContainer 
 PointToPointTracenHelper::Install (Ptr<Node> a, Ptr<Node> b)
 {
+  
+  std::string nodetypea= a->GetObject<Specie>()->GetName();
+  std::string nodetypeb= b->GetObject<Specie>()->GetName();
+  
   NetDeviceContainer container;
 
-  Ptr<PointToPointTracenNetDevice> devA = m_deviceFactory.Create<PointToPointTracenNetDevice> ();
+  Ptr<PointToPointTracenNetDevice> devA = m_deviceFactories[nodetypea].Create<PointToPointTracenNetDevice> ();
   devA->SetAddress (Mac48Address::Allocate ());
   devA->SetDestinationNode(b);
   a->AddDevice (devA);
-  Ptr<Queue<Packet> > queueA = m_queueFactory.Create<Queue<Packet> > ();
+  Ptr<Queue<Packet> > queueA = m_queueFactories[nodetypea].Create<Queue<Packet> > ();
   devA->SetQueue (queueA);
-  Ptr<PointToPointTracenNetDevice> devB = m_deviceFactory.Create<PointToPointTracenNetDevice> ();
+  Ptr<PointToPointTracenNetDevice> devB = m_deviceFactories[nodetypeb].Create<PointToPointTracenNetDevice> ();
   devB->SetAddress (Mac48Address::Allocate ());
   devB->SetDestinationNode(a);
   b->AddDevice (devB);
-  Ptr<Queue<Packet> > queueB = m_queueFactory.Create<Queue<Packet> > ();
+  Ptr<Queue<Packet> > queueB = m_queueFactories[nodetypeb].Create<Queue<Packet> > ();
   devB->SetQueue (queueB);
-  // Aggregate NetDeviceQueueInterface objects
-  Ptr<NetDeviceQueueInterface> ndqiA = CreateObject<NetDeviceQueueInterface> ();
-  ndqiA->GetTxQueue (0)->ConnectQueueTraces (queueA);
-  devA->AggregateObject (ndqiA);
-  Ptr<NetDeviceQueueInterface> ndqiB = CreateObject<NetDeviceQueueInterface> ();
-  ndqiB->GetTxQueue (0)->ConnectQueueTraces (queueB);
-  devB->AggregateObject (ndqiB);
+
+  //things related to queueing, netdev queue interface, traffic control
+  SetDevParam(devA, a->GetObject<Specie>()->GetName());
+  SetDevParam(devB, b->GetObject<Specie>()->GetName());
 
   Ptr<PointToPointTracenChannel> channel = 0;
 
@@ -319,6 +186,32 @@ PointToPointTracenHelper::Install (std::string aName, std::string bName)
   Ptr<Node> a = Names::Find<Node> (aName);
   Ptr<Node> b = Names::Find<Node> (bName);
   return Install (a, b);
+}
+
+void PointToPointTracenHelper::SetDevParam(Ptr<PointToPointTracenNetDevice> dev, const std::string& nodetype)
+{
+  // Aggregate NetDeviceQueueInterface objects to connect
+    // the device queue to the interface (used by traffic control layer)
+
+    const std::map<std::string, std::string> paramap = m_node_if_params.at(nodetype);
+    auto search = paramap.find("QueueDisc");
+    if (search != paramap.end()){
+      // Traffic control helper
+      TrafficControlHelper tch_gsl;
+      if (paramap.find("ChildQueueDisc")!=paramap.end()){
+        tch_gsl.SetRootQueueDisc(search->second, "ChildQueueDisc", StringValue(paramap.at("ChildQueueDisc")));
+      } else{
+        tch_gsl.SetRootQueueDisc(search->second);
+      }
+      //, "MaxSize", QueueSizeValue(QueueSize("100p")), "ChildQueueDisc", StringValue("ns3::ITbfQueueDisc"));//ns3::ITbfQueueDisc, ns3::FifoQueueDisc
+      
+      //m_tch_gsl.SetRootQueueDisc("ns3::FqCoDelQueueDisc", "DropBatchSize", UintegerValue(1), "Perturbation", UintegerValue(256));
+      Ptr<NetDeviceQueueInterface> ndqi = CreateObject<NetDeviceQueueInterface> ();
+      ndqi->GetTxQueue (0)->ConnectQueueTraces (dev->GetQueue());//if connected, packets will never be dropped in the netdevice, but before. 
+      dev->AggregateObject (ndqi);
+      QueueDiscContainer qd = tch_gsl.Install(dev);
+      setQdiscParams(qd, paramap);
+    }
 }
 
 } // namespace ns3

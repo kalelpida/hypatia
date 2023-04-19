@@ -39,39 +39,45 @@
 
 #include "ns3/trace-helper.h"
 #include "point-to-point-laser-helper.h"
+#include "ns3/specie.h"
+#include "ns3/traffic-control-helper.h"
+
+#include "ns3/device-factory-helper.h"
 
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("PointToPointLaserHelper");
 
-PointToPointLaserHelper::PointToPointLaserHelper ()
+PointToPointLaserHelper::PointToPointLaserHelper(const std::map<std::string, std::map<std::string, std::string>> node_if_params): 
+  m_node_if_params(node_if_params)
 {
-  m_queueFactory.SetTypeId ("ns3::DropTailQueue<Packet>");
-  m_deviceFactory.SetTypeId ("ns3::PointToPointLaserNetDevice");
+  for (auto attr : node_if_params){
+    // attr->second : nodetype attr->first : first node of next nodetype
+    m_queueFactories[attr.first] = ObjectFactory();
+    m_queueFactories.at(attr.first).SetTypeId ("ns3::DropTailQueue<Packet>");
+    m_queueFactories.at(attr.first).Set("MaxSize", QueueSizeValue(QueueSize(m_node_if_params.at(attr.first).at("devQMaxSize"))));
+    m_deviceFactories[attr.first] = ObjectFactory();
+    m_deviceFactories.at(attr.first).SetTypeId ("ns3::PointToPointLaserNetDevice");
+    setObjFactoryParams(m_deviceFactories.at(attr.first), attr.second);
+  }
   m_channelFactory.SetTypeId ("ns3::PointToPointLaserChannel");
   m_remoteChannelFactory.SetTypeId ("ns3::PointToPointLaserRemoteChannel");
 }
 
 void 
-PointToPointLaserHelper::SetQueue (std::string type,
-                                   std::string n1, const AttributeValue &v1,
-                                   std::string n2, const AttributeValue &v2,
-                                   std::string n3, const AttributeValue &v3,
-                                   std::string n4, const AttributeValue &v4)
+PointToPointLaserHelper::SetQueue (std::string nodetype, std::string type,
+                     std::string n1, const AttributeValue &v1,
+                     std::string n2, const AttributeValue &v2,
+                     std::string n3, const AttributeValue &v3,
+                     std::string n4, const AttributeValue &v4)
 {
   QueueBase::AppendItemTypeIfNotPresent (type, "Packet");
 
-  m_queueFactory.SetTypeId (type);
-  m_queueFactory.Set (n1, v1);
-  m_queueFactory.Set (n2, v2);
-  m_queueFactory.Set (n3, v3);
-  m_queueFactory.Set (n4, v4);
-}
-
-void 
-PointToPointLaserHelper::SetDeviceAttribute (std::string n1, const AttributeValue &v1)
-{
-  m_deviceFactory.Set (n1, v1);
+  m_queueFactories[nodetype].SetTypeId (type);
+  m_queueFactories[nodetype].Set (n1, v1);
+  m_queueFactories[nodetype].Set (n2, v2);
+  m_queueFactories[nodetype].Set (n3, v3);
+  m_queueFactories[nodetype].Set (n4, v4);
 }
 
 void 
@@ -93,6 +99,10 @@ PointToPointLaserHelper::Install (Ptr<Node> a, Ptr<Node> b)
 {
   // set the initial delay of the channel as the delay estimation for the lookahead of the
   // distributed scheduler
+  //choose device type
+  std::string nodetypea= a->GetObject<Specie>()->GetName();
+  std::string nodetypeb= b->GetObject<Specie>()->GetName();
+
   Ptr<MobilityModel> aMobility = a->GetObject<MobilityModel>();
   Ptr<MobilityModel> bMobility = b->GetObject<MobilityModel>();
   double propagation_speed(299792458.0);
@@ -102,26 +112,22 @@ PointToPointLaserHelper::Install (Ptr<Node> a, Ptr<Node> b)
 
   NetDeviceContainer container;
 
-  Ptr<PointToPointLaserNetDevice> devA = m_deviceFactory.Create<PointToPointLaserNetDevice> ();
+  Ptr<PointToPointLaserNetDevice> devA = m_deviceFactories[nodetypea].Create<PointToPointLaserNetDevice> ();
   devA->SetAddress (Mac48Address::Allocate ());
   devA->SetDestinationNode(b);
   a->AddDevice (devA);
-  Ptr<Queue<Packet> > queueA = m_queueFactory.Create<Queue<Packet> > ();
+  Ptr<Queue<Packet> > queueA = m_queueFactories[nodetypea].Create<Queue<Packet> > ();
   devA->SetQueue (queueA);
-  Ptr<PointToPointLaserNetDevice> devB = m_deviceFactory.Create<PointToPointLaserNetDevice> ();
+  Ptr<PointToPointLaserNetDevice> devB = m_deviceFactories[nodetypeb].Create<PointToPointLaserNetDevice> ();
   devB->SetAddress (Mac48Address::Allocate ());
   devB->SetDestinationNode(a);
   b->AddDevice (devB);
-  Ptr<Queue<Packet> > queueB = m_queueFactory.Create<Queue<Packet> > ();
+  Ptr<Queue<Packet> > queueB = m_queueFactories[nodetypeb].Create<Queue<Packet> > ();
   devB->SetQueue (queueB);
 
-  // Aggregate NetDeviceQueueInterface objects
-  Ptr<NetDeviceQueueInterface> ndqiA = CreateObject<NetDeviceQueueInterface> ();
-  //ndqiA->GetTxQueue (0)->ConnectQueueTraces (queueA); the control layer queue is not related to the physical device queue
-  devA->AggregateObject (ndqiA);
-  Ptr<NetDeviceQueueInterface> ndqiB = CreateObject<NetDeviceQueueInterface> ();
-  //ndqiB->GetTxQueue (0)->ConnectQueueTraces (queueB); the control layer queue is not related to the physical device queue
-  devB->AggregateObject (ndqiB);
+  //things related to queueing, netdev queue interface, traffic control
+  SetDevParam(devA, a->GetObject<Specie>()->GetName());
+  SetDevParam(devB, b->GetObject<Specie>()->GetName());
 
   // Distributed mode
   NS_ABORT_MSG_IF(MpiInterface::IsEnabled(), "Distributed mode is not currently supported for point-to-point lasers.");
@@ -164,4 +170,29 @@ PointToPointLaserHelper::Install (Ptr<Node> a, Ptr<Node> b)
   return container;
 }
 
+void 
+PointToPointLaserHelper::SetDevParam(Ptr<PointToPointLaserNetDevice> dev, const std::string& nodetype)
+{
+  // Aggregate NetDeviceQueueInterface objects to connect
+    // the device queue to the interface (used by traffic control layer)
+    const std::map<std::string, std::string> paramap = m_node_if_params.at(nodetype);
+    auto search = paramap.find("QueueDisc");
+    if (search != paramap.end()){
+      // Traffic control helper
+      TrafficControlHelper tch_gsl;
+      if (paramap.find("ChildQueueDisc")!=paramap.end()){
+        tch_gsl.SetRootQueueDisc(paramap.at("QueueDisc"), "ChildQueueDisc", StringValue(paramap.at("ChildQueueDisc")));
+      } else{
+        tch_gsl.SetRootQueueDisc(paramap.at("QueueDisc"));
+      }
+      //, "MaxSize", QueueSizeValue(QueueSize("100p")), "ChildQueueDisc", StringValue("ns3::ITbfQueueDisc"));//ns3::ITbfQueueDisc, ns3::FifoQueueDisc
+      
+      //m_tch_gsl.SetRootQueueDisc("ns3::FqCoDelQueueDisc", "DropBatchSize", UintegerValue(1), "Perturbation", UintegerValue(256));
+      Ptr<NetDeviceQueueInterface> ndqi = CreateObject<NetDeviceQueueInterface> ();
+      ndqi->GetTxQueue (0)->ConnectQueueTraces (dev->GetQueue());//if connected, packets will never be dropped in the netdevice, but before. 
+      dev->AggregateObject (ndqi);
+      QueueDiscContainer qd = tch_gsl.Install(dev);
+      setQdiscParams(qd, paramap);
+    }
+}
 } // namespace ns3

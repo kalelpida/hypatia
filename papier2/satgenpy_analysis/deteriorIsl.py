@@ -110,7 +110,7 @@ def casseISLs(dico):
     for groupe in groupes.values():
         all_protocols_name.append(groupe['nom'])
     protocols_name= '_and_'.join(sorted(set(all_protocols_name)))
-    run_dir = "../ns3_experiments/runs/run_loaded_tm_pairing_{}_Mbps_for_{}s_with_{}_{}".format( dico['debit-if-isl'], dico['duree'], protocols_name, dico['algo'])
+    run_dir = "../ns3_experiments/runs/run_loaded_tm_pairing_for_{}s_with_{}_{}".format( dico['duree'], protocols_name, dico['algo'])
     assert os.path.isfile( fic_config_ns3:=os.path.join(run_dir,"config_ns3.properties"))
     with open(fic_config_ns3, 'a') as f:
         f.write("######### Liens compromis, paramètres:"+ajout_str_isl+"\n")

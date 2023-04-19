@@ -22,7 +22,6 @@
 
 #include "ns3/ipv4-routing-helper.h"
 #include "ns3/basic-simulation.h"
-#include "ns3/topology-satellite-network.h"
 #include "ns3/ipv4-arbiter-routing.h"
 #include "ns3/arbiter-single-forward.h"
 
@@ -31,7 +30,7 @@ namespace ns3 {
     class GslIfBandwidthHelper
     {
     public:
-        GslIfBandwidthHelper(Ptr<BasicSimulation> basicSimulation, NodeContainer nodes, std::vector<std::pair<uint, std::string>>& devtypemap);
+        GslIfBandwidthHelper(Ptr<BasicSimulation> basicSimulation, NodeContainer nodes);
     private:
         void UpdateGslIfBandwidth(int64_t t);
 
@@ -40,7 +39,6 @@ namespace ns3 {
         NodeContainer m_nodes;
         std::map<std::string, std::string> m_gsl_data_rate_megabit_per_s_map;
         int64_t m_dynamicStateUpdateIntervalNs;
-        std::vector<std::pair<uint, std::string>> m_devtypemap;
 
     };
 

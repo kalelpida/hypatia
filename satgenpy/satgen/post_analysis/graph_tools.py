@@ -39,7 +39,7 @@ def construct_graph_with_distances(epoch, time_since_epoch_ns, satellites, groun
 
         # Only ISLs which are close enough are considered
         sat_distance_m = distance_m_between_satellites(satellites[a], satellites[b], str(epoch), str(time))
-        if sat_distance_m <= description['sat']['max_isl_length_m']:
+        if sat_distance_m <= description['satellite']['max_isl_length_m']:
             sat_net_graph_with_gs.add_edge(
                 a, b, weight=sat_distance_m
             )
@@ -82,7 +82,7 @@ def compute_path_length_without_graph(path, epoch, time_since_epoch_ns, satellit
                 str(epoch),
                 str(time)
             )
-            if sat_distance_m > type_params['sat']['max_isl_length_m'] \
+            if sat_distance_m > type_params['satellite']['max_isl_length_m'] \
                     or ((to_node_id, from_node_id) not in list_isls and (from_node_id, to_node_id) not in list_isls):
                 raise ValueError("Invalid ISL hop")
             path_length_m += sat_distance_m

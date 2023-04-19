@@ -96,7 +96,7 @@ std::vector<TcpFlowScheduleEntry> read_tcp_flow_schedule(const std::string& file
     if (schedule_file) {
 
         // Go over each line
-        size_t line_counter = 0;
+        //size_t line_counter = 0;
         int64_t prev_start_time_ns = 0;
         while (getline(schedule_file, line)) {
 

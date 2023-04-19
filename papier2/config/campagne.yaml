@@ -10,9 +10,8 @@ testparamelag: #nom de la campagne
   #      { sel: topUtil10, errModel: "recvErrRate:0.1-interval:[20000,26000]ms"}
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
   deteriorISL: [ {} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
-  sol: [ users_stations_and_servers ] #main_cities (only ue, keep in mind not to create parameters for gateway if-gsl), users_and_main_stations
   nb-UEs-sol: [ 100 ]
-  algo: [ "algorithm_free_two_only_over_isls5pp" ]
+  algo: [ "algorithm_penal_gsl" ]
   threads: [ 4 ]
   debit-if-isl: [ 20 ] #[ 3, 10 ] #Mb/s
   debit-if-gsl: [ {'ue':2, 'gateway':150, 'satellite':80} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
@@ -53,9 +52,9 @@ info-sauvegarde:
   expedir: "svgde_{strdate}_{graine}"
   sources: #select information that should be saved at the end of the experiment
     #directory: files or directory
-    "satgenpy_analysis/data/{constellation}_{isls}_{sol}_{algo}/{pas}ms_for_{duree}s/": manual
-    "satellite_networks_state/gen_data/{constellation}_{isls}_{sol}_{algo}": ground_stations.txt
-    ns3_experiments/runs: "run_loaded_tm_pairing_{debit-if-isl}_Mbps_for_{duree}s_with_{protocolesNom}_{algo}"
+    "satgenpy_analysis/data/{constellation}_{isls}_{algo}/{pas}ms_for_{duree}s/": manual
+    "satellite_networks_state/gen_data/{constellation}_{isls}_{algo}": ground_stations.txt
+    ns3_experiments/runs: "run_loaded_tm_pairing_for_{duree}s_with_{protocolesNom}_{algo}"
     config: ^(?!campagne).*$ #all but starting with campagne
     satellite_networks_state: commodites.temp
   #currinfo: currlog #pour savoir où on en est, si lancé en arrière-plan
@@ -64,6 +63,6 @@ actions: #[]
   - noeuds
   - commodites
   - routes
-  #- "analyse theorique"
-  #- "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
+  - "analyse theorique"
+  - "casse liens sat"  # attention, l'analyse théorique doit être activée sinon les liens isl desactives seront aleatoires
   - simulation

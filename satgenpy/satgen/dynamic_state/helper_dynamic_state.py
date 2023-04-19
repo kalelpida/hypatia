@@ -41,11 +41,8 @@ def worker(args):
         offset_ns,
         satellites,
         ground_stations,
-        list_isls,
-        list_gsl_interfaces_info,
-        types_parametres,
         dynamic_state_algorithm,
-        print_logs
+        net_gen_infos
      ) = args
 
     # Generate dynamic state
@@ -57,21 +54,18 @@ def worker(args):
         offset_ns,
         satellites,
         ground_stations,
-        list_isls,
-        list_gsl_interfaces_info,
-        types_parametres,
         dynamic_state_algorithm,  # Options:
                                   # "algorithm_free_one_only_gs_relays"
                                   # "algorithm_free_one_only_over_isls[2]"
                                   # "algorithm_free_gs_one_sat_many_only_over_isls[2]"
                                   # "algorithm_paired_many_only_over_isls[2]"
-        print_logs
+        net_gen_infos
     )
 
 
 def help_dynamic_state(
         output_generated_data_dir, num_threads, name, time_step_ms, duration_s,
-        types_parametres, dynamic_state_algorithm, print_logs
+        dynamic_state_algorithm, net_gen_infos
 ):
 
     # Directory
@@ -102,12 +96,6 @@ def help_dynamic_state(
         ground_stations = read_ground_stations_extended(output_generated_data_dir + "/" + name + "/ground_stations.txt")
         tles = read_tles(output_generated_data_dir + "/" + name + "/tles.txt")
         satellites = tles["satellites"]
-        list_isls = read_isls(output_generated_data_dir + "/" + name + "/isls.txt", len(satellites))
-        list_gsl_interfaces_info = read_gsl_interfaces_info(
-            output_generated_data_dir + "/" + name + "/gsl_interfaces_info.txt",
-            len(satellites),
-            len([elt for elt in ground_stations if elt['type']!='server'])
-        )
         epoch = tles["epoch"]
 
         # Print goal
@@ -124,11 +112,8 @@ def help_dynamic_state(
             current * time_step_ns,
             satellites,
             ground_stations,
-            list_isls,
-            list_gsl_interfaces_info,
-            types_parametres,
             dynamic_state_algorithm,
-            print_logs
+            net_gen_infos
         ))
 
         current += num_time_steps

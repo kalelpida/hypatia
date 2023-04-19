@@ -27,7 +27,8 @@ BASE_NAME: "tas_700"
 NICE_NAME: "TAS-700"
 
 # TAS 700
-
+#TODO: consider shell as an object
+#satellite:
 ECCENTRICITY: 0.0000001  # Circular orbits are zero, but pyephem does not permit 0, so lowest possible value
 ARG_OF_PERIGEE_DEGREE: 0.0
 PHASE_DIFF: True
@@ -50,38 +51,68 @@ RADIO_K_FACTOR: 1.33
 # Then call RADIO_K_FACTOR instead of cstl_dico["RADIO_K_FACTOR"] in satellite_networks_state/main_net_helper.py 
 
 #same names as in debit_gsl
-TYPES_OBJETS_SOL: ['ue', 'gateway', 'server']
+TYPES_OBJETS_SOL: ['gateway', 'ue', 'server'] #/!\ /!\ /!\ NE PAS CHANGER L'ORDRE /!\ /!\ /!\ ou modifier l'écriture des interfaces et/ou la génération des objets sol
 
 #interface allocation: lo, isl, gsl, finally terrestrial links
 #a change in interface configuration must be reflected in the system configuration (topology-satellite-network files)
 
 gateway: 
-  type: topCitiesUN #Lille # topCitiesHypatia: 100 biggest cities, Hypatia base file; topCitiesUN: +300k cities, United Nations estimate
+  positions: topCitiesUN #Lille # topCitiesHypatia: 100 biggest cities, Hypatia base file; topCitiesUN: +300k cities, United Nations estimate
   nombre: 7 #random, give IDs and place them, or set it in config?
   minElevation: 10 #degrees above horizon
-  q_factor: 1 # to change gsl if setting. #TODO consider reading it in step1
-  TrafficControl: config/gwTrafficControl
-  #          type: "ns3::RRQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
-  #          MaxSize: QueueSize 100p #type value
-  #          ChildQueueDisc: "ns3::ITbfQueueDisc"
-  #          ChildRate: DataRate 1Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
-            ## connectQueueTraces?
-  ifs:
-    - ["gsl", { agg_max_bandwidth: 1}, 1] #delay auto, 
-    #- "tl", {agg_max_bandwidth: 1}, 1 #one-one, with 1 server
 
 ue:
-  type: villesGlobe_tas700 #1ville_tas700 #randomGlobe_tas700 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
+  positions: villesGlobe_tas700 #1ville_tas700 #randomGlobe_tas700 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
   minElevation: 35 #degrees above horizon
-  nombre: config/nb-UEs-sol #voir dans config
-  ifs:
-    - ["gsl", {}, 1] # satellite
+  nombre: $config/nb-UEs-sol #voir dans config
   
 server:
-  ifs:
-    - ["tl", {agg_max_bandwidth: 1}, 1] # gateway
+  positions: topCitiesUN
+  nombre: 7
 
-satellite:
-  ifs:
-    # - "isl", {}, 4 #with satellite. added by plus_grid
-    - ["gsl", {}, "will_be_replaced_by_algo"] #with ue,with gateway
+#syntaxe des liens:
+#   [nom, dico propriétés des interfaces, dico propriétés du lien ]
+# Pour définir un lien il faut des objets (NetDevice dans ns3) sur lesquels seront créées des interfaces. 
+# Ces interfaces permettront d'accéder à un canal qui transportera l'information.
+#     La principale propriété d'une interface est son débit. 
+#     Dans ns3, les interfaces sont crées l'une après l'autre, en commençant par la loopback (lo)
+#     Suivent les autres interfaces, définies ici. 
+#     L'ordre de définition des interfaces est très important, car il sera utilisé par l'algorithme de routage.
+#     Les tables de routages sont définies avant la simulation et mises à jour régulièrement. 
+#     Les algorithmes prennent en compte un numéro d'interface. 
+# Un canal aggrège des interfaces, et transmet l'information d'une interface à l'autre (ou 1 vers plusieurs, non implémenté pour l'instant)
+
+# le nom permet de définir le canal, et crée une interface par objet relié
+# isl "lien inter-satellite" définit un canal simple entre 2 satellites. La délai est basé sur la distance géométrique entre les deux satellites.
+# gsl "lien sol-satellite" définit un canal entre des objets divers. Tous peuvent transmettre à tous.
+# tl "lien terrestre" définit un canal entre 2 ordinateurs. 
+
+# "dico propriétés" contient toutes les informations complémentaires nécessaires à la création du lien
+# exemples d'attributs utiles définis dans le "dico propriétés"
+# agg_max_bandwidth
+
+
+# Le dico propriétés est constitué des paramètres des différents objets.
+# En clé principale, le nom des objets
+# Puis: 
+#     Attribut : Unité_ns3~Valeurns3
+# Pour définir et ajouter un contrôleur de traffic, spécifier
+#   "QueueDisc" : ns3::classe_de_traffic_control
+#    Attribut : Unité_ns3 Valeurns3 (avec un espace entre le type et la valeur)
+# On peut ajouter le préfixe Child
+# un attribut particulier: le netdevice a une file d'attente d'émission, DropTailQueue. Seule sa taille est définie, avec 
+#    devQMaxSize: Valeurns3 (par ex "2kB", "100p") 
+# les arguments non typés ne sont lus que par python
+
+LINKS:
+    - ["isl", {"satellite": { 'DataRate': "DataRate~$config/debit-if-isl/Mbps"}}, {"limiteDist": True}] #interfaces between satellites, to be used together with the "plus grid"
+    - ["gsl", { "satellite": { 'DataRate': "DataRate~$config/debit-if-gsl/satellite/Mbps"}, "ue": { 'DataRate': "DataRate~$config/debit-if-gsl/ue/Mbps", "maxSatellites": 1}}, {"limiteDist": True, "penalite_s": 10}] 
+    - ["gsl", { "satellite": { 'DataRate': "DataRate~$config/debit-if-gsl/satellite/Mbps"}, "gateway": { 'DataRate': "DataRate~$config/debit-if-gsl/gateway/Mbps", "maxSatellites": 5}}, {"limiteDist": True, "penalite_s": 10}] 
+    # GSL
+    - ["tl", { "server": { 'DataRate': "DataRate~150Mbps"}, "gateway": { 'DataRate': "DataRate~150Mbps"}}, {"Delay": "Time~5ms"}] # gateway
+    #- "tl", {agg_max_bandwidth: 1}, 1 #one-one, with 1 server
+
+
+ENDPOINTS:
+  - ue # Its datarate is used by default as reference for setting up commodities, datarate...
+  - server

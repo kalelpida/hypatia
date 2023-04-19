@@ -10,7 +10,8 @@ def build(bld):
     module = bld.create_ns3_module('contrib-utils', ['core', 'network'])
     module.source = [
         "model/specie.cc",
-        "model/states-error-model.cc"
+        "model/states-error-model.cc",
+        "helper/device-factory-helper.cc"
     ]
 
     #module_test = bld.create_ns3_module_test_library('round-robin')
@@ -20,7 +21,8 @@ def build(bld):
     headers.module = 'contrib-utils'
     headers.source = [
         "model/states-error-model.h",
-        "model/specie.h"
+        "model/specie.h",
+        "helper/device-factory-helper.h"
     ]
 
     #if bld.env.ENABLE_EXAMPLES:

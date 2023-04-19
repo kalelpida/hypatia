@@ -100,7 +100,7 @@ namespace ns3 {
         // Additional accessors
         uint32_t GetNumSatellites();
         uint32_t GetNumGroundStations();
-        std::vector<std::pair<uint, std::string>>& GetDevTypeVector();
+        std::vector<std::string>& GetDevTypeVector();
         const NodeContainer& GetSatelliteNodes();
         const NodeContainer& GetGroundStationNodes();
         const std::vector<Ptr<GroundStation>>& GetGroundStations();
@@ -120,10 +120,12 @@ namespace ns3 {
         void Build(const Ipv4RoutingHelper& ipv4RoutingHelper);
         void ReadGroundObjects();
         void ReadSatellites();
+        void ReadEndpoints();
+        void ReadLinks();
         void InstallInternetStacks(const Ipv4RoutingHelper& ipv4RoutingHelper);
-        void ReadISLs();
-        void CreateGSLs();
-        void CreateTLs();
+        void ReadISLs(const std::string& lien);
+        void ReadGSLs(const std::string& lien);
+        void ReadTLs(const std::string& lien);
 
         // Helper
         void EnsureValidNodeId(uint32_t node_id);
@@ -144,6 +146,7 @@ namespace ns3 {
         NodeContainer m_groundStationNodes;                 //!< GSL capable nodes
         NodeContainer m_otherGroundNodes;                 //!< Ground station nodes
         NodeContainer m_satelliteNodes;                     //!< Satellite nodes
+        std::map<std::string, NodeContainer> m_nodesByType; //!< All nodes by type
         std::vector<Ptr<GroundStation> > m_groundEntities;  //!< all ground entities
         std::vector<Ptr<Satellite>> m_satellites;           //<! Satellites
         std::set<int64_t> m_endpoints;                      //<! Endpoint ids = ground station ids
@@ -167,13 +170,16 @@ namespace ns3 {
         bool m_enable_isl_utilization_tracking;
         bool m_enable_tx_log, m_enable_rx_log, m_enable_drop_log;
         int64_t m_isl_utilization_tracking_interval_ns;
-        std::vector<std::pair<uint, std::string>> m_devtypemap;
+        std::vector<std::string> m_nodespecies;
 
         Ptr<OutputStreamWrapper> m_drop_stream; //!< stream where to log drop events
         Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log transmission events
         Ptr<OutputStreamWrapper> m_rx_stream; //!< stream where to log receive events
 
         cbparams m_cbparams;
+        std::string m_current_link_filename;
+        std::map<std::string, std::string> m_channelparams;
+        std::map<std::string, std::map<std::string, std::string>> m_paramaps;
     };
 }
 

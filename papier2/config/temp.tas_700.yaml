@@ -1,0 +1,56 @@
+ALTITUDE_M: 700000
+ARG_OF_PERIGEE_DEGREE: 0.0
+BASE_NAME: tas_700
+ECCENTRICITY: 1.0e-07
+ENDPOINTS:
+- ue
+- server
+INCLINATION_DEGREE: 65
+ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE: 75
+LINKS:
+- - isl
+  - satellite:
+      DataRate: DataRate~20Mbps
+  - limiteDist: true
+- - gsl
+  - satellite:
+      DataRate: DataRate~80Mbps
+    ue:
+      DataRate: DataRate~2Mbps
+      maxSatellites: 1
+  - limiteDist: true
+    penalite_s: 10
+- - gsl
+  - gateway:
+      DataRate: DataRate~150Mbps
+      maxSatellites: 5
+    satellite:
+      DataRate: DataRate~80Mbps
+  - limiteDist: true
+    penalite_s: 10
+- - tl
+  - gateway:
+      DataRate: DataRate~150Mbps
+    server:
+      DataRate: DataRate~150Mbps
+  - Delay: Time~5ms
+NICE_NAME: TAS-700
+NUM_ORBS: 28
+NUM_SATS_PER_ORB: 27
+PHASE_DIFF: true
+RADIO_K_FACTOR: 1.33
+TYPES_OBJETS_SOL:
+- gateway
+- ue
+- server
+gateway:
+  minElevation: 10
+  nombre: 7
+  positions: topCitiesUN
+server:
+  nombre: 7
+  positions: topCitiesUN
+ue:
+  minElevation: 35
+  nombre: 100
+  positions: villesGlobe_tas700

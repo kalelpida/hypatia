@@ -38,7 +38,6 @@ with open(config_file, 'r') as f:
 	    dico_params=yaml.load(f, Loader=yaml.Loader)
 
 graine=dico_params.pop('graine')
-data_rate_megabit_per_s=dico_params.get('debit-if-isl')
 duration_s=dico_params.get('duree')
 algo = dico_params.get('algo')
 
@@ -52,8 +51,8 @@ protocol_chosen_name= '_and_'.join(sorted(list(all_protocols_name)))
 if (unique_id % num_machines) == workload_id:
 
 	# Prepare run directory
-	run_dir = "runs/run_loaded_tm_pairing_%d_Mbps_for_%ds_with_%s_%s" % (
-		data_rate_megabit_per_s, duration_s, protocol_chosen_name, algo
+	run_dir = "runs/run_loaded_tm_pairing_for_%ds_with_%s_%s" % (
+		duration_s, protocol_chosen_name, algo
 	)
 	logs_ns3_dir = run_dir + "/logs_ns3"
 	local_shell.remove_force_recursive(logs_ns3_dir)

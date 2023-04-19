@@ -51,7 +51,7 @@ with open(config_fic, 'r') as f:
 duree=dico['duree']
 pas=dico['pas']
 cstl=dico['constellation']
-nom_fic='_'.join([cstl, dico['isls'], dico['sol'], dico['algo']])
+nom_fic='_'.join([cstl, dico['isls'], dico['algo']])
 print("Plot routes and RTT of commodities over time")
 
 commodites_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../satellite_networks_state/commodites.temp")

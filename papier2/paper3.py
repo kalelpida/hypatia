@@ -85,9 +85,6 @@ class Experiences():
         # save current config
         with open(nomfic_courante, 'w') as f:
             yaml.dump(self.courante, f)
-        #save debitISL in a simple place for graph generation. Used by mcnf. #ToDo
-        with open("satellite_networks_state/debitISL.temp", "w") as f:
-            f.write(str(self.courante['debit-if-isl']))
         if cle==self.cles[-1] and self.indices_cles[-1]==0:
             return True
         # si ce n'est pas le dernier cas, on sait quelle cle a été modifiée, donc optimisation
@@ -170,16 +167,27 @@ def str_recursif(dico, prefix=''):
             dic.update(str_recursif(val, prefix=prefix+cle+'_'))
     return dic
 
-def remplace(dic_to, dic_from, prefix='config/', sep='/'):
+def remplace(dic_to, dic_from, prefix='$config/', sep='/'):
         """replace "prefix..." values of dic_to with related fields from dic_from"""
-        for cle, val in dic_to.items():
-            if isinstance(val, str) and val.startswith(prefix):
-                liste=val.split(sep)[1:]
+        if isinstance(dic_to, dict):
+            enumerateur=dic_to.items()
+        elif isinstance(dic_to, list):
+            enumerateur=enumerate(dic_to)
+        for cle, val in enumerateur:
+            if isinstance(val, str) and prefix in val:
+                debut=val.find(prefix)
+                liste=val[debut:].split(sep)
                 rempl_val=dic_from
-                for u in liste:
-                    rempl_val=rempl_val[u]
-                dic_to[cle]=rempl_val
-            elif isinstance(val, dict):
+                for i,u in enumerate(liste[1:]):
+                    try:
+                        rempl_val=rempl_val[u]
+                    except TypeError:
+                        dic_to[cle]=val.replace(val[debut:], f"{rempl_val}"+sep.join(liste[i+1:]).strip('/'))
+                        break
+                else:
+                    # loop ended correctly  
+                    dic_to[cle]=rempl_val
+            elif isinstance(val, dict) or isinstance(val, list):
                 remplace(val, dic_from, prefix=prefix, sep=sep)
 
         

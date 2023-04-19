@@ -56,7 +56,7 @@ public:
         TcpOptimizer::OptimizeBasic(basicSimulation);
 
         // Install a UDP burst client on all
-        UdpBurstHelper udpBurstHelper(1026, 15, basicSimulation->GetLogsDir());
+        UdpBurstHelper udpBurstHelper(1026, basicSimulation->GetLogsDir());
         ApplicationContainer udpApp = udpBurstHelper.Install(topology->GetNodes());
         udpApp.Start(Seconds(0.0));
 

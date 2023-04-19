@@ -468,6 +468,34 @@ std::map<std::string, std::string> parse_dict_string(const std::string str) {
 }
 
 /**
+ * Parse simple list string (i.e., [...]) into a real list without whitespace.
+ * If it is incorrect format, throw an exception.
+ *
+ * @param str  Input string (e.g., "[a,b,c]")
+ *
+ * @return List of strings (e.g., [a, b, c])
+ */
+std::vector<std::string> parse_simple_list_string(const std::string str) {
+
+    // Check list(...)
+    if (!starts_with(str, "[") || !ends_with(str, "]")) {
+        throw std::invalid_argument(format_string( "List %s is not encased in list: [...]", str.c_str()));
+    }
+    std::string only_inside = str.substr(1, str.size() - 2);
+    if (trim(only_inside).empty()) {
+        std::vector<std::string> final;
+        return final;
+    }
+    std::regex quotes("'|\"");
+    std::vector<std::string> prelim_list = split_string(only_inside, ",");
+    std::vector<std::string> final_list;
+    for (std::string& s : prelim_list) {
+        s = std::regex_replace(s, quotes, "");//delete all quotes
+        final_list.push_back(trim(s));
+    }
+    return final_list;
+}
+/**
  * Throw an exception if not all items are less than a number.
  *
  * @param s         Set of int64s

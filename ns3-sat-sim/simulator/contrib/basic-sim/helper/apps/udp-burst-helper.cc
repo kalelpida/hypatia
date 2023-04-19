@@ -27,12 +27,11 @@
 
 namespace ns3 {
 
-UdpBurstHelper::UdpBurstHelper (uint16_t port, double max_data_rate_megabit_per_s, std::string baseLogsDir)
+UdpBurstHelper::UdpBurstHelper (uint16_t port, std::string baseLogsDir)
 {
   m_factory.SetTypeId (UdpBurstApplication::GetTypeId ());
   SetAttribute ("Port", UintegerValue (port));
   SetAttribute ("BaseLogsDir", StringValue (baseLogsDir));
-  SetAttribute ("PktSendTimeNs", UintegerValue(1500*8000/max_data_rate_megabit_per_s));
 }
 
 void 

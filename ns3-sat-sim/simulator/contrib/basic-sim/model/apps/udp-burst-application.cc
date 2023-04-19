@@ -28,6 +28,7 @@
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
 #include "ns3/abort.h"
+#include "ns3/pointer.h"
 
 #include "udp-burst-application.h"
 
@@ -55,11 +56,7 @@ namespace ns3 {
                 .AddAttribute("MaxUdpPayloadSizeByte", "Total UDP payload size (byte) before it gets fragmented.",
                               UintegerValue(1472), // 1500 (point-to-point default) - 20 (IP) - 8 (UDP) = 1472
                               MakeUintegerAccessor(&UdpBurstApplication::m_max_udp_payload_size_byte),
-                              MakeUintegerChecker<uint32_t>())
-                .AddAttribute("PktSendTimeNs", "Sending time (nanoseconds) of a standard packet",
-                              UintegerValue(60000), // In nanoseconds. For a 2 Mb/s ISL, by default GSL rate is set to 100*ISL, so that's a 1500bytes packet sent at 200Mb/s
-                              MakeUintegerAccessor(&UdpBurstApplication::m_min_std_packet_time),
-                              MakeUintegerChecker<uint64_t>());
+                              MakeUintegerChecker<uint32_t>());
         return tid;
     }
 
@@ -84,9 +81,18 @@ namespace ns3 {
         if (m_outgoing_bursts.size() >= 1 && burstInfo.GetStartTimeNs() < std::get<0>(m_outgoing_bursts[m_outgoing_bursts.size() - 1]).GetStartTimeNs()) {
             throw std::runtime_error("Bursts must be added weakly ascending on start time");
         }
+        auto ndevs = GetNode()->GetNDevices();
+        m_min_std_packet_time=0;
+        DataRateValue drptr;
+        for (size_t i=1; i<ndevs; i++){
+            GetNode()->GetDevice(i)->GetAttribute("DataRate", drptr);
+            m_min_std_packet_time = std::max(drptr.Get().CalculateBytesTxTime(1500).GetNanoSeconds(), m_min_std_packet_time);
+        }
         double interpackettime_ns = std::ceil(1500.0 / (burstInfo.GetTargetRateMegabitPerSec() / 8000.0) - m_min_std_packet_time);
         NS_ABORT_MSG_IF(interpackettime_ns <= 0, "UDP application rate shall not exceed device sending rate.");
         std::exponential_distribution<double_t> interGenPacketTime(1.0/interpackettime_ns);
+        
+
         
         m_outgoing_bursts.push_back(std::make_tuple(burstInfo, targetAddress, interGenPacketTime));
         m_outgoing_bursts_packets_sent_counter.push_back(0);

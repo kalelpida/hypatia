@@ -41,7 +41,7 @@ class Node;
 class GSLHelper
 {
 public:
-  GSLHelper (const std::vector<std::pair<uint, std::string>>& nodetypes, std::map<std::string, std::string> tctypes, std::map<std::string, std::map<std::string, std::string>> tcattributes);
+  GSLHelper (const std::map<std::string, std::map<std::string, std::string>> node_if_params);
   virtual ~GSLHelper () {}
 
   // Set device and channel attributes
@@ -54,13 +54,12 @@ public:
   void SetChannelAttribute (std::string name, const AttributeValue &value);
 
   // Installers
-  NetDeviceContainer Install (NodeContainer satellites, NodeContainer gss, std::vector<std::tuple<int32_t, double>>& node_gsl_if_info);
+  NetDeviceContainer Install (NodeContainer satellites, NodeContainer gss, std::vector<std::tuple<int32_t, double>>& node_gsl_if_info);        
+  NetDeviceContainer Install(NodeContainer nodes);
   Ptr<GSLNetDevice> Install (Ptr<Node> node, Ptr<GSLChannel> channel);
 
 private:
-  std::vector<std::pair<uint, std::string>> m_nodetypes;
-  std::map<std::string, std::string> m_tctypes;
-  std::map<std::string, std::map<std::string, std::string>> m_tcattributes;
+  std::map<std::string, std::map<std::string, std::string>> m_node_if_params;
 
   std::map<std::string, ObjectFactory> m_queueFactories;         //!< Queue Factories
   ObjectFactory m_channelFactory;       //!< Channel Factory

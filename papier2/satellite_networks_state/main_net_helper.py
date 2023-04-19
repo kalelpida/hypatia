@@ -45,30 +45,24 @@ class MainNetHelper:
         
         altitude = cstl_dico['ALTITUDE_M']
         
-        self.types_parametres={}
-        for cle, val in cstl_dico.items():
-            if cle in cstl_dico['TYPES_OBJETS_SOL'] and any([conf_if[0]=='gsl' for conf_if in val['ifs']]):
-                #old approximation, false for low elevation angle
-                #sat_cone_radius_m= altitude/math.tan(math.radians(val['minElevation']))  # Considering an elevation angle of 35 degrees;
-                #max_gsl_m = math.sqrt(math.pow(sat_cone_radius_m, 2) + math.pow(altitude, 2))
-                t=EARTH_RADIUS*math.sin(math.radians(val['minElevation']))
-                max_gsl_m=(math.sqrt((EARTH_RADIUS+altitude)**2-EARTH_RADIUS**2+t**2) -t)*cstl_dico["RADIO_K_FACTOR"]
-                self.types_parametres[cle] = {"max_gsl_length_m": max_gsl_m}
-                
-        # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
-        self.types_parametres["sat"] = {'max_isl_length_m' :2 * math.sqrt(math.pow(EARTH_RADIUS + altitude, 2) - math.pow(EARTH_RADIUS + 80000, 2)), 'isl_polar_desactivation_anomaly_degree': self.cstl_config['ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE']}
-
         self.MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(altitude+EARTH_RADIUS)**3)/math.pi/2  # ~14.5 revs/jour
         
 
         self.NUM_ORBS = cstl_dico['NUM_ORBS']
         self.NUM_SATS_PER_ORB = cstl_dico['NUM_SATS_PER_ORB']
-        self.cstl_config['nb_sats'] = self.NUM_ORBS * self.NUM_SATS_PER_ORB
+        self.cstl_config['satellite'] = {"nombre": self.NUM_ORBS * self.NUM_SATS_PER_ORB}
+        self.cstl_config['NB_SATS'] = self.NUM_ORBS * self.NUM_SATS_PER_ORB #TODO remove this stupidity
         self.INCLINATION_DEGREE = cstl_dico['INCLINATION_DEGREE']
+
+        self.dict_type_ivl={"satellite": range(self.cstl_config["satellite"]['nombre'])}
+        prec=self.cstl_config["satellite"]['nombre']
+        for obj in self.cstl_config["TYPES_OBJETS_SOL"]:
+            self.dict_type_ivl[obj]=range(prec, prec+self.cstl_config[obj]["nombre"])
+            prec+=self.cstl_config[obj]["nombre"]
 
     def init_ground_stations(self):
         # Add base name to setting
-        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['sol'] + "_" + self.config['algo']
+        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['algo']
 
         # Create output directories
         if not os.path.isdir(self.output_generated_data_dir):
@@ -78,49 +72,14 @@ class MainNetHelper:
 
         # Ground stations
         print("Generating ground stations...")
-        if self.config['sol'] == "ground_stations_top_100":
-            satgen.extend_ground_stations(
-                "input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt",
-                self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
-            )
-            #TODO
-            #list_from_to=...
-        elif self.config['sol'] == "ground_stations_paris_moscow_grid":
-            satgen.extend_ground_stations(
-                "input_data/ground_stations_paris_moscow_grid.basic.txt",
-                self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
-            )
-            #TODO
-            #list_from_to=...
-        elif self.config['sol'] == "users_and_main_stations":
-            NbGateways = self.cstl_config["gateway"]["nombre"]
-            NbUEs = self.cstl_config["ue"]["nombre"]
-            list_from_to=satgen.extend_users_and_stations(self.config['graine'], NbGateways, NbUEs, self.cstl_config,
-                self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
-            )
-        elif self.config['sol'] == "users_stations_and_servers":
-            NbGateways = self.cstl_config["gateway"]["nombre"]
-            NbUEs = self.cstl_config["ue"]["nombre"]
-            list_from_to=satgen.extend_users_stations_and_servers(self.config['graine'], NbGateways, NbUEs, self.cstl_config,
-                self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
-            )
-        elif self.config['sol'] == "main_cities":
-            NbGateways = self.cstl_config["ue"]["nombre"]
-            list_from_to=satgen.extend_stations(self.config['graine'], NbGateways, self.cstl_config,
-                self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
-            )
-        else:
-            raise ValueError("Unknown ground station selection: " + self.config['sol'])
-        
         # create a from_to list
-        return list_from_to
+        return satgen.extend_ground_objects(self.config['graine'], self.cstl_config, self.output_generated_data_dir + "/" + name + "/ground_stations.txt")
 
-    def calculate(self,      
-    ):
+    def calculate(self):
+        # This function generates network links and compute interfaces
 
         # Add base name to setting
-        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['sol'] + "_" + self.config['algo']
-
+        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['algo']
 
         # TLEs
         print("Generating TLEs...")
@@ -136,70 +95,77 @@ class MainNetHelper:
             self.MEAN_MOTION_REV_PER_DAY
         )
 
-        # ISLs
-        print("Generating ISLs...")
-        if self.config['isls'] == "isls_plus_grid":
-            satgen.generate_plus_grid_isls(
-                self.output_generated_data_dir + "/" + name + "/isls.txt",
-                self.NUM_ORBS,
-                self.NUM_SATS_PER_ORB,
-                isl_shift=0,
-                idx_offset=0
-            )
-            self.cstl_config['satellite']['ifs']=[('isl', {}, 4)]+self.cstl_config['satellite']['ifs']
-        elif self.config['isls'] == "isls_none":
-            satgen.generate_empty_isls(
-                self.output_generated_data_dir + "/" + name + "/isls.txt"
-            )
-        else:
-            raise ValueError("Unknown ISL selection: " + self.config['isls'])
+        #generate links. These will be used for interface generation separately for ns3 and python route script.
+        #Therefore order is very important
+        total_nb_devsol=sum(self.cstl_config[obj]['nombre'] for obj in self.cstl_config['TYPES_OBJETS_SOL'])
+        network_links={}
+        interfaces={}
+        interfaces_number={i:0 for i in range(self.cstl_config['NB_SATS']+total_nb_devsol)}# device:next_nb_of_interface
+        interfaces_number_cpy=interfaces_number.copy()
+        gsl_devs=set()
+        for i,lien in enumerate(self.cstl_config['LINKS']):
+            type_lien, objets, proprietes_lien= lien
+            nom_lien=f"lix{i}"
+            if type_lien=='isl':
+                assert list(objets.keys())==["satellite"]
+                network_links[nom_lien], nvelles_interfaces=generate_plus_grid_isls(
+                    os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
+                    self.NUM_ORBS,
+                    self.NUM_SATS_PER_ORB,
+                    interfaces_number,
+                    isl_shift=0
+                )
+                interfaces.update(nvelles_interfaces)
+                if proprietes_lien.get("limiteDist", False):
+                    self.cstl_config['LINKS'][i][2]["max_length_m"]={}
+                    self.cstl_config['LINKS'][i][2]["polar_desactivation_anomaly_degree"]={}
+                    for obj in objets:
+                        # ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
+                        self.cstl_config['LINKS'][i][2]["max_length_m"][obj]=2 * math.sqrt(math.pow(EARTH_RADIUS + self.cstl_config['ALTITUDE_M'], 2) - math.pow(EARTH_RADIUS + 80000, 2))
+                        self.cstl_config['LINKS'][i][2]["polar_desactivation_anomaly_degree"][obj] = self.cstl_config['ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE']
 
-        # Description
-        print("Generating description...")
-        with open(self.output_generated_data_dir + "/" + name + "/description.yaml", 'w') as f:
-            yaml.dump(self.types_parametres, f)
 
-        # GSL interfaces
-        ground_stations = satgen.read_ground_stations_extended(
-            self.output_generated_data_dir + "/" + name + "/ground_stations.txt"
-        )
-        if self.config['algo'] == "algorithm_free_one_only_gs_relays" \
-                or self.config['algo'] == "algorithm_free_one_only_over_isls"\
-				or self.config['algo'] == "algorithm_free_one_only_over_isls2"\
-                or self.config['algo'] == "algorithm_free_one_only_over_isls2b"\
-                or self.config['algo'] == "algorithm_free_one_only_over_isls2c"\
-                or self.config['algo'] == "algorithm_free_one_only_over_isls2d"\
-                or self.config['algo'] == "algorithm_free_one_only_over_isls2e"\
-                or self.config['algo'] == "algorithm_free_one_only_over_isls3"\
-                or self.config['algo'] == "algorithm_free_one_only_over_isls4":
-            gsl_interfaces_per_satellite = 1
-        elif self.config['algo'] == "algorithm_free_two_only_over_isls5pp":
-            gsl_interfaces_per_satellite=2
-        elif self.config['algo'] == "algorithm_paired_many_only_over_isls":
-            gsl_interfaces_per_satellite = len(ground_stations)
-        else:
-            raise ValueError("Unknown dynamic state algorithm: " + self.config['algo'])
-        for i, elt in enumerate(self.cstl_config['satellite']['ifs']):
-            if elt[0]=='gsl':
-                self.cstl_config['satellite']['ifs'][i][2]=gsl_interfaces_per_satellite
-        #print("Generating GSL interfaces info..")
-        #satgen.generate_simple_gsl_interfaces_info(
-        #    self.output_generated_data_dir + "/" + name + "/gsl_interfaces_info.txt",
-        #    self.NUM_ORBS * self.NUM_SATS_PER_ORB,
-        #    len(ground_stations),
-        #    gsl_interfaces_per_satellite,  # GSL interfaces per satellite
-        #    1,  # (GSL) Interfaces per ground station
-        #    1,  # Aggregate max. bandwidth satellite (unit unspecified)
-        #    1   # Aggregate max. bandwidth ground station (same unspecified unit)
-        #)
+            elif type_lien=='gsl':
+                #network_links will change with time, but interface number remain the same
+                network_links[nom_lien]=None
+                interfaces.update(generate_gsl_interfaces(nom_lien, interfaces_number, *[self.dict_type_ivl[obj] for obj in objets]))
+                for obj in objets:
+                    gsl_devs.add(obj)
+                
+                if proprietes_lien.get("limiteDist", False):
+                    self.cstl_config['LINKS'][i][2]["max_length_m"]={}
+                    for obj in objets:
+                        elev=self.cstl_config[obj].get('minElevation', False)
+                        if elev:
+                            t=EARTH_RADIUS*math.sin(math.radians(elev))
+                            max_gsl_m=(math.sqrt((EARTH_RADIUS+self.cstl_config['ALTITUDE_M'])**2-EARTH_RADIUS**2+t**2) -t)*self.cstl_config["RADIO_K_FACTOR"]
+                            self.cstl_config['LINKS'][i][2]["max_length_m"][obj]=max_gsl_m
 
-        print("Generating TerrestrialLink interfaces info..")
-        satgen.generate_simple_gsl_tl_interfaces_info(self.output_generated_data_dir + "/" + name ,
-            self.NUM_ORBS * self.NUM_SATS_PER_ORB,
-            ground_stations, 
-            self.cstl_config)
 
-        # Forwarding state
+            elif type_lien=='tl':
+                network_links[nom_lien], nvelles_interfaces=generate_tl_net(
+                    os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
+                    interfaces_number,
+                    *[self.dict_type_ivl[obj] for obj in objets]
+                )
+                interfaces.update(nvelles_interfaces)
+
+            else:
+                raise Exception("type de lien non reconnu")
+            
+            res= (interfaces_number_cpy == interfaces_number)
+            print(f"succes ajout d'interfaces: {res}")
+        
+        # Forwarding state, handle special GSL case
+        net_gen_infos={}
+        net_gen_infos['endpoints'] = self.cstl_config['ENDPOINTS']
+        net_gen_infos['dev gsl'] = gsl_devs
+        net_gen_infos['interfaces'] = interfaces
+        net_gen_infos['network links'] = network_links
+        net_gen_infos['dev ranges'] = self.dict_type_ivl
+        net_gen_infos['liste liens'] = self.cstl_config['LINKS']
+
+
         print("Generating forwarding state...")
         satgen.help_dynamic_state(
             self.output_generated_data_dir,
@@ -207,7 +173,89 @@ class MainNetHelper:
             name,
             self.config['pas'],
             self.config['duree'],
-            self.types_parametres,
             self.config['algo'],
-            True
+            net_gen_infos
         )
+
+def generate_plus_grid_isls(output_filename_isls, n_orbits, n_sats_per_orbit, interfaces_number, isl_shift):
+    """
+    Generate plus grid ISL file.
+
+    :param output_filename_isls     Output filename
+    :param n_orbits:                Number of orbits
+    :param n_sats_per_orbit:        Number of satellites per orbit
+    :param isl_shift:               ISL shift between orbits (e.g., if satellite id in orbit is X,
+                                    does it also connect to the satellite at X in the adjacent orbit)
+    :param idx_offset:              Index offset (e.g., if you have multiple shells)
+    """
+
+    if n_orbits < 3 or n_sats_per_orbit < 3:
+        raise ValueError("Number of x and y must each be at least 3")
+    
+    nvelles_interfaces={}
+    list_isls = []
+    for i in range(n_orbits):
+        for j in range(n_sats_per_orbit):
+            sat = i * n_sats_per_orbit + j
+
+            # Link to the next in the orbit
+            sat_same_orbit = i * n_sats_per_orbit + ((j + 1) % n_sats_per_orbit)
+            sat_adjacent_orbit = ((i + 1) % n_orbits) * n_sats_per_orbit + ((j + isl_shift) % n_sats_per_orbit)
+
+            # Same orbit
+            list_isls.append((sat, sat_same_orbit, 's'))
+            nvelles_interfaces[(sat, sat_same_orbit)] = interfaces_number[sat]
+            nvelles_interfaces[(sat_same_orbit, sat)] = interfaces_number[sat_same_orbit]
+            interfaces_number[sat] += 1
+            interfaces_number[sat_same_orbit] += 1
+
+            # Adjacent orbit
+            list_isls.append((sat, sat_adjacent_orbit, 'a'))
+            nvelles_interfaces[(sat, sat_adjacent_orbit)] = interfaces_number[sat]
+            nvelles_interfaces[(sat_adjacent_orbit, sat)] = interfaces_number[sat_adjacent_orbit]
+            interfaces_number[sat] += 1
+            interfaces_number[sat_adjacent_orbit] += 1
+    
+    with open(output_filename_isls, 'w') as f:
+        for (a, b, val) in list_isls:
+            f.write(str(a) + " " + str(b) + " " + str(val) + "\n")
+
+    return list_isls, nvelles_interfaces
+
+def generate_tl_net(output_filename_tls, interfaces_number, objetsA, objetsB):
+    """
+    Generate plus grid ISL file.
+
+    :param output_filename_isls     Output filename
+    :param interfaces_number        dictionary containing the next interface number
+
+    """
+    
+    nvelles_interfaces={}
+    liste_liens = []
+    if len(objetsB)!=len(objetsA):
+        raise Exception("erreur TL: il doit y avoir bijection entre les objets A et B")
+    delta=min(objetsA)-min(objetsB)
+    for a in objetsA:
+        b=a-delta
+        
+        liste_liens.append((a, b))
+
+        nvelles_interfaces[(a, b)] = interfaces_number[a]
+        nvelles_interfaces[(b, a)] = interfaces_number[b]
+        interfaces_number[a] += 1
+        interfaces_number[b] += 1
+    
+    with open(output_filename_tls, 'w') as f:
+        for (a, b) in liste_liens:
+            f.write(f"{a},{b}\n")
+
+    return liste_liens, nvelles_interfaces
+
+def generate_gsl_interfaces(nom_lien, interfaces_number, *objets):
+    nvelles_interfaces={}
+    for rnge_objet in objets:
+        for i in rnge_objet:
+            nvelles_interfaces[(i, nom_lien)] = interfaces_number[i]
+            interfaces_number[i]+=1
+    return nvelles_interfaces

@@ -1,0 +1,87 @@
+# The MIT License (MIT)
+#
+# Copyright (c) 2020 ETH Zurich
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+# GENERATION CONSTANTS
+
+BASE_NAME: "tas_700"
+NICE_NAME: "TAS-700"
+
+# TAS 700
+
+ECCENTRICITY: 0.0000001  # Circular orbits are zero, but pyephem does not permit 0, so lowest possible value
+ARG_OF_PERIGEE_DEGREE: 0.0
+PHASE_DIFF: True
+
+ALTITUDE_M: 700000  # Altitude ~700 km
+NUM_ORBS: 28
+NUM_SATS_PER_ORB: 27
+INCLINATION_DEGREE: 65
+
+ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE: 75
+# orbites circulaires, périgée confondu avec le noeud ascendant à l'équateur, lorsque l'anomalie atteint 90°, le satellite est à sa latitude maximale. 
+# lorsque l'anomalie dépasse ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE, les isl adjacents sont désactivés
+# Par symétrie centrale, les ISL sont désactivés lorsque l'anomalie et comprise entre ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE et 180-ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE
+# ou entre -ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE et ISL_POLAR_DESACTIVATION_ANOMALY_DEGREE-180
+# Todo: différencier désactivations à droite et à gauche
+RADIO_K_FACTOR: 1.33 
+# The K-factor varies according to temperature, humidity..
+# It was written here so that it can be easily noticed.
+# If you have any better definitive value, you can move it to satellite_networks_state/input_data/constants.py
+# Then call RADIO_K_FACTOR instead of cstl_dico["RADIO_K_FACTOR"] in satellite_networks_state/main_net_helper.py 
+
+#same names as in debit_gsl
+TYPES_OBJETS_SOL: ['ue', 'gateway', 'server']
+
+#interface allocation: lo, isl, gsl, finally terrestrial links
+#a change in interface configuration must be reflected in the system configuration (topology-satellite-network files)
+
+gateway: 
+  type: topCitiesUN #Lille # topCitiesHypatia: 100 biggest cities, Hypatia base file; topCitiesUN: +300k cities, United Nations estimate
+  nombre: 7 #random, give IDs and place them, or set it in config?
+  minElevation: 10 #degrees above horizon
+  q_factor: 1 # to change gsl if setting. #TODO consider reading it in step1
+  TrafficControl: config/gwTrafficControl
+  #          type: "ns3::RRQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
+  #          MaxSize: QueueSize 100p #type value
+  #          ChildQueueDisc: "ns3::ITbfQueueDisc"
+  #          ChildRate: DataRate 1Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
+            ## connectQueueTraces?
+  ifs:
+    - ["gsl", { agg_max_bandwidth: 1}, 1] #delay auto, 
+    #- "tl", {agg_max_bandwidth: 1}, 1 #one-one, with 1 server
+
+ue:
+  type: villesGlobe_tas700 #1ville_tas700 #randomGlobe_tas700 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
+  minElevation: 35 #degrees above horizon
+  nombre: config/nb-UEs-sol #voir dans config
+  ifs:
+    - ["gsl", {}, 1] # satellite
+  
+server:
+  ifs:
+    - ["tl", {agg_max_bandwidth: 1}, 1] # gateway
+
+satellite:
+  ifs:
+    # - "isl", {}, 4 #with satellite. added by plus_grid
+    - ["gsl", {}, "will_be_replaced_by_algo"] #with ue,with gateway

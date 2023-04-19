@@ -16,17 +16,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
+ *        Paul
  */
 #ifndef POINT_TO_POINT_TRACEN_HELPER_H
 #define POINT_TO_POINT_TRACEN_HELPER_H
 
-#include <string>
-
 #include "ns3/object-factory.h"
 #include "ns3/net-device-container.h"
 #include "ns3/node-container.h"
-
-#include "ns3/trace-helper.h"
+#include <map>
+#include "ns3/point-to-point-tracen-net-device.h"
 
 namespace ns3 {
 
@@ -35,20 +34,21 @@ class Node;
 
 /**
  * \brief Build a set of PointToPointTracenNetDevice objects
+ * Copied from PointToPointHelper, but TraceUserHelperForDevice functionalities were removed, as I prefer to use
+ * personalised traces rather than conventional ones 
  *
  * Normally we eschew multiple inheritance, however, the classes 
  * PcapUserHelperForDevice and AsciiTraceUserHelperForDevice are
  * "mixins".
  */
-class PointToPointTracenHelper : public PcapHelperForDevice,
-	                   public AsciiTraceHelperForDevice
+class PointToPointTracenHelper
 {
 public:
   /**
    * Create a PointToPointTracenHelper to make life easier when creating point to
    * point networks.
    */
-  PointToPointTracenHelper ();
+  PointToPointTracenHelper (const std::map<std::string, std::map<std::string, std::string>> node_if_params, const std::map<std::string, std::string> channel_params);
   virtual ~PointToPointTracenHelper () {}
 
   /**
@@ -56,6 +56,7 @@ public:
    * This method allows one to set the type of the queue that is automatically
    * created when the device is created and attached to a node.
    *
+   * \param nodetype the following parameters will depend on the object
    * \param type the type of queue
    * \param n1 the name of the attribute to set on the queue
    * \param v1 the value of the attribute to set on the queue
@@ -69,23 +70,12 @@ public:
    * Set the type of queue to create and associated to each
    * PointToPointTracenNetDevice created through PointToPointTracenHelper::Install.
    */
-  void SetQueue (std::string type,
-                 std::string n1 = "", const AttributeValue &v1 = EmptyAttributeValue (),
-                 std::string n2 = "", const AttributeValue &v2 = EmptyAttributeValue (),
-                 std::string n3 = "", const AttributeValue &v3 = EmptyAttributeValue (),
-                 std::string n4 = "", const AttributeValue &v4 = EmptyAttributeValue ());
-
-  /**
-   * Set an attribute value to be propagated to each NetDevice created by the
-   * helper.
-   *
-   * \param name the name of the attribute to set
-   * \param value the value of the attribute to set
-   *
-   * Set these attributes on each ns3::PointToPointTracenNetDevice created
-   * by PointToPointTracenHelper::Install
-   */
-  void SetDeviceAttribute (std::string name, const AttributeValue &value);
+  void
+  SetQueue (std::string nodetype, std::string type,
+                     std::string n1, const AttributeValue &v1,
+                     std::string n2, const AttributeValue &v2,
+                     std::string n3, const AttributeValue &v3,
+                     std::string n4, const AttributeValue &v4);
 
   /**
    * Set an attribute value to be propagated to each Channel created by the
@@ -142,51 +132,26 @@ public:
   NetDeviceContainer Install (std::string aName, Ptr<Node> b);
 
   /**
-   * \param aNode Name of first node
-   * \param bNode Name of second node
+   * \param aName Name of first node
+   * \param bName name of second node
    * \return a NetDeviceContainer for nodes
    *
    * Saves you from having to construct a temporary NodeContainer.
    */
-  NetDeviceContainer Install (std::string aNode, std::string bNode);
+  NetDeviceContainer Install (std::string aName, std::string bName);
 
-private:
-  /**
-   * \brief Enable pcap output the indicated net device.
-   *
-   * NetDevice-specific implementation mechanism for hooking the trace and
-   * writing to the trace file.
-   *
-   * \param prefix Filename prefix to use for pcap files.
-   * \param nd Net device for which you want to enable tracing.
-   * \param promiscuous If true capture all possible packets available at the device.
-   * \param explicitFilename Treat the prefix as an explicit filename if true
-   */
-  virtual void EnablePcapInternal (std::string prefix, Ptr<NetDevice> nd, bool promiscuous, bool explicitFilename);
+  
 
-  /**
-   * \brief Enable ascii trace output on the indicated net device.
-   *
-   * NetDevice-specific implementation mechanism for hooking the trace and
-   * writing to the trace file.
-   *
-   * \param stream The output stream object to use when logging ascii traces.
-   * \param prefix Filename prefix to use for ascii trace files.
-   * \param nd Net device for which you want to enable tracing.
-   * \param explicitFilename Treat the prefix as an explicit filename if true
-   */
-  virtual void EnableAsciiInternal (
-    Ptr<OutputStreamWrapper> stream,
-    std::string prefix,
-    Ptr<NetDevice> nd,
-    bool explicitFilename);
-
-  ObjectFactory m_queueFactory;         //!< Queue Factory
+  std::map<std::string, ObjectFactory> m_queueFactories;         //!< Queue Factories
   ObjectFactory m_channelFactory;       //!< Channel Factory
-  ObjectFactory m_deviceFactory;        //!< Device Factory
+  std::map<std::string, ObjectFactory> m_deviceFactories;        //!< Device Factory
 #ifdef NS3_MPI
   ObjectFactory m_remoteChannelFactory; //!< Remote Channel Factory
 #endif
+
+private:
+  void SetDevParam(Ptr<PointToPointTracenNetDevice> dev, const std::string& nodetype);
+  std::map<std::string, std::map<std::string, std::string>> m_node_if_params;
 };
 
 } // namespace ns3
