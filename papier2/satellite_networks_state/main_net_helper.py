@@ -23,7 +23,7 @@
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),"../../satgenpy"))
 import satgen
-import math
+import math, re
 import yaml
 
 from .input_data.constants import *
@@ -73,7 +73,8 @@ class MainNetHelper:
         # Ground stations
         print("Generating ground stations...")
         # create a from_to list
-        return satgen.extend_ground_objects(self.config['graine'], self.cstl_config, self.output_generated_data_dir + "/" + name + "/ground_stations.txt")
+        self.from_to_list =  satgen.extend_ground_objects(self.config['graine'], self.cstl_config, self.output_generated_data_dir + "/" + name + "/ground_stations.txt")
+        return self.from_to_list
 
     def calculate(self):
         # This function generates network links and compute interfaces
@@ -99,9 +100,8 @@ class MainNetHelper:
         #Therefore order is very important
         total_nb_devsol=sum(self.cstl_config[obj]['nombre'] for obj in self.cstl_config['TYPES_OBJETS_SOL'])
         network_links={}
-        interfaces={}
+        self.interfaces={}
         interfaces_number={i:0 for i in range(self.cstl_config['NB_SATS']+total_nb_devsol)}# device:next_nb_of_interface
-        interfaces_number_cpy=interfaces_number.copy()
         gsl_devs=set()
         for i,lien in enumerate(self.cstl_config['LINKS']):
             type_lien, objets, proprietes_lien= lien
@@ -115,7 +115,7 @@ class MainNetHelper:
                     interfaces_number,
                     isl_shift=0
                 )
-                interfaces.update(nvelles_interfaces)
+                self.interfaces.update(nvelles_interfaces)
                 if proprietes_lien.get("limiteDist", False):
                     self.cstl_config['LINKS'][i][2]["max_length_m"]={}
                     self.cstl_config['LINKS'][i][2]["polar_desactivation_anomaly_degree"]={}
@@ -128,7 +128,7 @@ class MainNetHelper:
             elif type_lien=='gsl':
                 #network_links will change with time, but interface number remain the same
                 network_links[nom_lien]=None
-                interfaces.update(generate_gsl_interfaces(nom_lien, interfaces_number, *[self.dict_type_ivl[obj] for obj in objets]))
+                self.interfaces.update(generate_gsl_interfaces(nom_lien, interfaces_number, *[self.dict_type_ivl[obj] for obj in objets]))
                 for obj in objets:
                     gsl_devs.add(obj)
                 
@@ -148,22 +148,20 @@ class MainNetHelper:
                     interfaces_number,
                     *[self.dict_type_ivl[obj] for obj in objets]
                 )
-                interfaces.update(nvelles_interfaces)
+                self.interfaces.update(nvelles_interfaces)
 
             else:
                 raise Exception("type de lien non reconnu")
             
-            res= (interfaces_number_cpy == interfaces_number)
-            print(f"succes ajout d'interfaces: {res}")
-        
         # Forwarding state, handle special GSL case
         net_gen_infos={}
         net_gen_infos['endpoints'] = self.cstl_config['ENDPOINTS']
         net_gen_infos['dev gsl'] = gsl_devs
-        net_gen_infos['interfaces'] = interfaces
+        net_gen_infos['interfaces'] = self.interfaces
         net_gen_infos['network links'] = network_links
         net_gen_infos['dev ranges'] = self.dict_type_ivl
         net_gen_infos['liste liens'] = self.cstl_config['LINKS']
+        net_gen_infos['paires']=self.from_to_list
 
 
         print("Generating forwarding state...")
@@ -176,6 +174,75 @@ class MainNetHelper:
             self.config['algo'],
             net_gen_infos
         )
+
+    def detraqueISL(self):
+        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['algo']
+        rep_fics_chemins = os.path.join(self.output_generated_data_dir, name, "dynamic_state_"+str(self.config['pas'])+"ms_for_" + str(self.config['duree'])+ "s")
+        chemins={}
+        for fic in os.listdir(rep_fics_chemins):
+            if not fic.startswith('paths_'):
+                continue
+            instant = int(fic[len('paths_'):].rstrip('.txt'))
+            with open(os.path.join(rep_fics_chemins, fic)) as f:
+                lignes=f.readlines()
+            locdico={}
+            for ligne in lignes:
+                paire, duree, chemin = eval(ligne)
+                locdico[tuple(paire)]=(duree, chemin)
+            chemins[instant]=locdico
+        
+        for numlien, lien in enumerate(self.cstl_config['LINKS']):
+            nomficlien=f"lix{numlien}.txt"
+            detraque=lien[2].get('detraque', {})
+            if not detraque:
+                continue
+            #-interval:[20000,26000]ms
+            ajout_str_isl=" "+detraque["errModel"]+" trackLinkDrops\n"
+            try:
+                deb_perturb, fin_perturb = re.search("-interval:(\\d+),(\\d+)ms", detraque['errModel']).groups()
+                deb_perturb, fin_perturb = int(deb_perturb), int(fin_perturb)
+                borne_inf, borne_sup = deb_perturb-deb_perturb%self.config['pas'], fin_perturb-fin_perturb%self.config['pas']
+                borne_inf*=int(1e6)
+                borne_sup*=int(1e6)
+            except Exception:
+                print("détraque sur tout l'intervalle")
+                borne_inf, borne_sup = 0, self.config['duree']*int(1e9)
+            objets=list(lien[1].keys())
+            #find out which interface connects two neighbours in the graph
+            match lien[0]:
+                case "isl":
+                    itf_connects = lambda paire: all( x in self.dict_type_ivl['satellite'] for x in paire)
+                    liens_compromis_str="{} {} "
+                case "tl":
+                    itf_connects = lambda paire: all(paire[i] in self.dict_type_ivl[objets[i]] for i in (0, 1)) or all(paire[i] in self.dict_type_ivl[objets[1-i]] for i in (0, 1))
+                    liens_compromis_str="{},{} "
+                case _: #'gsl'
+                    raise Exception("cas non implémenté/reconnu")
+            utilisations={}
+            for cle, dico in chemins.items():
+                if not (borne_inf<=cle<borne_sup):
+                    continue
+                
+                for paire, (delai, chemins) in dico.items():
+                    for curr, suiv in zip(chemins[:-1], chemins[1:]):
+                        if itf_connects((curr, suiv)):
+                            try:
+                                utilisations[(curr, suiv)]+=1
+                            except KeyError:
+                                utilisations[(curr, suiv)]=1
+            nbsel= int(detraque['sel'].removeprefix('topUtil'))
+            x = sorted([[util, paire] for paire, util in utilisations.items()], reverse=True)[:nbsel]
+            liens_a_modifier=[liens_compromis_str.format(*paire) for _, paire in x]
+            with open(os.path.join(self.output_generated_data_dir, name, nomficlien), "r") as f_itfs:
+                lignes=f_itfs.readlines()
+            for i, ligne in enumerate(lignes):
+                for a_modifier in liens_a_modifier:
+                    if a_modifier in ligne:
+                        lignes[i] = ligne.strip()+ajout_str_isl
+                        break
+            with open(os.path.join(self.output_generated_data_dir, name, nomficlien), "w") as f_itfs:
+                f_itfs.writelines(lignes)
+            
 
 def generate_plus_grid_isls(output_filename_isls, n_orbits, n_sats_per_orbit, interfaces_number, isl_shift):
     """
@@ -248,7 +315,7 @@ def generate_tl_net(output_filename_tls, interfaces_number, objetsA, objetsB):
     
     with open(output_filename_tls, 'w') as f:
         for (a, b) in liste_liens:
-            f.write(f"{a},{b}\n")
+            f.write(f"{a},{b} \n")
 
     return liste_liens, nvelles_interfaces
 

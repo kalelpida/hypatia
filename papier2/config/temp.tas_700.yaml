@@ -11,13 +11,13 @@ LINKS:
 - - isl
   - satellite:
       DataRate: DataRate~20Mbps
-  - limiteDist: true
+  - detraque: {}
+    limiteDist: true
 - - gsl
   - satellite:
       DataRate: DataRate~80Mbps
     ue:
       DataRate: DataRate~2Mbps
-      maxSatellites: 1
   - limiteDist: true
     penalite_s: 10
 - - gsl
@@ -45,12 +45,12 @@ TYPES_OBJETS_SOL:
 - server
 gateway:
   minElevation: 10
-  nombre: 7
-  positions: topCitiesUN
+  nombre: 1
+  positions: Lille
 server:
-  nombre: 7
-  positions: topCitiesUN
+  nombre: 1
+  positions: Lille
 ue:
   minElevation: 35
-  nombre: 100
-  positions: villesGlobe_tas700
+  nombre: 200
+  positions: 1ville_tas700

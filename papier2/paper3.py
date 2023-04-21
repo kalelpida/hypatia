@@ -115,6 +115,11 @@ class Experiences():
             mh.calculate()
             os.chdir(basedir)
 
+        if "casse liens sat" in self.actions:
+            os.chdir("satellite_networks_state")
+            mh.detraqueISL()
+            os.chdir(basedir)
+        
         ### SATGENPY ANALYSIS
         # analysis  of path and rtt based on networkx.
         # edit variables 'satgenpy_generated_constellation', 'duration_s' 
@@ -124,18 +129,12 @@ class Experiences():
             subprocess.check_call(["python", "perform_full_analysis.py", nomfic_courante], stdout=sys.stdout, stderr=sys.stderr)
             os.chdir(basedir)
         
-        if "casse liens sat" in self.actions:
-            os.chdir("satgenpy_analysis")
-            from satgenpy_analysis.deteriorIsl import casseISLs
-            casseISLs(self.courante)
-            os.chdir(basedir)
-
         # NS-3 EXPERIMENTS
         if "simulation" in self.actions:
             os.chdir("ns3_experiments")
             subprocess.check_call(["python", "step_2_run.py", "0", nomfic_courante], stdout=sys.stdout, stderr=sys.stderr)
             os.chdir(basedir)
-
+        
     
     def operation_sauvegarde(self, destdir, sources):
         nomdestdir=destdir.format(strdate=time.strftime(self.strdate), **self.courante)

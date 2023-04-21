@@ -123,9 +123,10 @@ def generate_dynamic_state_at(
 
                 # Add to networkx graph
                 if val=='s' or (not limitePolaire) or (is_connected_to_adjacent(satellites[a], seuil=limitePolaire['satellite']) and is_connected_to_adjacent(satellites[b], seuil=limitePolaire['satellite'])):
+                    if poids!=None:
+                        raise Exception("Aucun intérêt de mettre des liens satellite à durée fixe. Vérifier la config")
                     full_net_graph_penalised.add_edge(
-                        a, b, weight=sat_distance_m/3e8 if poids==None else poids
-                    )
+                        a, b, weight=sat_distance_m/3e8, delai=sat_distance_m/3e8)
             
         elif type_lien=='gsl':
             # What satellites can a ground station see
@@ -147,19 +148,21 @@ def generate_dynamic_state_at(
                 satellites_in_range.sort()
                 xid=len(satellites) + ground_station["gid"]
                 assert xid in net_gen_infos['dev ranges'][gs_type]
-                for (distance_m, sid) in satellites_in_range[:caracs_lien[1][gs_type]["maxSatellites"]]:
+                for (distance_m, sid) in satellites_in_range[:caracs_lien[1][gs_type].get("maxSatellites", len(satellites_in_range))]:
+                    if poids!=None:
+                        raise Exception("Aucun intérêt de mettre des liens sol-satellite à durée fixe. Vérifier la config")
+                    penalite=parametres.get('penalite_s', 10)
                     full_net_graph_penalised.add_edge(
-                        sid, xid , weight=distance_m/3e8+parametres.get('penalite_s', 10) if poids==None else poids,
-                        lix=nom_lien
-                    )
+                        sid, xid , weight=distance_m/3e8+penalite, delai=distance_m/3e8,
+                        lix=nom_lien)
+
             
         elif type_lien=='tl':
             for (a, b) in net_gen_infos['network links'][nom_lien]:
                 if poids==None:
                     raise Exception("mettre à jour mesure de distance pour TLs")
                 full_net_graph_penalised.add_edge(
-                        a, b, weight=poids
-                    )
+                        a, b, weight=poids, delai=poids)
 
     #################################
 
@@ -169,13 +172,12 @@ def generate_dynamic_state_at(
     # (a) Output the gsl_if_bandwidth_<t>.txt files (disabled in this version)
     # (b) Output the fstate_<t>.txt files
     #
-    endpoint_ranges={ x: net_gen_infos["dev ranges"][x] for x in net_gen_infos["endpoints"]}
     if dynamic_state_algorithm == "algorithm_penal_gsl":
 
         return algorithm_penal_gsl(
         output_dynamic_state_dir,
         time_since_epoch_ns,
-        endpoint_ranges,
+        net_gen_infos['paires'],
         full_net_graph_penalised,
         net_gen_infos["interfaces"],
         prev_output,

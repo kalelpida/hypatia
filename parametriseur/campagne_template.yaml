@@ -10,7 +10,6 @@ paramTester:
   pas: [2000] #en ms
   isls: [ isls_plus_grid ]
   deteriorISL: [ {} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:2000,3000ms" } ] 
-  sol: [ users_and_main_stations ]
   nb-UEs-sol: [ 100 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [ 4 ]

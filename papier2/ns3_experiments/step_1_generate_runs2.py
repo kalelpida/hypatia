@@ -53,6 +53,7 @@ class main_step1:
         for lien in self.cstl_dico['LINKS']:
             if self.obj_reference in lien[1]:
                 debit_reference = min(debitMbps(lien[1][self.obj_reference]['DataRate']), debit_reference)
+        nb_obj_ref = self.cstl_dico[self.obj_reference]['nombre']
 
         #true_gsl_max_data_rate_megabit_per_s = data_rate_megabit_per_s*100 # used to generate bursty traffic. maybe admission control from the ground will change that 
         duration_s = int(dico_params['duree'])
@@ -71,7 +72,6 @@ class main_step1:
         # Both protocols
         assert "nom" not in dico_params['protocoles']
         groupes = dico_params.get('protocoles', {})
-        nb_UEs = dico_params['nb-UEs-sol']
         
         offset_commodite=0
         tcp_vals=[]
@@ -84,7 +84,7 @@ class main_step1:
             try:
                 groupe_nb_commodites = int(groupe['nb'])
             except Exception:
-                groupe_nb_commodites = round(nb_UEs*groupe.get('ratio', 2))
+                groupe_nb_commodites = round(nb_obj_ref*groupe.get('ratio', 2))
             if groupe_nb_commodites<=0:
                 continue
             fin_groupe_commodites = offset_commodite+groupe_nb_commodites
@@ -199,9 +199,11 @@ class main_step1:
                     conf["devQMaxSize"]="2kB" # tout est géré par le traffic Control
                 else:
                     debit=debitMbps(conf["DataRate"])
-                    queue_size_kB = int(debit/8*80) # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
                     if obj in self.cstl_dico['TYPES_OBJETS_SOL']:
-                        queue_size_kB*=(self.cstl_dico[obj]['nombre']/nb_dev_reference)**0.5
+                        queue_size_kB = debit/8*20 # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
+                        queue_size_kB = max(int(queue_size_kB*(self.cstl_dico[obj]['nombre']/nb_dev_reference)**0.5), 2)
+                    else:
+                        queue_size_kB= int(debit/8*5)
                     if "tcp" in protocol_chosen_name: # long queues penalise TCP
                         conf["devQMaxSize"]=f"{queue_size_kB}kB"
                     elif "udp" in protocol_chosen_name:  # UDP does not have this problem, so we cap it at 100 packets
@@ -209,7 +211,7 @@ class main_step1:
                     else:
                         raise ValueError("Unknown protocol chosen: " + protocol_chosen_name)
                 paramliens.append(strconf+str(conf))
-            paramliens.append(f"{nom_lien}_params={lien[2]}") #unused by ns3 for now
+            paramliens.append(f"{nom_lien}_params={ns3paramchecker(lien[2])}")
 
         # Prepare run directory
         run_dir = "runs/run_loaded_tm_pairing_for_{}s_with_{}_{}".format(
@@ -293,3 +295,14 @@ def debitMbps(strdeb):
     elif not 'M' in strdebit:
         debit*=1e-6
     return debit
+
+def ns3paramchecker(dicparams):
+    """ Remove parameters which cannot be read by ns3 (dicts of dicts for instance) """
+    dicfinal={}
+    for nom, elt in dicparams.items():
+        if not isinstance(elt, str) or (':' in elt) or (',' in elt):
+            continue
+        else:
+            dicfinal[nom]=elt
+    return dicfinal
+

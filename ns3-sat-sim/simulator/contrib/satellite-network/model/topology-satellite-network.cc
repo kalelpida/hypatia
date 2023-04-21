@@ -183,6 +183,9 @@ static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
     //static const std::regex periodicModel("periodicMdl-period:(\\d*\\.?\\d*)-recvErrRate:(\\d*\\.?\\d*)-drift:(\\d*\\.?\\d*)"); //TODO ?
 
     std::smatch match;
+    bool val0= std::regex_search(line, match, rateErrModel);
+    bool val1 = std::regex_search(line, match, brstErrModel);
+    bool val2 = std::regex_search(line, match, gilbertEliottModel);
     // Error Model
     if (std::regex_search(line, match, rateErrModel)){
         //create burst error models and assign them to both devices
@@ -735,7 +738,7 @@ namespace ns3 {
         NS_ABORT_MSG_UNLESS(fstate_file.is_open(), "File " + filename + " could not be opened");
         if (fstate_file) {
             while (getline(fstate_file, line)) {
-                std::vector<std::string> comma_split = split_string(line, ",", 2);
+                std::vector<std::string> comma_split = split_string(trim(line), ",", 2);
                 Ptr<Node> n1 = m_allNodes.Get(parse_positive_int64(comma_split[0]));
                 Ptr<Node> n2 = m_allNodes.Get(parse_positive_int64(comma_split[1]));
                 if (m_paramaps.find(n1->GetObject<Specie>()->GetName()) == m_paramaps.end() || m_paramaps.find(n2->GetObject<Specie>()->GetName()) == m_paramaps.end()){
