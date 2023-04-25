@@ -337,7 +337,7 @@ PointToPointLaserNetDevice::SetReceiveErrorModel (Ptr<ErrorModel> em)
 }
 
 void
-PointToPointLaserNetDevice::Receive (Ptr<Packet> packet)
+PointToPointLaserNetDevice::Receive (Ptr<Packet> packet, Time rxtime)
 {
   NS_LOG_FUNCTION (this << packet);
   uint16_t protocol = 0;
@@ -348,7 +348,7 @@ PointToPointLaserNetDevice::Receive (Ptr<Packet> packet)
       // If we have an error model and it indicates that it is time to lose a
       // corrupted packet, don't forward this packet up, let it go.
       //
-      m_phyRxDropTrace (m_node, packet);
+      m_phyRxDropTrace (m_node, packet, rxtime);
     }
   else 
     {
@@ -381,7 +381,7 @@ PointToPointLaserNetDevice::Receive (Ptr<Packet> packet)
           m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
         }
 
-      m_macRxTrace (m_node, originalPacket);
+      m_macRxTrace (m_node, originalPacket, rxtime);
       m_rxCallback (this, packet, protocol, GetRemote ());
     }
 }
@@ -630,7 +630,8 @@ void
 PointToPointLaserNetDevice::DoMpiReceive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
-  Receive (p);
+  NS_ABORT_MSG("MPI receive not implemented");
+  Receive (p, Time(0));
 }
 
 Address 

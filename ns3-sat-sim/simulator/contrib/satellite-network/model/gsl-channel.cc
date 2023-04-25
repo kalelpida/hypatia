@@ -107,7 +107,8 @@ GSLChannel::TransmitTo(Ptr<const Packet> p, Ptr<GSLNetDevice> srcNetDevice, Ptr<
           txTime + delay,
           &GSLNetDevice::Receive,
           destNetDevice,
-          p->Copy ()
+          p->Copy (),
+          txTime
   );
 
   // Re-enabled below code if distributed is again enabled:

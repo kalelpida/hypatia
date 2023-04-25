@@ -125,38 +125,39 @@ PointToPointTracenHelper::Install (Ptr<Node> a, Ptr<Node> b)
 
   Ptr<PointToPointTracenChannel> channel = 0;
 
+ // Distributed mode is not currently supported, enable the below if it is:
   // If MPI is enabled, we need to see if both nodes have the same system id 
   // (rank), and the rank is the same as this instance.  If both are true, 
   // use a normal p2p channel, otherwise use a remote channel
-#ifdef NS3_MPI
-  bool useNormalChannel = true;
-  if (MpiInterface::IsEnabled ())
-    {
-      uint32_t n1SystemId = a->GetSystemId ();
-      uint32_t n2SystemId = b->GetSystemId ();
-      uint32_t currSystemId = MpiInterface::GetSystemId ();
-      if (n1SystemId != currSystemId || n2SystemId != currSystemId) 
-        {
-          useNormalChannel = false;
-        }
-    }
-  if (useNormalChannel)
-    {
-      channel = m_channelFactory.Create<PointToPointTracenChannel> ();
-    }
-  else
-    {
-      channel = m_remoteChannelFactory.Create<PointToPointTracenRemoteChannel> ();
-      Ptr<MpiReceiver> mpiRecA = CreateObject<MpiReceiver> ();
-      Ptr<MpiReceiver> mpiRecB = CreateObject<MpiReceiver> ();
-      mpiRecA->SetReceiveCallback (MakeCallback (&PointToPointTracenNetDevice::Receive, devA));
-      mpiRecB->SetReceiveCallback (MakeCallback (&PointToPointTracenNetDevice::Receive, devB));
-      devA->AggregateObject (mpiRecA);
-      devB->AggregateObject (mpiRecB);
-    }
-#else
+//#ifdef NS3_MPI
+//  bool useNormalChannel = true;
+//  if (MpiInterface::IsEnabled ())
+//    {
+//      uint32_t n1SystemId = a->GetSystemId ();
+//      uint32_t n2SystemId = b->GetSystemId ();
+//      uint32_t currSystemId = MpiInterface::GetSystemId ();
+//      if (n1SystemId != currSystemId || n2SystemId != currSystemId) 
+//        {
+//          useNormalChannel = false;
+//        }
+//    }
+//  if (useNormalChannel)
+//    {
+//      channel = m_channelFactory.Create<PointToPointTracenChannel> ();
+//    }
+//  else
+//    {
+//      channel = m_remoteChannelFactory.Create<PointToPointTracenRemoteChannel> ();
+//      Ptr<MpiReceiver> mpiRecA = CreateObject<MpiReceiver> ();
+//      Ptr<MpiReceiver> mpiRecB = CreateObject<MpiReceiver> ();
+//      mpiRecA->SetReceiveCallback (MakeCallback (&PointToPointTracenNetDevice::Receive, devA));
+//      mpiRecB->SetReceiveCallback (MakeCallback (&PointToPointTracenNetDevice::Receive, devB));
+//      devA->AggregateObject (mpiRecA);
+//      devB->AggregateObject (mpiRecB);
+//    }
+//#else
   channel = m_channelFactory.Create<PointToPointTracenChannel> ();
-#endif
+//#endif
 
   devA->Attach (channel);
   devB->Attach (channel);

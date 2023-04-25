@@ -1,7 +1,7 @@
 testparamelag: #nom de la campagne
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
-  duree: [ 60 ] #en s
+  duree: [ 6 ] #en s
   pas: [2000] #en ms
   isls: [ isls_plus_grid ]
   # examples of ISL deteriorators
@@ -9,7 +9,7 @@ testparamelag: #nom de la campagne
   #      { sel: topUtil10, errModel: "brstErrMdl-brstRate:0.01-brstSize:5-interval:20000,26000ms" },
   #      { sel: topUtil10, errModel: "recvErrRate:0.1-interval:20000,26000ms"}
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
-  deteriorISL: [ {}, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms" } ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
+  deteriorISL: [ {} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   nb-UEs-sol: [ 200 ]
   algo: [ "algorithm_penal_gsl" ]
   threads: [ 4 ]
@@ -28,11 +28,11 @@ testparamelag: #nom de la campagne
   # a tcp flow is defined by its size, which is calculated with debit and duree_ms
   # Débit UDP : max(udp_list_flow_size_proportion[i], 0.999*data_rate_GSL_megabit_per_s))
   protocoles: 
-    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'ratio': 1.5} #, 'extra_parameters' : 'pacingDR0.9Mb/s' }
-      agresseurs: { 'nom': "tcp", 'debut_ms': [30000, 30100], 'duree_ms': 7000, 'ratio': 0.5, 'debit': 2 }
-    - UDPbase: {'nom': "udp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'ratio': 1.5, 'debit': 2}
-      UDPagresseurs: { 'nom': "udp", 'debut_ms': [30000, 30100], 'duree_ms': 7000, 'ratio': 0.5, 'debit': 2 }
-    #- {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'debit': 20 }
+    #- base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'ratio': 1.5} #, 'extra_parameters' : 'pacingDR0.9Mb/s' }
+    #  agresseurs: { 'nom': "tcp", 'debut_ms': [30000, 30100], 'duree_ms': 7000, 'ratio': 0.5, 'debit': 2 }
+    #- UDPbase: {'nom': "udp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'ratio': 1.5, 'debit': 2}
+    #  UDPagresseurs: { 'nom': "udp", 'debut_ms': [30000, 30100], 'duree_ms': 7000, 'ratio': 0.5, 'debit': 2 }
+    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'debit': 2 }
     #- { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 20, 'extra_parameters' : 'pacingDR0.9Mb/s', 'nb_agresseurs': 15, 'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 5000, 'fdebit_agresseurs': 0}  #{ 'nom': "tcp"} ]
     #- { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 20, 'nb_agresseurs': 15, 'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 6000, 'fdebit_agresseurs': 0}
     #- { 'nom': "tcp_and_udp", 'debut_ms':'0,100', 'duree_ms':'max', 'debit': 20, 'nb_agresseurs': 15, 'debut_agresseur_ms': [20000, 20010], 'duree_agresseur_ms': 6000, 'fdebit_agresseurs': 0.1}
@@ -40,9 +40,9 @@ testparamelag: #nom de la campagne
   # extra_parameters : string, thought as space-separated coefficients
   # pacingDR[double][unit or default to bit per sec] is at application level, so only takes into account the payload
   gwTrafficControl:
-    - type: "ns3::RRFQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
-      MaxSize: QueueSize 30p #type value
-      ChildQueueDisc: "ns3::FifoQueueDisc"
+    #- type: "ns3::RRFQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
+    #  MaxSize: QueueSize 30p #type value
+    #  ChildQueueDisc: "ns3::FifoQueueDisc"
     - {}
     #  ChildRate: DataRate 2Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
     #- {}

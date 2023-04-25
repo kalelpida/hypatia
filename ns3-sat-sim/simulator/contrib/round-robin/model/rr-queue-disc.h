@@ -69,7 +69,7 @@ public:
   uint32_t GetPrio (void) const;
 
 private:
-  uint32_t m_prio;     //!< the index for this flow
+  uint32_t m_prio;     //!< the priority of this flow
   uint32_t m_index;     //!< the index for this flow
 };
 

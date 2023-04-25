@@ -135,6 +135,7 @@ RRFQueueDiscTestCase::RRFQueueDiscTestCase ()
 {
 }
 
+/*
 static 
 Ptr<Packet> createSrcIpv4Packet(uint32_t pktSize, const char* src_addr){
   Ptr<Packet> p=Create<Packet>();
@@ -143,6 +144,7 @@ Ptr<Packet> createSrcIpv4Packet(uint32_t pktSize, const char* src_addr){
   p->AddHeader(h);
   return p;
 }
+*/
 
 void
 RRFQueueDiscTestCase::DoRunRRFQueueTestOneDest (Ptr<RRFQueueDisc> q, uint32_t qSize, uint32_t pktSize)
@@ -197,7 +199,6 @@ RRFQueueDiscTestCase::DoRunRRFQueueSimpleTest (Ptr<RRFQueueDisc> q, uint32_t qSi
   Ptr<Ipv4QueueDiscItem> qIt;
   Ptr<QueueDiscItem> item;
   Address dest;
-  uint32_t expectedNumPackets;
   NS_ASSERT_MSG(q->GetMaxSize ().GetUnit ()== QueueSizeUnit::BYTES, "This test only works for byte queue size counters");
   NS_TEST_EXPECT_MSG_EQ (q->GetCurrentSize ().GetValue (), 0, "The queue disc should be empty");
   NS_ASSERT_MSG((n_dests>0) && (n_dests <= 256), "bad number of destinations");

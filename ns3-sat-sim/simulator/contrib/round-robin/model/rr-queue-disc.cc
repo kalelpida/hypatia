@@ -43,7 +43,7 @@ TypeId UserFlow::GetTypeId (void)
 }
 
 UserFlow::UserFlow ()
-  : m_index (0), m_prio(0)
+  : m_prio(0), m_index (0)
 {
   NS_LOG_FUNCTION (this);
 }

@@ -150,7 +150,7 @@ public:
    *
    * \param p Ptr to the received packet.
    */
-  void Receive (Ptr<Packet> p);
+  void Receive (Ptr<Packet> p, Time rxtime);
 
   // The remaining methods are documented in ns3::NetDevice*
 
@@ -358,7 +358,7 @@ private:
    * transition).  This is a non-promiscuous trace (which doesn't mean a lot 
    * here in the point-to-point-laser device).
    */
-  TracedCallback<Ptr<const Node>, Ptr<const Packet> > m_macRxTrace;
+  TracedCallback<Ptr<const Node>, Ptr<const Packet>, const Time& > m_macRxTrace;
 
   /**
    * The trace source fired for packets successfully received by the device

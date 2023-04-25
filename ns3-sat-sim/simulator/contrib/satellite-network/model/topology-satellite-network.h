@@ -67,20 +67,10 @@
 #include "ns3/point-to-point-tracen-channel.h"
 #include "point-to-point-tracen-remote-channel.h"
 
+#include "ns3/trace-journal.h"
+
 namespace ns3 {
-    struct structacceptNodeObj { 
-        unsigned int minNodeId; 
-    };
-
-    typedef std::map<std::pair<InetSocketAddress,Ipv4Address>, uint64_t> mapflow_t;
-    typedef struct structacceptNodeObj acceptNodeObj;
-
-    struct structCbParams{
-        mapflow_t *m_conversion;
-        acceptNodeObj m_log_condition_NodeId;
-    };
-
-    typedef struct structCbParams cbparams;
+    
 
     class TopologySatelliteNetwork : public Topology
     {

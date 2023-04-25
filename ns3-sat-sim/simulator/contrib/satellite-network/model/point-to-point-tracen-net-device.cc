@@ -329,7 +329,7 @@ PointToPointTracenNetDevice::SetReceiveErrorModel (Ptr<ErrorModel> em)
 }
 
 void
-PointToPointTracenNetDevice::Receive (Ptr<Packet> packet)
+PointToPointTracenNetDevice::Receive (Ptr<Packet> packet, Time rxtime)
 {
   NS_LOG_FUNCTION (this << packet);
   uint16_t protocol = 0;
@@ -373,7 +373,7 @@ PointToPointTracenNetDevice::Receive (Ptr<Packet> packet)
           m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
         }
 
-      m_macRxTrace (m_node, originalPacket);
+      m_macRxTrace (m_node, originalPacket, rxtime);
       m_rxCallback (this, packet, protocol, GetRemote ());
     }
 }
@@ -621,7 +621,8 @@ void
 PointToPointTracenNetDevice::DoMpiReceive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
-  Receive (p);
+  NS_ABORT_MSG("MPI receive not implemented");
+  Receive (p, Time(0));
 }
 
 Address 

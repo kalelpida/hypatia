@@ -77,28 +77,28 @@ def getconfigcourante(dossier, cles_variantes):
 	nbsats=dico_constel.get('NUM_ORBS')*dico_constel.get('NUM_SATS_PER_ORB')
 	set_globale('NB_SATS', nbsats)
 	set_globale('NB_STATIONS', dico_constel['gateway']['nombre'])
-
+	num=0
 	liste_variants=[]
 	for cle in cles_variantes:
 		valeur =  dico_config[cle]
 		if not valeur:
 			liste_variants.append('Nul'+cle)
 		elif type(valeur) is dict:
-			liste_variants.append("-".join(f"{nom}:{val}" for nom, val in valeur.items()))
+			liste_variants.append("-".join(f"{nom}:{val}" if type(val) != dict else f"{nom}:val{num}" for nom, val in valeur.items() ))
 		elif "__iter__" in dir(valeur):
 			liste_variants.append("-".join(str(u) for u in valeur))
 		else:
 			liste_variants.append(str(valeur))
+		num+=1
 	return '::'.join(liste_variants), liste_variants
 
 
 def lecture(dossier, str_variants):
-	infos_reduites=["instant", "noeud", "commId", "seqNum", "offset", "taille", "TCP", "retour", "info"]
-	infos_completes=["instant", "src", "dst", "commId", "seqNum", "offset", "taille", "dureeTx", "TCP", "retour", "info"]
 	dico_bdds[str_variants]=[]
-	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.rx'), names=infos_reduites))
-	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.tx'), names=infos_completes))
-	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.drops'), names=infos_reduites))
+	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.rx')))
+	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.tx')))
+	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.drops')))
+	print(dico_bdds[str_variants][0])
 
 
 

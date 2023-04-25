@@ -11,6 +11,7 @@ def build(bld):
     module.source = [
         "model/specie.cc",
         "model/states-error-model.cc",
+        "model/trace-journal.cc",
         "helper/device-factory-helper.cc"
     ]
 
@@ -22,6 +23,7 @@ def build(bld):
     headers.source = [
         "model/states-error-model.h",
         "model/specie.h",
+        "model/trace-journal.h",
         "helper/device-factory-helper.h"
     ]
 

@@ -23,158 +23,6 @@
 
 #include "topology-satellite-network.h"
 namespace ns3 {
-    typedef struct {
-        bool isTCP = false;
-        bool isReverse = false; // wether it comes from the destination
-        uint32_t dataOffset = 0;//corresponds to the fragment initial data, (o)
-        uint32_t dataSize; 
-        uint64_t idcomm;  
-        uint64_t idseq = 0; //used in UDP, corresponds to the offset of the data sent, in packets
-    } resAnalysePacket;
-    
- static void getPacketFlux(Ptr<const Packet> p, mapflow_t *conversion, resAnalysePacket& analysePacket){
-        // Extract burst identifier and packet sequence number if UDP
-        // Otherwise get flow identifier from packet sequence number
-        static TypeId tidInteret= IdSeqHeader::GetTypeId();
-        static TypeId tidtcpheader = TcpHeader::GetTypeId();
-        static TypeId tidipheader = Ipv4Header::GetTypeId();
-        static TypeId tidudpheader = UdpHeader::GetTypeId();
-
-        auto it = p->BeginItem ();
-        Ipv4Header ipheader;
-        InetSocketAddress idSource((uint16_t)0);
-        InetSocketAddress idDest((uint16_t)0);
-
-
-        PacketMetadata::Item item;
-        while (it.HasNext ()){
-        item = it.Next ();
-        if (item.tid == tidipheader){
-            ipheader.Deserialize(item.current);
-            idSource.SetIpv4(ipheader.GetSource());
-            idDest.SetIpv4(ipheader.GetDestination());
-            break;
-        }
-        }
-        if (! it.HasNext()){
-            p->Print(std::cerr);
-            NS_ABORT_MSG("incomplete packet");
-        }
-        item = it.Next ();
-        if (item.tid == tidudpheader){
-            // that's UDP
-            /*
-            UdpHeader udpheader;
-            udpheader.Deserialize(item.current);
-            std::get<1>(idSource) = udpheader.GetSourcePort();
-            std::get<1>(idDest) = udpheader.GetDestinationPort();
-            const auto& conversionref = conversion;
-            */
-            
-            if (! it.HasNext()){
-                p->Print(std::cerr);
-                NS_ABORT_MSG("incomplete packet");
-            }
-            item = it.Next ();
-            if (item.tid!=tidInteret) {
-                p->Print(std::cerr);
-                NS_ABORT_MSG("Not an usual Hypatia packet");
-            }
-            IdSeqHeader incomingIdSeq;
-            incomingIdSeq.Deserialize(item.current);
-            analysePacket.dataSize = item.currentSize;
-            analysePacket.idcomm = incomingIdSeq.GetId();
-            
-            // get into payload
-            item = it.Next();
-            NS_ASSERT_MSG(item.type == PacketMetadata::Item::ItemType::PAYLOAD, "not an usual Hypatia UDP packet");
-            analysePacket.dataSize += item.currentSize;
-            return;
-        
-        } else if (item.tid == tidtcpheader){
-            TcpHeader tcpheader;
-            analysePacket.isTCP = true;
-            tcpheader.Deserialize(item.current);
-            idSource.SetPort(tcpheader.GetSourcePort());
-            idDest.SetPort(tcpheader.GetDestinationPort());
-            const mapflow_t conversionref = *conversion;
-
-            // update commodity number
-            bool trouve=false;
-            auto triplet = std::make_pair(idSource, idDest.GetIpv4());
-            auto triplet_reverse = std::make_pair(idDest, idSource.GetIpv4());
-            for (auto paire : conversionref){
-                if (paire.first == triplet){
-                    analysePacket.idcomm = paire.second;
-                    trouve=true;
-                    break;
-                } else if (paire.first == triplet_reverse){
-                    analysePacket.idcomm = paire.second;
-                    analysePacket.isReverse = true;
-                    trouve=true;
-                    break;
-                }
-            }
-            
-            if (!trouve){
-                std::cout << "New packet received:" << std::endl;
-                p->Print(std::cout);
-                std::cout << "\n Until now, only below commodities are listed" << std::endl;
-
-                for (auto paire : conversionref){
-                    std::cout << "src" << paire.first.first.GetIpv4() << ":" << paire.first.first.GetPort() << " ; dst " << paire.first.second << " ; related commodity: " << paire.second << std::endl;
-                }
-                NS_ABORT_MSG("Not recognised TCP packet:");
-            }
-            
-            
-            // update data info carried by the packet
-            if (it.HasNext()){
-                item = it.Next();
-                NS_ASSERT_MSG(item.type == PacketMetadata::Item::ItemType::PAYLOAD, "not an usual Hypatia UDP packet");
-                analysePacket.dataOffset = item.currentTrimedFromStart;
-                analysePacket.dataSize = item.currentSize;
-            } else {
-                analysePacket.dataSize = 0;
-            }
-            while (it.HasNext()){
-                item = it.Next();
-                if (item.type == PacketMetadata::Item::ItemType::PAYLOAD){
-                    analysePacket.dataSize += item.currentSize;
-                }
-            }
-            
-        } else {
-            p->Print(std::cerr);
-            NS_ABORT_MSG("Not an usual Hypatia packet");
-        }
-    }
-
-static void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> src_node, Ptr<const Node> dst_node,  Ptr<const Packet> packet, const Time& txTime)
-{
-    //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
-    resAnalysePacket analysePacket;
-    getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
-    // Log precise timestamp received of the sequence packet if needed
-    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << src_node->GetId() << "," << dst_node->GetId() << "," << analysePacket.idcomm;
-    *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize << "," << txTime.GetNanoSeconds();
-    *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
-}
-
-static void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> node, Ptr<const Packet> packet)
-{
-    //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
-    // Extract burst identifier and packet sequence number
-    if (cbparams_val->m_log_condition_NodeId.minNodeId >= node->GetId()){
-    resAnalysePacket analysePacket;
-    getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
-    // Log precise timestamp received of the sequence packet if needed
-    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << analysePacket.idcomm; // we only know the node receiving/where the error occurs
-    *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize; //txtime unknown
-    *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
-    }
-}
-
 
 static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
     static const std::regex rateErrModel("recvErrRate:(\\d*\\.?\\d*)-interval:(\\d+),(\\d+)ms");
@@ -183,9 +31,6 @@ static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
     //static const std::regex periodicModel("periodicMdl-period:(\\d*\\.?\\d*)-recvErrRate:(\\d*\\.?\\d*)-drift:(\\d*\\.?\\d*)"); //TODO ?
 
     std::smatch match;
-    bool val0= std::regex_search(line, match, rateErrModel);
-    bool val1 = std::regex_search(line, match, brstErrModel);
-    bool val2 = std::regex_search(line, match, gilbertEliottModel);
     // Error Model
     if (std::regex_search(line, match, rateErrModel)){
         //create burst error models and assign them to both devices
@@ -304,8 +149,11 @@ namespace ns3 {
         //Traces
         AsciiTraceHelper asciiTraceHelper;
         m_drop_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/link.drops");
+        *m_drop_stream->GetStream() << "instant, noeud, typeObj, commId, seqNum, offset, taille, TCP, retour, info" << std::endl;
         m_tx_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/link.tx");
+        *m_tx_stream->GetStream() << "instant, src, srcObj, dst, dstObj, commId, seqNum, offset, taille, dureeTx, TCP, retour, info" << std::endl;
         m_rx_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/link.rx");
+        *m_rx_stream->GetStream() << "instant, noeud, typeObj, commId, seqNum, offset, taille, dureeRx, TCP, retour, info" << std::endl;
         
         // Initialize satellites
         ReadSatellites();
@@ -622,9 +470,9 @@ namespace ns3 {
                 m_islFromTo.push_back(std::make_pair(sat1_id, sat0_id));
             }
             if (m_enable_rx_log){
-                netDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "ISL-rx"));
+                netDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "ISL-rx"));
                 //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
-                netDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "ISL-rx"));
+                netDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "ISL-rx"));
             }
             if (m_enable_tx_log){
                 netDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "ISL-tx"));
@@ -679,7 +527,7 @@ namespace ns3 {
             {
                 if (m_enable_drop_log) {devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "GSL-bufOvflwLinkErr")); }
                 if (m_enable_tx_log) {devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "GSL-tx")); }
-                if (m_enable_rx_log) {devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "GSL-rx")); }
+                if (m_enable_rx_log) {devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "GSL-rx")); }
             }
         }
         std::cout << "    >> Finished install GSL interfaces (interfaces, network devices, one shared channel)" << std::endl;
@@ -756,8 +604,8 @@ namespace ns3 {
 
                 // Tracking
                 if (m_enable_rx_log){
-                    p2pDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "TL-rx"));
-                    p2pDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerReduit, m_rx_stream, &m_cbparams, "TL-rx"));
+                    p2pDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
+                    p2pDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
                 }
                 if (m_enable_tx_log){
                     p2pDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));

@@ -205,9 +205,9 @@ GSLHelper::Install (Ptr<Node> node, Ptr<GSLChannel> channel) {
     
 
     // Aggregate MPI receivers // TODO: Why?
-    Ptr<MpiReceiver> mpiRec = CreateObject<MpiReceiver> ();
-    mpiRec->SetReceiveCallback (MakeCallback (&GSLNetDevice::Receive, dev));
-    dev->AggregateObject(mpiRec);
+    // Ptr<MpiReceiver> mpiRec = CreateObject<MpiReceiver> ();
+    // mpiRec->SetReceiveCallback (MakeCallback (&GSLNetDevice::Receive, dev));
+    // dev->AggregateObject(mpiRec);
 
     // Attach to channel
     dev->Attach (channel);
