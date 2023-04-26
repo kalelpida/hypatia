@@ -65,7 +65,7 @@ def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
 						cles_variantes=eval(f.readline())
 	return trouves, sorted(cles_variantes)
 
-def getconfigcourante(dossier, cles_variantes):
+def getconfigcourante(dossier, cles_variantes, num=0):
 	chemin, =re.search('(.*svgde_[^/]*20\d{2}-\d{2}-\d{2}-\d{4}_\d+/)',dossier).groups()#all before the config_name
 	with open(os.path.join(chemin,  "courante.yaml"), 'r') as f:
 		dico_config=yaml.load(f, Loader=yaml.Loader)
@@ -77,7 +77,6 @@ def getconfigcourante(dossier, cles_variantes):
 	nbsats=dico_constel.get('NUM_ORBS')*dico_constel.get('NUM_SATS_PER_ORB')
 	set_globale('NB_SATS', nbsats)
 	set_globale('NB_STATIONS', dico_constel['gateway']['nombre'])
-	num=0
 	liste_variants=[]
 	for cle in cles_variantes:
 		valeur =  dico_config[cle]
@@ -89,7 +88,6 @@ def getconfigcourante(dossier, cles_variantes):
 			liste_variants.append("-".join(str(u) for u in valeur))
 		else:
 			liste_variants.append(str(valeur))
-		num+=1
 	return '::'.join(liste_variants), liste_variants
 
 
@@ -98,7 +96,6 @@ def lecture(dossier, str_variants):
 	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.rx')))
 	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.tx')))
 	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.drops')))
-	print(dico_bdds[str_variants][0])
 
 
 
@@ -115,7 +112,7 @@ def remplissage_dico():
 	except Exception:
 		for i,dos in enumerate(dossiers):
 			print(f"repartition données: {i}/{len(dossiers)}")
-			str_params, liste_variants = getconfigcourante(dos, cles_variantes)
+			str_params, liste_variants = getconfigcourante(dos, cles_variantes, i)
 			df_variants_data.append([dos]+liste_variants+[str_params])
 			lecture(dos, str_params)
 		df_variants=pd.DataFrame(df_variants_data, columns=df_variants_columns)

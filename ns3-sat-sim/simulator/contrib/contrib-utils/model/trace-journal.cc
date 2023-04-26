@@ -140,7 +140,7 @@ void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val,
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
     *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << src_node->GetId() << "," << src_node->GetObject<Specie>()->GetName() << ",";
-    *stream->GetStream() << dst_node->GetId() << "," << src_node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm;
+    *stream->GetStream() << dst_node->GetId() << "," << dst_node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm;
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize << "," << txTime.GetNanoSeconds();
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
     }

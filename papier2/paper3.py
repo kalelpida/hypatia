@@ -169,9 +169,22 @@ def str_recursif(dico, prefix=''):
 def remplace(dic_to, dic_from, prefix='$config/', sep='/'):
         """replace "prefix..." values of dic_to with related fields from dic_from"""
         if isinstance(dic_to, dict):
+            #maj clefs
+            for cle in list(dic_to.keys()):
+                if isinstance(cle, str) and prefix in cle:
+                    debut=cle.find(prefix)
+                    liste=cle[debut:].split(sep)
+                    maj_dic=dic_from
+                    for i,u in enumerate(liste[1:]):
+                        maj_dic=maj_dic[u]
+                    else:
+                        # loop ended correctly  
+                        dic_to.update(maj_dic)
+                        del dic_to[cle]
             enumerateur=dic_to.items()
         elif isinstance(dic_to, list):
             enumerateur=enumerate(dic_to)
+        #maj valeurs
         for cle, val in enumerateur:
             if isinstance(val, str) and prefix in val:
                 debut=val.find(prefix)

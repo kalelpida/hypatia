@@ -130,7 +130,7 @@ class main_step1:
                         i,
                         list_from_to[i][0],
                         list_from_to[i][1],
-                        tcp_list_flow_size_byte[i] if i%2==0 else 100,
+                        tcp_list_flow_size_byte[i],
                         list_start_time[i],
                         extra_parameters,
                         metadata

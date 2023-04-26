@@ -112,7 +112,7 @@ LINKS:
     - ["gsl", { "satellite": { 'DataRate': "DataRate~$config/debit-if-gsl/satellite/Mbps"}, "ue": { 'DataRate': "DataRate~$config/debit-if-gsl/ue/Mbps" }}, {"limiteDist": True, "penalite_s": 10}] # although the ue has only 1 interface, it only makes 1 connection, so it does not need to choose the closest sat
     - ["gsl", { "satellite": { 'DataRate': "DataRate~$config/debit-if-gsl/satellite/Mbps"}, "gateway": { 'DataRate': "DataRate~$config/debit-if-gsl/gateway/Mbps", maxSatellites: 5 }}, {"limiteDist": True, "penalite_s": 10}] # in reality, the gateway has a limited number of interfaces, and connects many users. To maximize bandwidth (not implemented here), we select the 5 closest satellites
     # GSL
-    - ["tl", { "server": { 'DataRate': "DataRate~150Mbps"}, "gateway": { 'DataRate': "DataRate~$config/debit-if-gsl/gateway/Mbps"}}, {"Delay": "Time~5ms"}] # gateway
+    - ["tl", { "server": { 'DataRate': "DataRate~150Mbps"}, "gateway": { 'DataRate': "DataRate~$config/debit-if-gsl/gateway/Mbps", $config/gwTrafficControl}}, {"Delay": "Time~5ms"}] # gateway
     #- "tl", {agg_max_bandwidth: 1}, 1 #one-one, with 1 server
 
 

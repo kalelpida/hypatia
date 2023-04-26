@@ -5,6 +5,7 @@ dev_testing/
 .vscode/
 
 papier2/config/courante.yaml
+papier2/config/temp.*
 papier2/sauvegardes/*
 !papier2/sauvegardes/*.py
 papier2/ns3_experiments/runs/*

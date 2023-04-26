@@ -10,7 +10,7 @@ testparamelag: #nom de la campagne
   #      { sel: topUtil10, errModel: "recvErrRate:0.1-interval:20000,26000ms"}
   #      {} # pas de déterioration, équivalent à commenter "casse liens sat" dans les actions
   deteriorISL: [ {} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
-  nb-UEs-sol: [ 200 ]
+  nb-UEs-sol: [ 100 ]
   algo: [ "algorithm_penal_gsl" ]
   threads: [ 4 ]
   debit-if-isl: [ 20 ] #[ 3, 10 ] #Mb/s
@@ -40,13 +40,12 @@ testparamelag: #nom de la campagne
   # extra_parameters : string, thought as space-separated coefficients
   # pacingDR[double][unit or default to bit per sec] is at application level, so only takes into account the payload
   gwTrafficControl:
-    #- type: "ns3::RRFQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
+    #- QueueDisc: "ns3::RRFQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
     #  MaxSize: QueueSize 30p #type value
     #  ChildQueueDisc: "ns3::FifoQueueDisc"
-    - {}
     #  ChildRate: DataRate 2Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
-    #- {}
-    #- {"type": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 300ms", "Target": "String 200ms"} 
+    - {}
+    - {"QueueDisc": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 300ms", "Target": "String 200ms"} 
 
 info-sauvegarde:
   strdate: '%Y-%m-%d-%H%M'
