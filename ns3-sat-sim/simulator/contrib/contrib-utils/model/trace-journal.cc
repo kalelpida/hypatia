@@ -1,5 +1,10 @@
 #include "trace-journal.h"
 #include "ns3/specie.h"
+#include "ns3/tcp-header.h"
+#include "ns3/udp-header.h"
+#include "ns3/ipv4-header.h"
+#include "ns3/node.h"
+#include "ns3/simulator.h"
 
 namespace ns3 {
 
@@ -135,7 +140,7 @@ static void getPacketFlux(Ptr<const Packet> p, mapflow_t *conversion, resAnalyse
 void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> src_node, Ptr<const Node> dst_node,  Ptr<const Packet> packet, const Time& txTime)
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
-    if (cbparams_val->m_log_condition_NodeId.minNodeId <= src_node->GetId()){
+    if (cbparams_val->m_log_condition_NodeId.minNodeId <= std::max(src_node->GetId(), dst_node->GetId())){
     resAnalysePacket analysePacket = {false, false, 0, 0, 0, 0};
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed

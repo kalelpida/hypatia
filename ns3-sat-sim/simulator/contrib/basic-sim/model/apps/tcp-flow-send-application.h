@@ -32,6 +32,7 @@
 //#include "ns3/topology-satellite-network.h"
 #include "ns3/topology.h"
 #include "ns3/ipv4.h"
+#include "ns3/trace-helper.h"
 
 namespace ns3 {
 
@@ -101,9 +102,12 @@ private:
   void SocketClosedError(Ptr<Socket> socket);
   void CwndChange(uint32_t, uint32_t newCwnd);
   void RttChange (Time, Time newRtt);
-  void InsertCwndLog(int64_t timestamp, uint32_t cwnd_byte);
-  void InsertRttLog (int64_t timestamp, int64_t rtt_ns);
+  void RtoChange(Time, Time newRto);
   void InsertProgressLog (int64_t timestamp, int64_t progress_byte);
+  
+  Ptr<OutputStreamWrapper> m_prog_stream;
+  Ptr<OutputStreamWrapper> m_cwnd_stream;
+  Ptr<OutputStreamWrapper> m_rtt_stream;
 
 };
 

@@ -3,7 +3,9 @@
 #include <map>
 #include "ns3/ipv4.h"
 #include "ns3/id-seq-header.h"
-#include "ns3/internet-module.h"
+#include "ns3/output-stream-wrapper.h"
+#include "ns3/nstime.h"
+//#include "ns3/internet-module.h"
 
 namespace ns3 {
 

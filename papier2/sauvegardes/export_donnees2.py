@@ -77,6 +77,7 @@ def getconfigcourante(dossier, cles_variantes, num=0):
 	nbsats=dico_constel.get('NUM_ORBS')*dico_constel.get('NUM_SATS_PER_ORB')
 	set_globale('NB_SATS', nbsats)
 	set_globale('NB_STATIONS', dico_constel['gateway']['nombre'])
+	set_globale('TYPES_OBJETS', set(dico_constel['TYPES_OBJETS_SOL']+['satellite']))
 	liste_variants=[]
 	for cle in cles_variantes:
 		valeur =  dico_config[cle]
