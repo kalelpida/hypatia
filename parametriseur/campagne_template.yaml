@@ -10,12 +10,13 @@ paramTester:
   pas: [2000] #en ms
   isls: [ isls_plus_grid ]
   deteriorISL: [ {} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:2000,3000ms" } ] 
-  nb-UEs-sol: [ 100 ]
+  nb-UEs-sol: [ 70 ]
   algo: [ "algorithm_free_one_only_over_isls" ]
   threads: [ 4 ]
   debit-if-isl: [ 15 ] #[ 3, 10 ] #Mb/s
   debit-if-gsl: [ {'ue':10, 'gateway':90, 'satellite':40} ] #Mb/s
   logs-actifs: [ ['tx' ] ] #('rx', 'tx', 'drop')
+  estimDelai: [{"isl": 80, 'gsl': 80 }, {"isl": 20, 'gsl': 20}]
   # examples of protocoles:
   # { 'nom':"udp", "metadata":"expInterPacket" }
   # { 'nom':"udp"}

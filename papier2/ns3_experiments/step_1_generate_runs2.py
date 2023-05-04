@@ -199,11 +199,13 @@ class main_step1:
                     conf["devQMaxSize"]="2kB" # tout est géré par le traffic Control
                 else:
                     debit=debitMbps(conf["DataRate"])
+                    delai=lien[2]['estimDelai']
                     if obj in self.cstl_dico['TYPES_OBJETS_SOL']:
-                        queue_size_kB = debit/8*20 # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
-                        queue_size_kB = max(int(queue_size_kB*(self.cstl_dico[obj]['nombre']/nb_dev_reference)**0.5), 2)
+                        queue_size_kB = debit/8*delai # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
+                        queue_size_kB = max(int(queue_size_kB*(self.cstl_dico[obj]['nombre']/nb_dev_reference)**0.5), 2) # at least more than 1 paquet
                     else:
-                        queue_size_kB= int(debit/8*5)
+                        assert obj=="satellite"
+                        queue_size_kB= max(int(debit/8*delai), 2)
                     if "tcp" in protocol_chosen_name: # long queues penalise TCP
                         conf["devQMaxSize"]=f"{queue_size_kB}kB"
                     elif "udp" in protocol_chosen_name:  # UDP does not have this problem, so we cap it at 100 packets
@@ -235,18 +237,23 @@ class main_step1:
         replace_in_lines(lignes,     "[LIENS]", str(noms_liens))
         replace_in_lines(lignes,     "[PARAMS-LIENS]", "\n".join(paramliens))
 
-        #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
-        commodities_set='set(' + ', '.join(str(i) for i in range(len(self.list_from_to))) + ')'
-        replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-LOG]", commodities_set)
-        commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in self.list_from_to) + ')'
-        replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-PINGMESH]", 'set()')
-        #configure logs
-        logs_possibles=set(('RX', 'TX', 'DROP'))
         self.logs_actifs=set([elt.upper() for elt in self.logs_actifs])
-        assert self.logs_actifs.issubset(logs_possibles)
-        for elt in self.logs_actifs:
+        if 'COMS' in self.logs_actifs:
+            commodities_set='set(' + ', '.join(str(i) for i in range(len(self.list_from_to))) + ')'
+            replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-LOG]", commodities_set)
+        else:
+            replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-LOG]", 'set()')
+        if 'PING' in self.logs_actifs:
+            #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
+            commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in self.list_from_to) + ')'
+            replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-PINGMESH]", commodities_set)
+        else:
+            replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-PINGMESH]", 'set()')
+        #configure logs
+        logs_bool=set(('RX', 'TX', 'DROP'))
+        for elt in self.logs_actifs&logs_bool:
             replace_in_lines(lignes,     f"ENABLE_{elt}_LOG", 'true')
-        for elt in logs_possibles-self.logs_actifs:
+        for elt in logs_bool-self.logs_actifs:
             replace_in_lines(lignes,     f"ENABLE_{elt}_LOG", 'false')
         with open(run_dir + "/config_ns3.properties", 'w') as f:
             f.writelines(lignes)

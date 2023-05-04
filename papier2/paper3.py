@@ -21,7 +21,7 @@ nomfic_courante=os.path.join(basedir, "config/courante.yaml")
 
 #si aucune des variables en cle ne change, les actions sont inutiles
 rend_indispensable={
-    ("graine", "constellation", "duree", "pas", "isls", "deteriorISL", "sol", "nb-UEs-sol", "algo"): ("analyse theorique", "casse liens sat")
+    ("graine", "constellation", "duree", "pas", "isls", "deteriorISL", "sol", "nb-UEs-sol", "algo", "maxSatsGw"): ("analyse theorique", "casse liens sat")
 }
 
 def genere_cles(campagne):

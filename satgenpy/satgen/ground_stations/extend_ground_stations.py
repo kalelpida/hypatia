@@ -121,24 +121,25 @@ def extend_ground_objects(graine, cstl_config, filename_ground_out):
     # Dans la plupart des cas, le correspondant est le plus proche
     type_client, type_serveur=cstl_config['ENDPOINTS']
     nb, nbserveurs=cstl_config[type_client]["nombre"], cstl_config[type_serveur]["nombre"]
-    decalages=[]
+    decalages={}
+    # id attribution begins with satellites, then follows TYPE_OBJET_SOL order
     for nom_obj in cstl_config['ENDPOINTS']:
         decalage=cstl_config['NB_SATS']
         for obj in cstl_config['TYPES_OBJETS_SOL']:
             if obj==nom_obj:
                 break
             decalage+=cstl_config[obj]["nombre"]
-        decalages.append(decalage)
+        decalages[nom_obj]=decalage
 
-    for id_client, pos_client in enumerate(selection_positions_sol[type_client]):
+    for pos_client in selection_positions_sol[type_client]:
+        id_client = pos_client['gid']
         # add source and dest of commodities 
         if id_client < 0.2*nb:#20% flots longs
-            dest=np.random.randint(0, nbserveurs)
+            id_serveur=np.random.randint(0, nbserveurs)
         else: #80% flots courts
-            dest=sorted([(geodesic_distance_m_between_ground_stations(pos_client, pos_serveur), id_serveur) for id_serveur, pos_serveur in enumerate(selection_positions_sol[type_serveur])])[0][1]
+            id_serveur=sorted([(geodesic_distance_m_between_ground_stations(pos_client, pos_serveur), pos_serveur['gid']) for pos_serveur in selection_positions_sol[type_serveur]])[0][1]
 
         # remember that for convenience in later routing, IDs in commodities are allocated from 0 to infinite
-        # begin by satellites, then following TYPE_OBJET_SOL order
-        list_from_to.append([id_client+decalages[0], dest+decalages[1]])
-        list_from_to.append([dest+decalages[1], id_client+decalages[0]])
+        list_from_to.append([id_client+decalages[type_client], id_serveur+decalages[type_serveur]])
+        list_from_to.append([id_serveur+decalages[type_serveur], id_client+decalages[type_client]])
     return list_from_to
