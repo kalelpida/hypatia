@@ -16,7 +16,7 @@ testNbSats2: #nom de la campagne
   debit-if-isl: [ 20 ] #[ 3, 10 ] #Mb/s
   debit-if-gsl: [ {'ue':2, 'gateway':150, 'satellite':80} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
   logs-actifs: [ ['rx'] ] #('rx', 'tx', 'drop', 'coms', 'ping') # 'drop' callbacks won't be effective when Traffic Control is set 
-  estimDelai: [{"isl": 80, 'gsl': 80 }, {"isl": 20, 'gsl': 20}]
+  estimDelai: [{"isl": 80, 'gsl': 80, 'extremite': 40 }, {"isl": 5, 'gsl': 10, 'extremite': 80}, {"isl": 20, 'gsl': 20, 'extremite': 40}]
 
   ##------------------
   # satellite_network_min_node_log: rx log only 1st station and satellites
@@ -41,11 +41,12 @@ testNbSats2: #nom de la campagne
   # debit: by default debit-if-gsl['ue'] for UDP. used to compute the size of the data sent by TCP
   # extra_parameters : string, thought as space-separated coefficients
   # pacingDR[double][unit or default to bit per sec] is at application level, so only takes into account the payload
-  gwTrafficControl:
+  srvTrafficControl:
     #- QueueDisc: "ns3::RRFQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
     #  MaxSize: QueueSize 30p #type value
     #  ChildQueueDisc: "ns3::FifoQueueDisc"
     #  ChildRate: DataRate 2Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
+    - {"QueueDisc": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 100ms", "Target": "String 100ms"} 
     - {}
     #- {"QueueDisc": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 300ms", "Target": "String 200ms"} 
 

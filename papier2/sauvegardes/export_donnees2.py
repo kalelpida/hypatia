@@ -6,7 +6,7 @@ A first database contains the different parameters explored in each experiment, 
 Then, a dict keyed with these same 'variants' string contains the database for each experiment
 """
 import os, sys
-import re, yaml
+import re, yaml, csv
 import pickle
 import pandas as pd
 
@@ -19,14 +19,24 @@ FIC_SAUVEGARDE = os.path.join(DOSSIER, os.path.basename(__file__).removesuffix('
 
 df_variants=pd.DataFrame()
 dico_bdds={}
+dico_locales={}
 
 global NB_SATS
 global NB_STATIONS # ground stations, not UEs
+
 def set_globale(nom, valeur):
 	if nom in globals() and valeur != globals()[nom]:
 		raise Exception(f"redéfinition de {nom}")
 	else:
 		globals()[nom]= valeur
+
+def set_locale(cle, nom, valeur):
+	if cle in dico_locales and nom in dico_locales[cle] and valeur != globals()[nom]:
+		raise Exception(f"redéfinition de {nom}")
+	elif cle in dico_locales:
+		dico_locales[cle][nom]=valeur
+	else:
+		dico_locales[cle] = {nom: valeur}
 
 def nom_algo(algo):
 	if algo=='isls':
@@ -65,38 +75,76 @@ def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
 						cles_variantes=eval(f.readline())
 	return trouves, sorted(cles_variantes)
 
+def getcomInfos(dossier, cle):
+	chemin=os.path.dirname(dossier)
+	tcpcoms=os.path.join(chemin, "tcp_flow_schedule.csv")
+	if os.path.isfile(tcpcoms):
+		dico_tcp={}
+		with open(tcpcoms, 'r') as f:
+			rdr = csv.reader(f, delimiter=',')
+			for ligne in rdr:
+				idcom, groupe = ligne[0], ligne[6]
+				dico_tcp[idcom]=groupe
+		set_locale(cle, 'COMS_TCP', dico_tcp)
+	udpcoms=os.path.join(chemin, "udp_burst_schedule.csv")
+	if os.path.isfile(udpcoms):
+		dico_udp={}
+		with open(tcpcoms, 'r') as f:
+			rdr = csv.reader(f, delimiter=',')
+			for ligne in rdr:
+				idcom, groupe = ligne[0], ligne[7]
+				dico_udp[idcom]=groupe
+		set_locale(cle, 'COMS_UDP', dico_udp)
+	
 def getconfigcourante(dossier, cles_variantes, num=0):
 	chemin, =re.search('(.*svgde_[^/]*20\d{2}-\d{2}-\d{2}-\d{4}_\d+/)',dossier).groups()#all before the config_name
 	with open(os.path.join(chemin,  "courante.yaml"), 'r') as f:
 		dico_config=yaml.load(f, Loader=yaml.Loader)
 		constel_nom=dico_config.get('constellation')
-		os.path.abspath
-	chemin_config=re.search('.*papier2', os.path.abspath(__file__)).group(0)
-	with open(os.path.join(chemin_config,  'config', constel_nom+".yaml"), 'r') as f:
+	chemin_config=os.path.dirname(chemin)
+	with open(os.path.join(chemin_config, constel_nom+".yaml"), 'r') as f:
 		dico_constel=yaml.load(f, Loader=yaml.Loader)
-	nbsats=dico_constel.get('NUM_ORBS')*dico_constel.get('NUM_SATS_PER_ORB')
-	set_globale('NB_SATS', nbsats)
-	set_globale('NB_STATIONS', dico_constel['gateway']['nombre'])
-	set_globale('TYPES_OBJETS', set(dico_constel['TYPES_OBJETS_SOL']+['satellite']))
 	liste_variants=[]
 	for cle in cles_variantes:
 		valeur =  dico_config[cle]
 		if not valeur:
-			liste_variants.append('Nul'+cle)
+			liste_variants.append('Nul'+cle[:5])
 		elif type(valeur) is dict:
 			liste_variants.append("-".join(f"{nom}:{val}" if type(val) != dict else f"{nom}:val{num}" for nom, val in valeur.items() ))
 		elif "__iter__" in dir(valeur):
-			liste_variants.append("-".join(str(u) for u in valeur))
+			liste_variants.append("-".join(str(u) for u in valeur)+cle[:5])
 		else:
-			liste_variants.append(str(valeur))
-	return '::'.join(liste_variants), liste_variants
-
+			liste_variants.append(str(valeur)+cle[:5])
+	str_variants= '::'.join(liste_variants)
+	nbsats=dico_constel.get('NUM_ORBS')*dico_constel.get('NUM_SATS_PER_ORB')
+	set_globale('NB_SATS', nbsats)
+	set_globale('NB_STATIONS', dico_constel['gateway']['nombre'])
+	set_globale('TYPES_OBJETS', set(dico_constel['TYPES_OBJETS_SOL']+['satellite']))#just assert we compare similar experiments. For now
+	set_locale(str_variants, 'types_objets', set(dico_constel['TYPES_OBJETS_SOL']+['satellite'])) # maybe this one will be used
+	return str_variants, liste_variants
 
 def lecture(dossier, str_variants):
+	global dico_bdds
 	dico_bdds[str_variants]=[]
 	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.rx')))
 	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.tx')))
 	dico_bdds[str_variants].append(pd.read_csv(os.path.join(dossier, 'link.drops')))
+	fics_progress=[]
+	fics_cwnd=[]
+	fics_rtt=[]
+	for fic in os.listdir(dossier):
+		if re.match('tcp_flow_\d+_progress.csv', fic):
+			fics_progress.append(fic)
+		elif re.match('tcp_flow_\d+_cwnd.csv', fic):
+			fics_cwnd.append(fic)
+		elif re.match('tcp_flow_\d+_rtt.csv', fic):
+			fics_rtt.append(fic)
+	df_suivi=pd.concat([pd.read_csv(os.path.join(dossier, fic)) for fic in fics_progress] if fics_progress else [pd.DataFrame()], ignore_index=True)
+	dico_bdds[str_variants].append(df_suivi)
+	df_suivi=pd.concat([pd.read_csv(os.path.join(dossier, fic)) for fic in fics_cwnd] if fics_cwnd else [pd.DataFrame()], ignore_index=True)
+	dico_bdds[str_variants].append(df_suivi)
+	df_suivi=pd.concat([pd.read_csv(os.path.join(dossier, fic)) for fic in fics_rtt] if fics_rtt else [pd.DataFrame()], ignore_index=True)
+	dico_bdds[str_variants].append(df_suivi)
 
 
 
@@ -114,10 +162,11 @@ def remplissage_dico():
 		for i,dos in enumerate(dossiers):
 			print(f"repartition données: {i}/{len(dossiers)}")
 			str_params, liste_variants = getconfigcourante(dos, cles_variantes, i)
+			getcomInfos(dos, str_params)
 			df_variants_data.append([dos]+liste_variants+[str_params])
 			lecture(dos, str_params)
 		df_variants=pd.DataFrame(df_variants_data, columns=df_variants_columns)
-		globales={'NB_SATS':NB_SATS, 'SOUS_DOSSIERS':dossiers, "NB_STATIONS":NB_STATIONS}
+		globales={'NB_SATS':NB_SATS, 'SOUS_DOSSIERS':dossiers, "NB_STATIONS":NB_STATIONS, 'locales': dico_locales}
 		with open(FIC_SAUVEGARDE, 'wb') as f:
 			pickle.dump((globales, df_variants, dico_bdds), f)
 	"""

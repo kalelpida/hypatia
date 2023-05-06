@@ -195,18 +195,21 @@ class main_step1:
             for obj, conf in lien[1].items():
                 strconf=f"{nom_lien}_{obj}_params="
                 
-                if "QueueDisc" in conf:
+                if "QueueDisc" in conf and "MaxSize" in conf:
                     conf["devQMaxSize"]="2kB" # tout est géré par le traffic Control
                 else:
                     debit=debitMbps(conf["DataRate"])
-                    delai=lien[2]['estimDelai']
+                    delai=self.cstl_dico[obj].get('estimDelai', lien[2]['estimDelai'])#if this is the extremity, get the estimated delay to reach the other side. Otherwise, get the link delay
                     if obj in self.cstl_dico['TYPES_OBJETS_SOL']:
                         queue_size_kB = debit/8*delai # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
                         queue_size_kB = max(int(queue_size_kB*(self.cstl_dico[obj]['nombre']/nb_dev_reference)**0.5), 2) # at least more than 1 paquet
                     else:
                         assert obj=="satellite"
                         queue_size_kB= max(int(debit/8*delai), 2)
-                    if "tcp" in protocol_chosen_name: # long queues penalise TCP
+                    if "QueueDisc" in conf: #vraiment utile?
+                        conf["devQMaxSize"]="2kB" 
+                        conf["MaxSize"]=f"QueueSize {queue_size_kB}kB"
+                    elif "tcp" in protocol_chosen_name: # long queues penalise TCP
                         conf["devQMaxSize"]=f"{queue_size_kB}kB"
                     elif "udp" in protocol_chosen_name:  # UDP does not have this problem, so we cap it at 100 packets
                         conf["devQMaxSize"]=f"{min(queue_size_kB, 100)}kB"
