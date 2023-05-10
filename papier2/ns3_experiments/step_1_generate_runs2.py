@@ -248,10 +248,12 @@ class main_step1:
             replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-LOG]", 'set()')
         if 'PING' in self.logs_actifs:
             #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
+            #x=np.unique(np.array(self.list_from_to).flatten())
+            #liste=[[u, 756] for u in x]+[[756, u] for u in x]
             commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in self.list_from_to) + ')'
-            replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-PINGMESH]", commodities_set)
-        else:
-            replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-PINGMESH]", 'set()')
+            pingmesh="enable_pingmesh_scheduler=true\npingmesh_interval_ns=1000000000\npingmesh_endpoint_pairs="+commodities_set
+            replace_in_lines(lignes,     "enable_pingmesh_scheduler=false", pingmesh)
+        
         #configure logs
         logs_bool=set(('RX', 'TX', 'DROP'))
         for elt in self.logs_actifs&logs_bool:

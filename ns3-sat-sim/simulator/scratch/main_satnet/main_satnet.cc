@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     std::string valid;
     std::cin >> valid;
     std::cout << " suite:" << valid << std::endl;
-    */
+    //*/
     // Load basic simulation environment
     Ptr<BasicSimulation> basicSimulation = CreateObject<BasicSimulation>(run_dir);
 
@@ -78,6 +78,7 @@ int main(int argc, char *argv[]) {
     ArbiterSingleForwardHelper arbiterHelper(basicSimulation, topology->GetNodes());
     // for now disable ifbandwidth updates
     //GslIfBandwidthHelper gslIfBandwidthHelper(basicSimulation, topology->GetNodes());
+    Packet::EnablePrinting();
 
     // Schedule flows
     TcpFlowScheduler tcpFlowScheduler(basicSimulation, topology); // Requires enable_tcp_flow_scheduler=true

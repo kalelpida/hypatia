@@ -53,6 +53,7 @@ PointToPointTracenHelper::PointToPointTracenHelper(const std::map<std::string, s
     // attr->second : nodetype attr->first : first node of next nodetype
     m_queueFactories[attr.first] = ObjectFactory();
     m_queueFactories.at(attr.first).SetTypeId ("ns3::DropTailQueue<Packet>");
+    m_queueFactories.at(attr.first).Set("MaxSize", QueueSizeValue(QueueSize(m_node_if_params.at(attr.first).at("devQMaxSize"))));
     m_deviceFactories[attr.first] = ObjectFactory();
     m_deviceFactories.at(attr.first).SetTypeId ("ns3::PointToPointTracenNetDevice");
     setObjFactoryParams(m_deviceFactories.at(attr.first), attr.second);

@@ -228,13 +228,18 @@ def main():
         exp.setStrDate(strdate)
         estPremiere=True
         while not fini:
-            fini=exp.experienceSuivante()
             if estPremiere:
                 exp.actions=set(liste_actions)
+                #update missing information in constellation config file
+                exp.updateCstlInfo()
+                # save current config
+                with open(nomfic_courante, 'w') as f:
+                    yaml.dump(exp.courante, f)
                 estPremiere=False
             exp.execution()
             if (destdir:=campagnedir+'/'+expedir) and sources:
                 exp.operation_sauvegarde(destdir, sources)
+            fini=exp.experienceSuivante()
         cd=campagnedir.format(nom_campagne=nom_campagne)
         with open(os.path.join(cd,'variations.txt'), "w") as f:
             f.write(str(cles_variantes))

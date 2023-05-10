@@ -9,6 +9,7 @@
 namespace ns3 {
 
 struct structresAnalysePacket{
+    bool succes;
     bool isTCP;
     bool isReverse; // wether it comes from the destination
     uint32_t dataOffset;//corresponds to the fragment initial data, (o)
@@ -46,6 +47,7 @@ static void getPacketFlux(Ptr<const Packet> p, mapflow_t *conversion, resAnalyse
         if (! it.HasNext()){
             p->Print(std::cerr);
             NS_ABORT_MSG("incomplete packet");
+            return;
         }
         item = it.Next ();
         if (item.tid == tidudpheader){
@@ -64,8 +66,10 @@ static void getPacketFlux(Ptr<const Packet> p, mapflow_t *conversion, resAnalyse
             }
             item = it.Next ();
             if (item.tid!=tidInteret) {
-                p->Print(std::cerr);
-                NS_ABORT_MSG("Not an usual Hypatia packet");
+                analysePacket.succes=false;//inintéressant, sans doute du ping
+                return;
+                //p->Print(std::cerr);
+                //NS_ABORT_MSG("Not an usual Hypatia packet");
             }
             IdSeqHeader incomingIdSeq;
             incomingIdSeq.Deserialize(item.current);
@@ -141,13 +145,15 @@ void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val,
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     if (cbparams_val->m_log_condition_NodeId.minNodeId <= std::max(src_node->GetId(), dst_node->GetId())){
-    resAnalysePacket analysePacket = {false, false, 0, 0, 0, 0};
+    resAnalysePacket analysePacket = {true, false, false, 0, 0, 0, 0};
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
+    if (analysePacket.succes){
     *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << src_node->GetId() << "," << src_node->GetObject<Specie>()->GetName() << ",";
     *stream->GetStream() << dst_node->GetId() << "," << dst_node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm;
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize << "," << txTime.GetNanoSeconds();
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    }
     }
 }
 
@@ -156,12 +162,14 @@ void PacketEventTracerSimple(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     // Extract burst identifier and packet sequence number
     if (cbparams_val->m_log_condition_NodeId.minNodeId <= node->GetId()){
-    resAnalysePacket analysePacket = {false, false, 0, 0, 0, 0};
+    resAnalysePacket analysePacket = {true, false, false, 0, 0, 0, 0};
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
+    if (analysePacket.succes){
     *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize << "," << rxTime.GetNanoSeconds();
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    }
     }
 }
 
@@ -170,12 +178,14 @@ void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     // Extract burst identifier and packet sequence number
     if (cbparams_val->m_log_condition_NodeId.minNodeId >= node->GetId()){
-    resAnalysePacket analysePacket = {false, false, 0, 0, 0, 0};
+    resAnalysePacket analysePacket = {true, false, false, 0, 0, 0, 0};
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
+    if (analysePacket.succes){
     *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize;
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    }
     }
 }
 }

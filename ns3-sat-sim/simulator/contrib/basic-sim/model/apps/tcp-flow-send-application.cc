@@ -110,7 +110,6 @@ TcpFlowSendApplication::TcpFlowSendApplication()
           m_ackedBytes(0),
           m_isCompleted(false) {
     NS_LOG_FUNCTION(this);
-    Packet::EnablePrinting();
 }
 
 TcpFlowSendApplication::~TcpFlowSendApplication() {
@@ -154,8 +153,17 @@ void TcpFlowSendApplication::StartApplication(void) { // Called at time specifie
         Address localAddrPort;
         m_socket->GetSockName(localAddrPort);
         InetSocketAddress saddr = InetSocketAddress::ConvertFrom(localAddrPort);
-        saddr.SetIpv4(GetNode()->GetObject<Ipv4>()->GetAddress(1, 0).GetLocal());
-        m_topology->RegisterFlow(std::pair<InetSocketAddress, Ipv4Address>(saddr, InetSocketAddress::ConvertFrom(m_peer).GetIpv4()) , m_tcpFlowId);
+        int nbifs = GetNode()->GetObject<Ipv4>()->GetNInterfaces();
+        int nbaddrs;
+        for (auto ifnum=1; ifnum<nbifs; ifnum++){
+            //la lo n'est pas prise en compte. Un même objet peut avoir plusieurs interfaces et répondre à plusieurs addresses par interface
+            //how to check multicast?
+            nbaddrs = GetNode()->GetObject<Ipv4>()->GetNAddresses(ifnum);
+            for (auto addrnum=0; addrnum<nbaddrs; addrnum++){
+                saddr.SetIpv4(GetNode()->GetObject<Ipv4>()->GetAddress(ifnum, addrnum).GetLocal());
+                m_topology->RegisterFlow(std::pair<InetSocketAddress, Ipv4Address>(saddr, InetSocketAddress::ConvertFrom(m_peer).GetIpv4()) , m_tcpFlowId);
+            }
+        }
         
         // Connect, no receiver
         m_socket->Connect(m_peer);

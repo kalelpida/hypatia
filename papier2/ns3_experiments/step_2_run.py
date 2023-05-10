@@ -61,7 +61,7 @@ if (unique_id % num_machines) == workload_id:
 	# Perform run
 	local_shell.perfect_exec(
 		"cd ../../ns3-sat-sim/simulator; "
-		#"NS_LOG='GSLNetDevice' "
+		#"NS_LOG='GSLNetDevice=level_logic:PointToPointLaserNetDevice=level_logic:PointToPointTracenNetDevice=level_logic' "
 		"./waf --run=\"main_satnet "
 		"--run_dir='../../papier2/ns3_experiments/" + run_dir + "'\""
 		" 2>&1 | tee '../../papier2/ns3_experiments/" + logs_ns3_dir + "/console.txt'",

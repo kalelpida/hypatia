@@ -11,7 +11,7 @@ import pickle
 import pandas as pd
 
 
-DOSSIER='test'
+DOSSIER='convallaria'
 if len(sys.argv)==2:
 	DOSSIER=sys.argv[1].strip('/')
 

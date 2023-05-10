@@ -62,6 +62,13 @@ def worker(args):
         net_gen_infos
     )
 
+def clean_recursive(chem):
+    if os.path.isdir(chem):
+        for fic in os.listdir(chem):
+            clean_recursive(os.path.join(chem, fic))
+        os.rmdir(chem)
+    else:
+        os.remove(chem)
 
 def help_dynamic_state(
         output_generated_data_dir, num_threads, name, time_step_ms, duration_s,
@@ -71,8 +78,10 @@ def help_dynamic_state(
     # Directory
     output_dynamic_state_dir = output_generated_data_dir + "/" + name + "/dynamic_state_" + str(time_step_ms) \
                                + "ms_for_" + str(duration_s) + "s"
-    if not os.path.isdir(output_dynamic_state_dir):
-        os.makedirs(output_dynamic_state_dir)
+    
+    clean_recursive(output_dynamic_state_dir)
+    #rather than erase everything, we could just bypass route computing ?
+    os.makedirs(output_dynamic_state_dir)
 
     # In nanoseconds
     simulation_end_time_ns = duration_s * 1000 * 1000 * 1000

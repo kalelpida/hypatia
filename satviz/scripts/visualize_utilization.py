@@ -23,7 +23,7 @@
 import math
 import ephem
 import pandas as pd
-import re, os
+import re, os, csv
 import yaml
 
 try:
@@ -34,10 +34,10 @@ except (ImportError, SystemError):
 import sys
 
 
-IN_UTIL_DIR='../../papier2/sauvegardes/paramelae'
+IN_UTIL_DIR='../../papier2/sauvegardes/pbrtt'
 MODE = 1 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
 # Time in ms for which visualization will be generated
-GEN_TIME = 29000  #ms
+GEN_TIME = 5000  #ms
 UTIL_INTERVAL = 100 #ms
 
 
@@ -162,15 +162,16 @@ def generate_link_util_at_time():
     gen_time_ns=int(GEN_TIME)*int(1e6)
     fin_interval_ns=gen_time_ns+int(UTIL_INTERVAL)*int(1e6)
     with open(IN_UTIL_FILE, 'r') as f:
-        while (l:=f.readline()):
+        lecteur=csv.reader(f, delimiter=',')
+        next(lecteur)#skip header. Sinon utiliser csv.DictReader
+        for l in lecteur:
             #30000,767,431,2,0,1502,1201599,GSL-tx
-            deb, fin =l.find(','), l.rfind(',')
-            if (t_ns:=int(l[:deb])) < gen_time_ns:
+            t_ns, src, typesrc, dst, typedst, idcom, idseq, offset, payload, txtime_ns, isTCP, isRetour, type_lien = l
+            t_ns, src, dst, idcom, txtime_ns=int(t_ns), int(src), int(dst), int(idcom), int(txtime_ns)
+            if t_ns< gen_time_ns:
                 continue
             elif t_ns>= fin_interval_ns:
                 break
-            type_lien=l[fin+1:].strip()
-            src, dst, idcom, idseq, offset, payload, txtime_ns, isTCP, isRetour = eval(l[deb+1:fin])
             if idcom%2==MODE:
                 continue
             txtime_ns=min(txtime_ns,fin_interval_ns-t_ns)
@@ -194,14 +195,14 @@ def generate_link_util_at_time():
             case 'sat':
                 material="Cesium.Color.BLACK.withAlpha(1)"
                 dimensions=(10000.0, 10000.0, 10000.0)
-            case 'gateway':
+            case 'gateway' | "server":
                 material="Cesium.Color.ROYALBLUE.withAlpha(1)"
                 dimensions=(60000.0, 60000.0, 60000.0)
             case 'ue':
                 material="Cesium.Color.SIENNA.withAlpha(1)"
                 dimensions=(30000.0, 30000.0, 30000.0)
             case _:
-                raise Exception('type non reconnu')
+                raise Exception(obj['type'], 'type non reconnu')
         viz_string += "var redSphere = viewer.entities.add({name : '', position: Cesium.Cartesian3.fromDegrees(" \
                       + str(obj["lon"]) + "," \
                       + str(obj["lat"]) + "," \

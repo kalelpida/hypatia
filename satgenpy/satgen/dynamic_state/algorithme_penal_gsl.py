@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import networkx as nx 
+import os
 
 
 def algorithm_penal_gsl_fw(
@@ -109,8 +110,9 @@ def algorithm_penal_gsl(
     # Forwarding state
     fstate = {}
     # Now write state to file for complete graph
-    output_filename = output_dynamic_state_dir + "/fstate_" + str(time_since_epoch_ns) + ".txt"
-    output_filename_chemins = output_dynamic_state_dir + "/paths_" + str(time_since_epoch_ns) + ".txt"
+    output_filename = os.path.join(output_dynamic_state_dir, "fstate_" + str(time_since_epoch_ns) + ".txt")
+    output_filename_chemins = os.path.join(output_dynamic_state_dir, "paths", "paths_" + str(time_since_epoch_ns) + ".txt")
+    os.makedirs(os.path.join(output_dynamic_state_dir, 'paths'), exist_ok=True)
     #print("  > Writing forwarding state to: " + output_filename)
     with open(output_filename, "w") as f_out, open(output_filename_chemins, "w") as f_chem:
 

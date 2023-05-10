@@ -51,8 +51,8 @@ def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_st
 def extend_ground_objects(graine, cstl_config, filename_ground_out):
     # first, generate position file
     np.random.seed(graine)
-    if len(cstl_config.get('ENDPOINTS', []))==0 or len(cstl_config['ENDPOINTS'])>2:
-        raise Exception("choisir les terminaux à l'origine des flux: ENDPOINTS doit contenir 1 ou 2 types maximum.")
+    if len(cstl_config.get('ENDPOINTS', []))==0:
+        raise Exception("choisir les terminaux à l'origine des flux: ENDPOINTS doit contenir 1 ou 2 type d'objets.")
 
     selection_positions_sol={}
     ground_object_positions=[]
@@ -119,8 +119,8 @@ def extend_ground_objects(graine, cstl_config, filename_ground_out):
     #second cas, 2 classes de terminaux.
     # Les objets de la première classe vont tous établir 2 flux (1 aller, 1 retour) vers des objets de la seconde classe.
     # Dans la plupart des cas, le correspondant est le plus proche
-    type_client, type_serveur=cstl_config['ENDPOINTS']
-    nb, nbserveurs=cstl_config[type_client]["nombre"], cstl_config[type_serveur]["nombre"]
+    types_client, type_serveur=cstl_config['ENDPOINTS'][:-1], cstl_config['ENDPOINTS'][-1]
+    nbserveurs=cstl_config[type_serveur]["nombre"]
     decalages={}
     # id attribution begins with satellites, then follows TYPE_OBJET_SOL order
     for nom_obj in cstl_config['ENDPOINTS']:
@@ -130,16 +130,18 @@ def extend_ground_objects(graine, cstl_config, filename_ground_out):
                 break
             decalage+=cstl_config[obj]["nombre"]
         decalages[nom_obj]=decalage
+    
+    for type_client in types_client:
+        nb=cstl_config[type_client]["nombre"]
+        for pos_client in selection_positions_sol[type_client]:
+            id_client = pos_client['gid']
+            # add source and dest of commodities 
+            if id_client < 0.2*nb:#20% flots longs
+                id_serveur=np.random.randint(0, nbserveurs)
+            else: #80% flots courts
+                id_serveur=sorted([(geodesic_distance_m_between_ground_stations(pos_client, pos_serveur), pos_serveur['gid']) for pos_serveur in selection_positions_sol[type_serveur]])[0][1]
 
-    for pos_client in selection_positions_sol[type_client]:
-        id_client = pos_client['gid']
-        # add source and dest of commodities 
-        if id_client < 0.2*nb:#20% flots longs
-            id_serveur=np.random.randint(0, nbserveurs)
-        else: #80% flots courts
-            id_serveur=sorted([(geodesic_distance_m_between_ground_stations(pos_client, pos_serveur), pos_serveur['gid']) for pos_serveur in selection_positions_sol[type_serveur]])[0][1]
-
-        # remember that for convenience in later routing, IDs in commodities are allocated from 0 to infinite
-        list_from_to.append([id_client+decalages[type_client], id_serveur+decalages[type_serveur]])
-        list_from_to.append([id_serveur+decalages[type_serveur], id_client+decalages[type_client]])
+            # remember that for convenience in later routing, IDs in commodities are allocated from 0 to infinite
+            list_from_to.append([id_client+decalages[type_client], id_serveur+decalages[type_serveur]])
+            list_from_to.append([id_serveur+decalages[type_serveur], id_client+decalages[type_client]])
     return list_from_to
