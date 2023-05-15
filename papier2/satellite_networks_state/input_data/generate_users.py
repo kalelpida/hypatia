@@ -205,8 +205,8 @@ def create_users_villeschoisies(Nb, constellation='tas_700', ficVille='ground_st
             f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
 
 
-def kent_pdf(dlat, dlon, kappa):
-    return np.exp(kappa*np.cos(dlat)*np.cos(dlon))*kappa/4/np.pi/np.sinh(kappa)
+def kent_pdf(prodscal, kappa):
+    return np.exp(kappa*prodscal)*kappa/4/np.pi/np.sinh(kappa)
 
 def kent_randomgen(lat, lon, kappa, latmax):
     """
@@ -217,18 +217,15 @@ def kent_randomgen(lat, lon, kappa, latmax):
     lat_accept=False
     maxpdf=(np.exp(kappa)*kappa/4/np.pi/np.sinh(kappa))
     slatmax=np.sin(latmax)
+    sl, sL, cl, cL = np.sin(lon), np.sin(lat), np.cos(lon), np.cos(lat)
+    vec_central=np.array([cl*cL, sl*cL, sL])
     while not lat_accept:
         latobj, lonobj=np.arcsin(np.random.uniform(-slatmax, slatmax)), np.random.uniform(-np.pi, np.pi)#random from 3D sphere
-        deltalat=ramene_pi(latobj-lat)
-        deltalon=ramene_pi(lonobj-lon)
+        slobj, sLobj, clobj, cLobj = np.sin(lonobj), np.sin(latobj), np.cos(lonobj), np.cos(latobj)
+        prodscal=np.dot(vec_central, np.array([clobj*cLobj, slobj*cLobj, sLobj]))
         u=np.random.random()*maxpdf
-        lat_accept = u<kent_pdf(deltalat, deltalon, kappa)
-    if latobj>np.pi/2:
-        latobj=np.pi-latobj
-        lonobj+=np.pi
-    elif latobj<-np.pi/2:
-        latobj=-np.pi-latobj
-        lonobj+=np.pi
+        lat_accept = u<kent_pdf(prodscal, kappa)
+    assert -np.pi/2<latobj<np.pi/2
     return [latobj, lonobj]
 
 def ramene_pi(x):
@@ -245,8 +242,9 @@ def xyz(lat, lon):
 
 def test_distrib():
     lon, lat = np.pi/6, np.pi/3
-    kappa = 180
-    u = [xyz(*kent_randomgen(lat, lon, kappa)) for _ in range(5000)]
+    latmax=np.radians(80)
+    kappa = 5
+    u = [xyz(*kent_randomgen(lat, lon, kappa, latmax)) for _ in range(1000)]
     print(np.mean(np.reshape(u, (-1, len(u[0]))), axis=0))
     plt.figure(figsize=(20, 10))
     plt.subplot(121, projection='3d')
@@ -257,15 +255,9 @@ def test_distrib():
     plt.title('kent perso')
 
     plt.subplot(122)
-    s = np.random.vonmises(lon, kappa, 5)
+    s = np.random.vonmises(lon, kappa, 200)
     x=np.cos(s)
     y=np.sin(s)
-    deltax=min(x)-max(x)
-    deltay=(min(y)-max(y))/2
-    delta=min(deltax, deltay)
-    rab=0.015
-    plt.xlim(sorted((np.mean(x)-delta-rab,np.mean(x)+rab)))
-    plt.ylim(sorted((delta-rab+np.mean(y),-delta+rab+np.mean(y))))
     plt.plot(x, y,',')
     plt.title('vMF')
     plt.show()
@@ -276,5 +268,5 @@ if __name__ =='__main__':
     #test_distrib()
     #create_users_randomGlobe(250)
     create_users_villesGlobe(1000)
-    #create_users_villeschoisies(1000)
+    create_users_villeschoisies(1000)
 

@@ -1,6 +1,6 @@
 quaesumus: #nom de la campagne
   graine: [0]
-  constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
+  constellation: [ kuiper_630 ] # name will be inflated from files chosen in this directory
   duree: [ 20 ] #en s
   pas: [2000] #en ms
   isls: [ isls_plus_grid ]
@@ -16,7 +16,7 @@ quaesumus: #nom de la campagne
   debit-if-isl: [ 20 ] #[ 3, 10 ] #Mb/s
   debit-if-gsl: [ {'ue':2, 'gateway':150, 'satellite':80} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
   logs-actifs: [ ['rx', 'tx', 'drop', 'coms', 'ping'] ] #('rx', 'tx', 'drop', 'coms', 'ping') # 'drop' callbacks won't be effective when Traffic Control is set 
-  estimDelai: [{"isl": 5.5, 'gsl': 4, 'extremite': 20 }, {"isl": 5.5, 'gsl': 4, 'extremite': 80 }, {"isl": 10, 'gsl': 8, 'extremite': 80 }]
+  estimDelai: [{"isl": 5, 'gsl': 4, 'extremite': 20 }, {"isl": 5, 'gsl': 4, 'extremite': 80 }, {"isl": 10, 'gsl': 8, 'extremite': 80 }]
 
   ##------------------
   # satellite_network_min_node_log: rx log only 1st station and satellites
