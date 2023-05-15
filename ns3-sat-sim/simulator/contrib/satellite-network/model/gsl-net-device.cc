@@ -255,7 +255,6 @@ GSLNetDevice::TransmitStart (Ptr<Packet> p, const Address dest)
   NS_ASSERT_MSG (m_txMachineState == READY, "Must be READY to transmit");
   m_txMachineState = BUSY;
   m_currentPkt = p;
-  m_phyTxBeginTrace (m_currentPkt);
 
   Time txTime = m_bps.CalculateBytesTxTime (p->GetSize ());
   Time txCompleteTime = txTime + m_tInterframeGap;
@@ -264,9 +263,11 @@ GSLNetDevice::TransmitStart (Ptr<Packet> p, const Address dest)
   Simulator::Schedule (txCompleteTime, &GSLNetDevice::TransmitComplete, this, dest);
 
   bool result = m_channel->TransmitStart (p, this, dest, txTime);
+  m_phyTxBeginTrace (m_node, m_channel->GetDestDevice()->GetNode(),  m_currentPkt, txTime);
+  NS_ABORT_MSG_IF(txTime.GetNanoSeconds() == 0, txTime.GetNanoSeconds() << " src:" << m_node->GetId() << " taille:" << p->GetSize () << " debit:" << m_bps.GetBitRate());
   if (result == false)
     {
-      m_phyTxDropTrace (p);
+      m_phyTxDropTrace (m_node, m_channel->GetDestDevice()->GetNode(),  m_currentPkt, txTime);
     }
 
   NS_LOG_FUNCTION (this << " done");
@@ -342,9 +343,9 @@ GSLNetDevice::SetReceiveErrorModel (Ptr<ErrorModel> em)
 }
 
 void
-GSLNetDevice::Receive (Ptr<Packet> packet)
+GSLNetDevice::Receive (Ptr<Packet> packet, Time rxtime)
 {
-  NS_LOG_FUNCTION (this << packet << this->GetNode()->GetId());
+  NS_LOG_FUNCTION (this << packet->ToString() << this->GetNode()->GetId());
   uint16_t protocol = 0;
 
   if (m_receiveErrorModel && m_receiveErrorModel->IsCorrupt (packet) ) 
@@ -353,7 +354,7 @@ GSLNetDevice::Receive (Ptr<Packet> packet)
       // If we have an error model and it indicates that it is time to lose a
       // corrupted packet, don't forward this packet up, let it go.
       //
-      m_phyRxDropTrace (packet);
+      m_phyRxDropTrace (m_node, packet, rxtime);
     }
   else 
     {
@@ -389,8 +390,8 @@ GSLNetDevice::Receive (Ptr<Packet> packet)
           // 'from' argument for distributed simulator
           m_promiscCallback (this, packet, protocol, GetAddress(), GetAddress (), NetDevice::PACKET_HOST);
         }
-
-      m_macRxTrace (originalPacket);
+      
+      m_macRxTrace (m_node, originalPacket, rxtime);
       m_rxCallback (this, packet, protocol, GetAddress());
     }
 }
@@ -512,9 +513,10 @@ GSLNetDevice::Send (
   uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << packet << dest << protocolNumber);
-  NS_LOG_LOGIC ("p=" << packet << ", dest=" << &dest);
+  NS_LOG_LOGIC ("p=" << packet->ToString() << ", dest=" << &dest);
   NS_LOG_LOGIC ("UID is " << packet->GetUid ());
   NS_LOG_LOGIC ("node is " << this->GetNode()->GetId());
+  NS_LOG_LOGIC ("queue size is " << m_queue->GetCurrentSize());
 
   //
   // If IsLinkUp() is false it means there is no channel to send any packet 
@@ -522,7 +524,7 @@ GSLNetDevice::Send (
   //
   if (IsLinkUp () == false)
     {
-      m_macTxDropTrace (packet);
+      m_macTxDropTrace (m_node,  m_currentPkt);
       return false;
     }
 
@@ -558,7 +560,7 @@ GSLNetDevice::Send (
 
   // Enqueue may fail (overflow)
 
-  m_macTxDropTrace (packet);
+  m_macTxDropTrace (m_node,  packet);
   return false;
 }
 
@@ -615,7 +617,8 @@ void
 GSLNetDevice::DoMpiReceive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
-  Receive (p);
+  NS_ABORT_MSG("MPI receive not implemented");
+  Receive (p, Time(0));
 }
 
 bool

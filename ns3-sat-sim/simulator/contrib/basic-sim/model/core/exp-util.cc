@@ -423,6 +423,78 @@ std::vector<std::pair<std::string, std::string>> parse_map_string(const std::str
     return result;
 }
 
+
+/**
+ * Parse dict string (i.e., map(...)) into key-value pair list (which can be converted into a map later on).
+ * If it is incorrect format, throw an exception.
+ *
+ * @param str  Input string (e.g., "{a:b, c:d}"
+ *
+ * @return map of key-value pairs (e.g., {a:b, c:d} )
+ */
+std::map<std::string, std::string> parse_dict_string(const std::string str) {
+
+    // Check for encasing map(...)
+    if (!starts_with(str, "{") || !ends_with(str, "}")) {
+        throw std::invalid_argument(format_string( "Map %s is not encased in { x:y, ...}", str.c_str()));
+    }
+    std::string only_inside = str.substr(1, str.size() - 2);
+    std::map<std::string, std::string> final;
+
+    // If it is empty, just return an empty vector
+    if (trim(only_inside).empty()) {
+        return final;
+    }
+
+    // Split by comma to find all elements
+    std::vector<std::string> comma_split_list = split_string(only_inside, ",");
+    std::stringstream ss(only_inside);
+    std::string keyval;
+    std::vector<std::string> splitkeyval;
+    std::regex protection_re("::");
+    std::regex deprotection_re("##");
+    std::regex quotes("'|\"");
+    while (getline(ss, keyval, ',')){
+        keyval = std::regex_replace(keyval, protection_re, "##");
+        keyval = std::regex_replace(keyval, quotes, "");//delete all quotes
+        splitkeyval= split_string(keyval, ":", 2);
+        for (size_t i=0; i<splitkeyval.size(); i++){
+            splitkeyval[i] = std::regex_replace(splitkeyval[i], deprotection_re, "::");
+        }
+        final[trim(splitkeyval[0])] = trim(splitkeyval[1]);
+    }
+
+    return final;
+}
+
+/**
+ * Parse simple list string (i.e., [...]) into a real list without whitespace.
+ * If it is incorrect format, throw an exception.
+ *
+ * @param str  Input string (e.g., "[a,b,c]")
+ *
+ * @return List of strings (e.g., [a, b, c])
+ */
+std::vector<std::string> parse_simple_list_string(const std::string str) {
+
+    // Check list(...)
+    if (!starts_with(str, "[") || !ends_with(str, "]")) {
+        throw std::invalid_argument(format_string( "List %s is not encased in list: [...]", str.c_str()));
+    }
+    std::string only_inside = str.substr(1, str.size() - 2);
+    if (trim(only_inside).empty()) {
+        std::vector<std::string> final;
+        return final;
+    }
+    std::regex quotes("'|\"");
+    std::vector<std::string> prelim_list = split_string(only_inside, ",");
+    std::vector<std::string> final_list;
+    for (std::string& s : prelim_list) {
+        s = std::regex_replace(s, quotes, "");//delete all quotes
+        final_list.push_back(trim(s));
+    }
+    return final_list;
+}
 /**
  * Throw an exception if not all items are less than a number.
  *

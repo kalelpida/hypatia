@@ -94,6 +94,7 @@ public:
     const std::vector<std::pair<uint32_t, uint32_t>>& GetInterfaceIdxsForEdges();
     const std::vector<std::pair<Ptr<PointToPointNetDevice>, Ptr<PointToPointNetDevice>>>& GetNetDevicesForEdges();
     Ptr<PointToPointNetDevice> GetNetDeviceForLink(std::pair<int64_t, int64_t> link);
+    void RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> , uint64_t);//blank func
 
 private:
 

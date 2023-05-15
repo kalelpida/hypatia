@@ -32,7 +32,7 @@
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
-#include "ns3/point-to-point-module.h"
+//#include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/command-line.h"
@@ -45,18 +45,32 @@
 #include "ns3/type-id.h"
 #include "ns3/vector.h"
 #include "ns3/satellite-position-helper.h"
-#include "ns3/point-to-point-laser-helper.h"
-#include "ns3/gsl-helper.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"
 #include "ns3/ipv4-static-routing-helper.h"
 #include "ns3/ipv4-static-routing.h"
 #include "ns3/ipv4-routing-table-entry.h"
 #include "ns3/wifi-net-device.h"
-#include "ns3/point-to-point-laser-net-device.h"
 #include "ns3/ipv4.h"
+#include <regex>
+#include "ns3/id-seq-header.h"
+#include "ns3/states-error-model.h"
+#include "ns3/simulator.h" // for scheduling in SetErrorModel
+#include "ns3/specie.h"
+
+//devices
+#include "ns3/point-to-point-laser-net-device.h"
+#include "ns3/point-to-point-laser-helper.h"
+#include "ns3/gsl-helper.h"
+#include "ns3/point-to-point-tracen-helper.h"
+#include "ns3/point-to-point-tracen-net-device.h"
+#include "ns3/point-to-point-tracen-channel.h"
+#include "point-to-point-tracen-remote-channel.h"
+
+#include "ns3/trace-journal.h"
 
 namespace ns3 {
+    
 
     class TopologySatelliteNetwork : public Topology
     {
@@ -71,10 +85,12 @@ namespace ns3 {
         int64_t GetNumNodes();
         bool IsValidEndpoint(int64_t node_id);
         const std::set<int64_t>& GetEndpoints();
+        void RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> triplet, uint64_t flowId);
 
         // Additional accessors
         uint32_t GetNumSatellites();
         uint32_t GetNumGroundStations();
+        std::vector<std::string>& GetDevTypeVector();
         const NodeContainer& GetSatelliteNodes();
         const NodeContainer& GetGroundStationNodes();
         const std::vector<Ptr<GroundStation>>& GetGroundStations();
@@ -92,11 +108,14 @@ namespace ns3 {
         // Build functions
         void ReadConfig();
         void Build(const Ipv4RoutingHelper& ipv4RoutingHelper);
-        void ReadGroundStations();
+        void ReadGroundObjects();
         void ReadSatellites();
+        void ReadEndpoints();
+        void ReadLinks();
         void InstallInternetStacks(const Ipv4RoutingHelper& ipv4RoutingHelper);
-        void ReadISLs();
-        void CreateGSLs();
+        void ReadISLs(const std::string& lien);
+        void ReadGSLs(const std::string& lien);
+        void ReadTLs(const std::string& lien);
 
         // Helper
         void EnsureValidNodeId(uint32_t node_id);
@@ -114,26 +133,44 @@ namespace ns3 {
 
         // Generated state
         NodeContainer m_allNodes;                           //!< All nodes
-        NodeContainer m_groundStationNodes;                 //!< Ground station nodes
+        NodeContainer m_groundStationNodes;                 //!< GSL capable nodes
+        NodeContainer m_otherGroundNodes;                 //!< Ground station nodes
         NodeContainer m_satelliteNodes;                     //!< Satellite nodes
-        std::vector<Ptr<GroundStation> > m_groundStations;  //!< Ground stations
+        std::map<std::string, NodeContainer> m_nodesByType; //!< All nodes by type
+        std::vector<Ptr<GroundStation> > m_groundEntities;  //!< all ground entities
         std::vector<Ptr<Satellite>> m_satellites;           //<! Satellites
         std::set<int64_t> m_endpoints;                      //<! Endpoint ids = ground station ids
 
         // ISL devices
         NetDeviceContainer m_islNetDevices;
         std::vector<std::pair<int32_t, int32_t>> m_islFromTo;
+        //std::map<std::pair<int32_t, int32_t>, Ptr<std::vector<double>>> m_map_FromTo_UtilizationVec;
 
         // Values
+        //Net Device
         double m_isl_data_rate_megabit_per_s;
-        double m_gsl_data_rate_megabit_per_s;
-        int64_t m_isl_max_queue_size_pkts;
-        int64_t m_gsl_max_queue_size_pkts;
+        std::map<std::string, std::string> m_gsl_data_rate_megabit_per_s_map;
+        std::string m_isl_max_queue_size;
+        std::map<std::string, std::string> m_gsl_max_queue_size_map;
+
+        //Traffic Controller
+        std::map<std::string, std::string> m_tc_nodetype_qdisctype;
+        std::map< std::string, std::map<std::string, std::string>> m_tc_nodetype_attributemap;
+
         bool m_enable_isl_utilization_tracking;
+        bool m_enable_tx_log, m_enable_rx_log, m_enable_drop_log;
         int64_t m_isl_utilization_tracking_interval_ns;
+        std::vector<std::string> m_nodespecies;
 
+        Ptr<OutputStreamWrapper> m_drop_stream; //!< stream where to log drop events
+        Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log transmission events
+        Ptr<OutputStreamWrapper> m_rx_stream; //!< stream where to log receive events
+
+        cbparams m_cbparams;
+        std::string m_current_link_filename;
+        std::map<std::string, std::string> m_channelparams;
+        std::map<std::string, std::map<std::string, std::string>> m_paramaps;
     };
-
 }
 
 #endif //TOPOLOGY_SATELLITE_NETWORK_H

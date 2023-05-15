@@ -105,7 +105,7 @@ PointToPointLaserChannel::TransmitStart (
 
   Simulator::ScheduleWithContext (m_link[wire].m_dst->GetNode()->GetId (),
                                   txTime + delay, &PointToPointLaserNetDevice::Receive,
-                                  m_link[wire].m_dst, p->Copy ());
+                                  m_link[wire].m_dst, p->Copy (), txTime);
 
   // Call the tx anim callback on the net device
   m_txrxPointToPoint (p, src, m_link[wire].m_dst, txTime, txTime + delay);

@@ -12,7 +12,7 @@ import pickle
 
 DOSSIER='.'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
-DOSSIER_A_INCLURE=['']
+DOSSIER_A_INCLURE=['isls3', 'isls4', 'isls7', 'isls8']
 if len(sys.argv)==2:
 	DOSSIER=sys.argv[1].strip('/')
 
@@ -61,7 +61,7 @@ def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
 	aChercher=[chemin_initial]
 	while aChercher:
 		nom=aChercher.pop()
-		if "logs_ns3" in nom and all([motif in nom for motif in DOSSIER_A_INCLURE]):
+		if "logs_ns3" in nom and any([motif in nom for motif in DOSSIER_A_INCLURE]):
 			trouves.append(nom)
 		else:
 			for glob in os.listdir(nom):

@@ -60,6 +60,8 @@ public:
           Time txTime,
           bool isSameSystem
   );
+  
+  Ptr<GSLNetDevice> GetDestDevice() const;
 
   // Device management
   void Attach (Ptr<GSLNetDevice> device);
@@ -82,6 +84,7 @@ protected:
   typedef sgi::hash_map<Mac48Address, Ptr<GSLNetDevice>, Mac48AddressHash>::iterator MacToNetDeviceI;
   MacToNetDevice m_link;
   std::vector<Ptr<GSLNetDevice>> m_net_devices;
+  Ptr<GSLNetDevice> m_dest_net_device;
 
 };
 

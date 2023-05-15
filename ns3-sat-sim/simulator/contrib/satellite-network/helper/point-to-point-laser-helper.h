@@ -29,7 +29,8 @@
 #include "ns3/object-factory.h"
 #include "ns3/net-device-container.h"
 #include "ns3/node-container.h"
-#include "ns3/trace-helper.h"
+#include "ns3/point-to-point-laser-net-device.h"
+#include <map>
 
 namespace ns3 {
 
@@ -41,15 +42,15 @@ class PointToPointLaserHelper
 public:
 
   // Constructors
-  PointToPointLaserHelper ();
+  PointToPointLaserHelper(const std::map<std::string, std::map<std::string, std::string>> node_if_params);
 
   // Set point-to-point laser device and channel attributes
-  void SetQueue (std::string type,
-                 std::string n1 = "", const AttributeValue &v1 = EmptyAttributeValue (),
-                 std::string n2 = "", const AttributeValue &v2 = EmptyAttributeValue (),
-                 std::string n3 = "", const AttributeValue &v3 = EmptyAttributeValue (),
-                 std::string n4 = "", const AttributeValue &v4 = EmptyAttributeValue ());
-  void SetDeviceAttribute (std::string name, const AttributeValue &value);
+  void SetQueue (std::string nodetype, std::string type,
+                     std::string n1, const AttributeValue &v1,
+                     std::string n2, const AttributeValue &v2,
+                     std::string n3, const AttributeValue &v3,
+                     std::string n4, const AttributeValue &v4);
+  
   void SetChannelAttribute (std::string name, const AttributeValue &value);
 
   // Installers
@@ -57,10 +58,14 @@ public:
   NetDeviceContainer Install (Ptr<Node> a, Ptr<Node> b);
 
 private:
-  ObjectFactory m_queueFactory;         //!< Queue Factory
   ObjectFactory m_channelFactory;       //!< Channel Factory
   ObjectFactory m_remoteChannelFactory; //!< Remote Channel Factory
-  ObjectFactory m_deviceFactory;        //!< Device Factory
+  std::map<std::string, ObjectFactory> m_queueFactories;         //!< Queue Factories
+  std::map<std::string, ObjectFactory> m_deviceFactories;        //!< Device Factory
+
+  std::map<std::string, std::map<std::string, std::string>> m_node_if_params;
+
+  void SetDevParam(Ptr<PointToPointLaserNetDevice> dev, const std::string& nodetype);
 };
 
 } // namespace ns3

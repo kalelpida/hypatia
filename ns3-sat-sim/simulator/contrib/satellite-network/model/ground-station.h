@@ -40,7 +40,7 @@ public:
     // Constructors
     static TypeId GetTypeId();
     GroundStation(
-            uint32_t gid, std::string name,
+            uint32_t gid, std::string name, std::string specie,
             double latitude, double longitude, double elevation,
             Vector cartesian_position
     );
@@ -49,6 +49,7 @@ public:
     // Accessors
     uint32_t GetGid();
     std::string GetName();
+    std::string GetSpecie();
     double GetLatitude();
     double GetLongitude();
     double GetElevation();
@@ -58,6 +59,7 @@ public:
 private:
     uint32_t m_gid;        // Unique ground stations identifier
     std::string m_name;    // Name
+    std::string m_specie;    // Name
     double m_latitude;     // Latitude
     double m_longitude;    // Longitude
     double m_elevation;    // Elevation

@@ -20,6 +20,7 @@
  */
 
 #include "udp-burst-scheduler.h"
+#include <random>
 
 namespace ns3 {
 
@@ -88,6 +89,9 @@ namespace ns3 {
 
             // Install sink on each endpoint node
             std::cout << "  > Setting up UDP burst applications on all endpoint nodes" << std::endl;
+
+            std::mt19937_64 gen(RngSeedManager::GetSeed());
+            UdpBurstInfo::SetRandomGenerator(gen);
             for (int64_t endpoint : m_topology->GetEndpoints()) {
                 if (!m_enable_distributed || m_distributed_node_system_id_assignment[endpoint] == m_system_id) {
 

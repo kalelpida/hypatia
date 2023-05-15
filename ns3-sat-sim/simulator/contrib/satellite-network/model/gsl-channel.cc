@@ -74,8 +74,8 @@ GSLChannel::TransmitStart (
   Mac48Address address48 = Mac48Address::ConvertFrom (dst_address);
   MacToNetDeviceI it = m_link.find (address48);
   if (it != m_link.end ()) {
-    Ptr<GSLNetDevice> dst = it->second;
-    bool sameSystem = (src->GetNode()->GetSystemId() == dst->GetNode()->GetSystemId());
+    m_dest_net_device = it->second;
+    bool sameSystem = (src->GetNode()->GetSystemId() == m_dest_net_device->GetNode()->GetSystemId());
     return TransmitTo(p, src, it->second, txTime, sameSystem);
   }
 
@@ -107,7 +107,8 @@ GSLChannel::TransmitTo(Ptr<const Packet> p, Ptr<GSLNetDevice> srcNetDevice, Ptr<
           txTime + delay,
           &GSLNetDevice::Receive,
           destNetDevice,
-          p->Copy ()
+          p->Copy (),
+          txTime
   );
 
   // Re-enabled below code if distributed is again enabled:
@@ -172,6 +173,12 @@ GSLChannel::GetDevice (std::size_t i) const
 {
     NS_LOG_FUNCTION (this << i);
     return m_net_devices.at(i);
+}
+
+Ptr<GSLNetDevice> 
+GSLChannel::GetDestDevice() const
+{
+  return m_dest_net_device;
 }
 
 } // namespace ns3

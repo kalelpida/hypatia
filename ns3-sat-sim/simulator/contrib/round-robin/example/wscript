@@ -1,0 +1,9 @@
+# -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    return
+    obj = bld.create_ns3_program('rr-example', ['basic-sim'])
+    obj.source = 'pfifo-vs-red-vs-rr.cc'
+
+    #obj = bld.create_ns3_program('basic-sim-example-single-pingmesh', ['basic-sim'])
+    #obj.source = 'single_pingmesh.cc'

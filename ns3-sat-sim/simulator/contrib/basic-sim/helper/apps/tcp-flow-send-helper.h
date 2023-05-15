@@ -34,6 +34,7 @@
 #include "ns3/node-container.h"
 #include "ns3/application-container.h"
 #include "ns3/uinteger.h"
+#include "ns3/data-rate.h"
 
 namespace ns3 {
 
@@ -42,6 +43,7 @@ class TcpFlowSendHelper
 {
 public:
   TcpFlowSendHelper (std::string protocol, Address address, uint64_t maxBytes, int64_t flowId, bool enableFlowLoggingToFile, std::string baseLogsDir, std::string additionalParameters);
+  void SetPacingDataRate(DataRate pacingdatarate);
   ApplicationContainer Install (Ptr<Node> node) const;
 
 private:

@@ -25,6 +25,7 @@ from satgen.isls import *
 from satgen.ground_stations import *
 from satgen.tles import *
 import exputil
+import yaml
 import cartopy
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -64,13 +65,12 @@ def print_graphical_routes_and_rtt(
     satellites = tles["satellites"]
     list_isls = read_isls(satellite_network_dir + "/isls.txt", len(satellites))
     epoch = tles["epoch"]
-    description = exputil.PropertiesConfig(satellite_network_dir + "/description.txt")
+    with open(satellite_network_dir + "/description.yaml", 'r') as f:
+        description = yaml.load(f, Loader=yaml.Loader)
 
     # Derivatives
     simulation_end_time_ns = simulation_end_time_s * 1000 * 1000 * 1000
     dynamic_state_update_interval_ns = dynamic_state_update_interval_ms * 1000 * 1000
-    max_gsl_length_m = exputil.parse_positive_float(description.get_property_or_fail("max_gsl_length_m"))
-    max_isl_length_m = exputil.parse_positive_float(description.get_property_or_fail("max_isl_length_m"))
 
     # For each time moment
     fstate = {}
@@ -91,10 +91,10 @@ def print_graphical_routes_and_rtt(
             if path_there is not None and path_back is not None:
                 length_src_to_dst_m = compute_path_length_without_graph(path_there, epoch, t, satellites,
                                                                         ground_stations, list_isls,
-                                                                        max_gsl_length_m, max_isl_length_m)
+                                                                        description)
                 length_dst_to_src_m = compute_path_length_without_graph(path_back, epoch, t,
                                                                         satellites, ground_stations, list_isls,
-                                                                        max_gsl_length_m, max_isl_length_m)
+                                                                        description)
                 rtt_ns = (length_src_to_dst_m + length_dst_to_src_m) * 1000000000.0 / 299792458.0
             else:
                 length_src_to_dst_m = 0.0

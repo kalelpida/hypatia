@@ -21,10 +21,10 @@
 # SOFTWARE.
 
 import exputil
-import time
 import sys
 import os
-
+import yaml
+print("perform full anal")
 local_shell = exputil.LocalShell()
 max_num_processes = 6
 
@@ -45,115 +45,27 @@ if not "command_logs" in [obj for obj in os.listdir('data') if os.path.isdir(obj
 commands_to_run = []
 
 # Manual
-params=sys.argv[1:]
-print("Generating commands for manually selected endpoints pair (printing of routes and RTT over time)...")
-if len(params)>1:
-	nom_fic = '_'.join([params[0].lstrip('main_').rstrip('.py')]+params[3:-1])#main_kuiper_630.py 200 50 isls_none ground_stations_paris_moscow_grid algorithm_free_one_only_gs_relays ${num_threads}
-	pas=params[2]
-	duree=params[1]
-	with open("../satellite_networks_state/commodites.temp", "r") as f:
-		list_comms=eval(f.readline())
-	for (src,dst,_) in list_comms:
-		nompartiel_log = "_".join([params[0].lstrip('main_').rstrip('.py'),str(src),"to",str(dst)])+".log"
-		commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_routes_and_rtt "
-						"../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-						"{} "
-						" {} {} {} {} "
-						"> ../papier2/satgenpy_analysis/data/command_logs/manual_{} 2>&1".format(nom_fic,pas,duree,src,dst,nompartiel_log))
-		commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_graphical_routes_and_rtt "
-						"../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-						"{} "
-						" {} {} {} {} "
-						"> ../papier2/satgenpy_analysis/data/command_logs/manual_graphical_{} 2>&1".format(nom_fic,pas,duree,src,dst,nompartiel_log))
+config_fic = sys.argv[1]
+with open(config_fic, 'r') as f:
+    dico=yaml.load(f, Loader=yaml.Loader)
+duree=dico['duree']
+pas=dico['pas']
+cstl=dico['constellation']
+nom_fic='_'.join([cstl, dico['isls'], dico['algo']])
+print("Plot routes and RTT of commodities over time")
+
+commodites_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../satellite_networks_state/commodites.temp")
+
+os.chdir("../../satgenpy")
+sys.path.append(os.getcwd())
+import satgen
+
+satgen.post_analysis.main_print_graphical_routes_and_rtt_lazy("../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
+                "{} "
+                " {} {} {} {}".format(nom_fic,pas,duree,max_num_processes,commodites_path).split())
+
+satgen.post_analysis.main_print_routes_and_rtt_lazy("../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
+                "{} "
+                " {} {} {} {}".format(nom_fic,pas,duree,max_num_processes,commodites_path).split())
 
 
-else:
-	#Moskva-(Moscow) to Dallas-Fort-Worth with only ISLs on Telesat
-	commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_routes_and_rtt "
-		                   "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-		                   "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2 "
-		                   " 5000 20 363 381 "
-		                   "> ../papier2/satgenpy_analysis/data/command_logs/manual_telesat_isls_372_to_411.log 2>&1")
-	commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_graphical_routes_and_rtt "
-		                   "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-		                   "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2 "
-		                   " 5000 20 363 381 "
-		                   "> ../papier2/satgenpy_analysis/data/command_logs/manual_graphical_telesat_isls_372_to_411.log 2>&1")
-
-	#Moskva-(Moscow) to Dallas-Fort-Worth with only ISLs on Telesat
-	commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_routes_and_rtt "
-		                   "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-		                   "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2 "
-		                   " 5000 20 372 411 "
-		                   "> ../papier2/satgenpy_analysis/data/command_logs/manual_telesat_isls_372_to_411.log 2>&1")
-	commands_to_run.append("cd ../../satgenpy; python -m satgen.post_analysis.main_print_graphical_routes_and_rtt "
-		                   "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/"
-		                   "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2 "
-		                   " 5000 20 372 411 "
-		                   "> ../papier2/satgenpy_analysis/data/command_logs/manual_graphical_telesat_isls_372_to_411.log 2>&1")
-
-# Constellation comparison
-print("Generating commands for constellation comparison...")
-for satgenpy_generated_constellation in [
-	"telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls",
-    "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2",
-    "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2b",
-    "telesat_1015_isls_plus_grid_ground_stations_top_100_algorithm_free_one_only_over_isls2c"
-]:
-    for duration_s in [26]:
-        list_update_interval_ms = [2000]
-
-        # Path
-        for update_interval_ms in list_update_interval_ms:
-            commands_to_run.append(
-                "cd ../../satgenpy; "
-                "python -m satgen.post_analysis.main_analyze_path "
-                "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/%s %d %d "
-                "> ../papier2/satgenpy_analysis/data/command_logs/constellation_comp_path_%s_%dms_for_%ds.log "
-                "2>&1" % (
-                    satgenpy_generated_constellation, update_interval_ms, duration_s,
-                    satgenpy_generated_constellation, update_interval_ms, duration_s
-                )
-            )
-
-        # RTT
-        for update_interval_ms in list_update_interval_ms:
-            commands_to_run.append(
-                "cd ../../satgenpy; "
-                "python -m satgen.post_analysis.main_analyze_rtt "
-                "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/%s %d %d "
-                "> ../papier2/satgenpy_analysis/data/command_logs/constellation_comp_rtt_%s_%dms_for_%ds.log "
-                "2>&1" % (
-                    satgenpy_generated_constellation, update_interval_ms, duration_s,
-                    satgenpy_generated_constellation, update_interval_ms, duration_s
-                )
-            )
-
-        # Time step path
-        commands_to_run.append(
-            "cd ../../satgenpy; "
-            "python -m satgen.post_analysis.main_analyze_time_step_path "
-            "../papier2/satgenpy_analysis/data ../papier2/satellite_networks_state/gen_data/%s %s %d "
-            "> ../papier2/satgenpy_analysis/data/command_logs/constellation_comp_time_step_path_%s_%ds.log "
-            "2>&1" % (
-                satgenpy_generated_constellation,
-                ",".join(list(map(lambda x: str(x), list_update_interval_ms))),
-                duration_s,
-                satgenpy_generated_constellation,
-                duration_s
-            )
-        )
-
-# Run the commands
-print("Running commands (at most %d in parallel)..." % max_num_processes)
-for i in range(len(commands_to_run)):
-    print("Starting command %d out of %d: %s" % (i + 1, len(commands_to_run), commands_to_run[i]))
-    local_shell.detached_exec(commands_to_run[i])
-    while local_shell.count_screens() >= max_num_processes:
-        time.sleep(2)
-
-# Awaiting final completion before exiting
-print("Waiting completion of the last %d..." % max_num_processes)
-while local_shell.count_screens() > 0:
-    time.sleep(2)
-print("Finished.")

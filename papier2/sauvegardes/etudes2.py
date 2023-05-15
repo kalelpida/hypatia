@@ -2,9 +2,9 @@ import os, sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-DOSSIER='.'
+DOSSIER='svgde_global'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
-DOSSIER_A_INCLURE=['']
+DOSSIER_A_INCLURE=['isls3', 'isls4', 'isls7', 'isls8']
 if len(sys.argv)>1:
 	DOSSIER=sys.argv[1].strip('/')
 
@@ -32,7 +32,7 @@ def analyse(fic):
 				continue
 			if any([motif in line for motif in DOSSIER_A_EXCLURE]):
 				continue
-			if any([motif not in line for motif in DOSSIER_A_INCLURE]):
+			if not any([motif in line for motif in DOSSIER_A_INCLURE]):
 				continue
 			nomfic=fic
 			if '/' in nomfic:

@@ -42,11 +42,11 @@ GroundStation::GetTypeId (void)
 }
 
 GroundStation::GroundStation(
-        uint32_t gid, std::string name,
+        uint32_t gid, std::string name, std::string specie,
         double latitude, double longitude, double elevation,
         Vector cartesian_position
 )
-    : m_gid(gid), m_name(name),
+    : m_gid(gid), m_name(name), m_specie(specie),
       m_latitude(latitude), m_longitude(longitude), m_elevation(elevation),
       m_cartesian_position(cartesian_position)
 {
@@ -68,6 +68,12 @@ std::string
 GroundStation::GetName()
 {
     return m_name;
+}
+
+std::string
+GroundStation::GetSpecie()
+{
+    return m_specie;
 }
 
 double

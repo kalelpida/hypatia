@@ -41,12 +41,8 @@ def worker(args):
         offset_ns,
         satellites,
         ground_stations,
-        list_isls,
-        list_gsl_interfaces_info,
-        max_gsl_length_m,
-        max_isl_length_m,
         dynamic_state_algorithm,
-        print_logs
+        net_gen_infos
      ) = args
 
     # Generate dynamic state
@@ -58,29 +54,34 @@ def worker(args):
         offset_ns,
         satellites,
         ground_stations,
-        list_isls,
-        list_gsl_interfaces_info,
-        max_gsl_length_m,
-        max_isl_length_m,
         dynamic_state_algorithm,  # Options:
                                   # "algorithm_free_one_only_gs_relays"
                                   # "algorithm_free_one_only_over_isls[2]"
                                   # "algorithm_free_gs_one_sat_many_only_over_isls[2]"
                                   # "algorithm_paired_many_only_over_isls[2]"
-        print_logs
+        net_gen_infos
     )
 
+def clean_recursive(chem):
+    if os.path.isdir(chem):
+        for fic in os.listdir(chem):
+            clean_recursive(os.path.join(chem, fic))
+        os.rmdir(chem)
+    elif os.path.exists(chem):
+        os.remove(chem)
 
 def help_dynamic_state(
         output_generated_data_dir, num_threads, name, time_step_ms, duration_s,
-        max_gsl_length_m, max_isl_length_m, dynamic_state_algorithm, print_logs
+        dynamic_state_algorithm, net_gen_infos
 ):
 
     # Directory
     output_dynamic_state_dir = output_generated_data_dir + "/" + name + "/dynamic_state_" + str(time_step_ms) \
                                + "ms_for_" + str(duration_s) + "s"
-    if not os.path.isdir(output_dynamic_state_dir):
-        os.makedirs(output_dynamic_state_dir)
+    
+    clean_recursive(output_dynamic_state_dir)
+    #rather than erase everything, we could just bypass route computing ?
+    os.makedirs(output_dynamic_state_dir)
 
     # In nanoseconds
     simulation_end_time_ns = duration_s * 1000 * 1000 * 1000
@@ -104,12 +105,6 @@ def help_dynamic_state(
         ground_stations = read_ground_stations_extended(output_generated_data_dir + "/" + name + "/ground_stations.txt")
         tles = read_tles(output_generated_data_dir + "/" + name + "/tles.txt")
         satellites = tles["satellites"]
-        list_isls = read_isls(output_generated_data_dir + "/" + name + "/isls.txt", len(satellites))
-        list_gsl_interfaces_info = read_gsl_interfaces_info(
-            output_generated_data_dir + "/" + name + "/gsl_interfaces_info.txt",
-            len(satellites),
-            len(ground_stations)
-        )
         epoch = tles["epoch"]
 
         # Print goal
@@ -126,24 +121,20 @@ def help_dynamic_state(
             current * time_step_ns,
             satellites,
             ground_stations,
-            list_isls,
-            list_gsl_interfaces_info,
-            max_gsl_length_m,
-            max_isl_length_m,
             dynamic_state_algorithm,
-            print_logs
+            net_gen_infos
         ))
 
         current += num_time_steps
 
     # Run in parallel
-    #pool = ThreadPool(num_threads)
-    #pool.map(worker, list_args)
-    #pool.close()
-    #pool.join()
+    pool = ThreadPool(num_threads)
+    pool.map(worker, list_args)
+    pool.close()
+    pool.join()
     # or run sequentially
-    for args in list_args:
-        worker(args)
+    #for args in list_args:
+    #    worker(args)
 
     # mix up last computed of thread i and first computed of thread i+1
     for current_epoch in range(num_calculations-1):

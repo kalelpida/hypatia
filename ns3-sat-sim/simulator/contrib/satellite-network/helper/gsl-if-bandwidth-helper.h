@@ -22,7 +22,6 @@
 
 #include "ns3/ipv4-routing-helper.h"
 #include "ns3/basic-simulation.h"
-#include "ns3/topology-satellite-network.h"
 #include "ns3/ipv4-arbiter-routing.h"
 #include "ns3/arbiter-single-forward.h"
 
@@ -38,7 +37,7 @@ namespace ns3 {
         // Parameters
         Ptr<BasicSimulation> m_basicSimulation;
         NodeContainer m_nodes;
-        double m_gsl_data_rate_megabit_per_s;
+        std::map<std::string, std::string> m_gsl_data_rate_megabit_per_s_map;
         int64_t m_dynamicStateUpdateIntervalNs;
 
     };

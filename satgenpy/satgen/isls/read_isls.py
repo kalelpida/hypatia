@@ -32,13 +32,15 @@ def read_isls(filename_isls, num_satellites):
 
     :return: List of all undirected ISL edges
     """
-    isls_list = []
+    isls_dic = {}
     with open(filename_isls, 'r') as f:
         isls_set = set()
         for line in f:
             line_spl = line.split()
             a = parse_positive_int(line_spl[0])
             b = parse_positive_int(line_spl[1])
+            val = line_spl[2]
+            assert val in 'as' # adjacent, same orbit
 
             # Verify the input
             if a >= num_satellites:
@@ -52,6 +54,6 @@ def read_isls(filename_isls, num_satellites):
             isls_set.add((a, b))
 
             # Finally add it to the list
-            isls_list.append((a, b))
+            isls_dic[(a, b)]= val
 
-    return isls_list
+    return isls_dic

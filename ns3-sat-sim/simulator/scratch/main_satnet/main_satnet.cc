@@ -57,7 +57,13 @@ int main(int argc, char *argv[]) {
         printf("Usage: ./waf --run=\"main_satnet --run_dir='<path/to/run/directory>'\"");
         return 0;
     }
-
+    /*
+    //used to get time to attach debug
+    std::cout << "entree";
+    std::string valid;
+    std::cin >> valid;
+    std::cout << " suite:" << valid << std::endl;
+    //*/
     // Load basic simulation environment
     Ptr<BasicSimulation> basicSimulation = CreateObject<BasicSimulation>(run_dir);
 
@@ -70,7 +76,9 @@ int main(int argc, char *argv[]) {
     // Read topology, and install routing arbiters
     Ptr<TopologySatelliteNetwork> topology = CreateObject<TopologySatelliteNetwork>(basicSimulation, Ipv4ArbiterRoutingHelper());
     ArbiterSingleForwardHelper arbiterHelper(basicSimulation, topology->GetNodes());
-    GslIfBandwidthHelper gslIfBandwidthHelper(basicSimulation, topology->GetNodes());
+    // for now disable ifbandwidth updates
+    //GslIfBandwidthHelper gslIfBandwidthHelper(basicSimulation, topology->GetNodes());
+    Packet::EnablePrinting();
 
     // Schedule flows
     TcpFlowScheduler tcpFlowScheduler(basicSimulation, topology); // Requires enable_tcp_flow_scheduler=true
