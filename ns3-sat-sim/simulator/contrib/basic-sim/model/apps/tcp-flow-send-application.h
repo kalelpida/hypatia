@@ -29,6 +29,10 @@
 #include "ns3/ptr.h"
 #include "ns3/string.h"
 #include "ns3/traced-callback.h"
+//#include "ns3/topology-satellite-network.h"
+#include "ns3/topology.h"
+#include "ns3/ipv4.h"
+#include "ns3/trace-helper.h"
 
 namespace ns3 {
 
@@ -51,17 +55,18 @@ public:
   bool IsClosedByError();
   bool IsClosedNormally();
   void FinalizeDetailedLogs();
+  void setTopology(Ptr<Topology>);
 
-protected:
-  virtual void DoDispose (void);
 private:
   virtual void StartApplication (void);    // Called at time specified by Start
   virtual void StopApplication (void);     // Called at time specified by Stop
+  virtual void SendData ();                // To be redefined in daughter classes
+protected:
+  virtual void DoDispose (void);
 
   /**
    * Send data until the L4 transmission buffer is full.
    */
-  void SendData ();
 
   Ptr<Socket>     m_socket;       //!< Associated socket
   Address         m_peer;         //!< Peer address
@@ -86,6 +91,8 @@ private:
   std::string m_baseLogsDir;               //!< Where the logs will be written to:
                                            //!<   logs_dir/tcp_flow_[id]_{progress, cwnd, rtt}.csv
   TracedCallback<Ptr<const Packet> > m_txTrace;
+  // All flows logging
+  Ptr<Topology> m_topology;
 
 private:
   void ConnectionSucceeded (Ptr<Socket> socket);
@@ -95,9 +102,12 @@ private:
   void SocketClosedError(Ptr<Socket> socket);
   void CwndChange(uint32_t, uint32_t newCwnd);
   void RttChange (Time, Time newRtt);
-  void InsertCwndLog(int64_t timestamp, uint32_t cwnd_byte);
-  void InsertRttLog (int64_t timestamp, int64_t rtt_ns);
+  void RtoChange(Time, Time newRto);
   void InsertProgressLog (int64_t timestamp, int64_t progress_byte);
+  
+  Ptr<OutputStreamWrapper> m_prog_stream;
+  Ptr<OutputStreamWrapper> m_cwnd_stream;
+  Ptr<OutputStreamWrapper> m_rtt_stream;
 
 };
 

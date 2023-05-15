@@ -31,6 +31,7 @@
 #include "ns3/id-seq-header.h"
 #include "ns3/string.h"
 #include "ns3/exp-util.h"
+#include <random>
 
 namespace ns3 {
 
@@ -64,13 +65,14 @@ namespace ns3 {
 
         uint16_t m_port;      //!< Port on which we listen for incoming packets.
         uint32_t m_max_udp_payload_size_byte;  //!< Maximum size of UDP payload before getting fragmented
+        int64_t m_min_std_packet_time; //!< Minimum standard MTU (1500bytes) packet send time. Maximum sending datarate of the node, shall be greater than the target sending rate
         Ptr<Socket> m_socket; //!< IPv4 Socket
         std::string m_baseLogsDir; //!< Where the UDP burst logs will be written to:
                                    //!<   logs_dir/udp_burst_[id]_{incoming, outgoing}.csv
         EventId m_startNextBurstEvent; //!< Event to start next burst
 
         // Outgoing bursts
-        std::vector<std::tuple<UdpBurstInfo, InetSocketAddress>> m_outgoing_bursts; //!< Weakly ascending on start time list of bursts
+        std::vector<std::tuple<UdpBurstInfo, InetSocketAddress, std::exponential_distribution<double_t>>> m_outgoing_bursts; //!< Weakly ascending on start time list of bursts
         std::vector<uint64_t> m_outgoing_bursts_packets_sent_counter; //!< Amount of UDP packets sent out already for each burst
         std::vector<EventId> m_outgoing_bursts_event_id; //!< Event ID of the outgoing burst send loop
         std::vector<bool> m_outgoing_bursts_enable_precise_logging; //!< True iff enable precise logging for each burst
@@ -80,6 +82,8 @@ namespace ns3 {
         std::vector<UdpBurstInfo> m_incoming_bursts;
         std::map<int64_t, uint64_t> m_incoming_bursts_received_counter;       //!< Counter for how many packets received
         std::map<int64_t, uint64_t> m_incoming_bursts_enable_precise_logging; //!< True iff enable precise logging for each burst
+
+        static std::exponential_distribution<double_t> s_exponential_distribution;
 
     };
 

@@ -5,7 +5,7 @@ import scipy.optimize as opt
 
 DOSSIER='.'
 DOSSIER_A_EXCLURE=['slp','tcp','Ancien']
-DOSSIER_A_INCLURE=['']
+DOSSIER_A_INCLURE=['isls3', 'isls4', 'isls7', 'isls8']
 if len(sys.argv)==2:
 	DOSSIER=sys.argv[1].strip('/')
 	print(f"étude de : {DOSSIER}")
@@ -31,7 +31,7 @@ def analyse(file):
 				continue
 			if any([motif in line for motif in DOSSIER_A_EXCLURE]):
 				continue
-			if any([motif not in line for motif in DOSSIER_A_INCLURE]):
+			if not any([motif in line for motif in DOSSIER_A_INCLURE]):
 				continue
 			nomfic=file
 			if '/' in nomfic:

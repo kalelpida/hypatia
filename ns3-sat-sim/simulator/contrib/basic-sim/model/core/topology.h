@@ -3,6 +3,7 @@
 
 #include "ns3/core-module.h"
 #include "ns3/node-container.h"
+#include "ns3/inet-socket-address.h"
 
 namespace ns3 {
 
@@ -14,6 +15,7 @@ public:
     virtual int64_t GetNumNodes() = 0;
     virtual bool IsValidEndpoint(int64_t node_id) = 0;
     virtual const std::set<int64_t>& GetEndpoints() = 0;
+    virtual void RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> triplet, uint64_t flowId)=0;//from a source(Adress, port)-dest(Address) to a flow index
 };
 
 }

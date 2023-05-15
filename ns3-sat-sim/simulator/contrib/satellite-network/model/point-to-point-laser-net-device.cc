@@ -252,7 +252,6 @@ PointToPointLaserNetDevice::TransmitStart (Ptr<Packet> p)
   NS_ASSERT_MSG (m_txMachineState == READY, "Must be READY to transmit");
   m_txMachineState = BUSY;
   m_currentPkt = p;
-  m_phyTxBeginTrace (m_currentPkt);
   TrackUtilization(true);
 
   Time txTime = m_bps.CalculateBytesTxTime (p->GetSize ());
@@ -262,6 +261,7 @@ PointToPointLaserNetDevice::TransmitStart (Ptr<Packet> p)
   Simulator::Schedule (txCompleteTime, &PointToPointLaserNetDevice::TransmitComplete, this);
 
   bool result = m_channel->TransmitStart (p, this, m_destination_node, txTime);
+  m_phyTxBeginTrace(m_node, m_destination_node,  m_currentPkt, txTime);
   if (result == false)
     {
       m_phyTxDropTrace (p);
@@ -337,7 +337,7 @@ PointToPointLaserNetDevice::SetReceiveErrorModel (Ptr<ErrorModel> em)
 }
 
 void
-PointToPointLaserNetDevice::Receive (Ptr<Packet> packet)
+PointToPointLaserNetDevice::Receive (Ptr<Packet> packet, Time rxtime)
 {
   NS_LOG_FUNCTION (this << packet);
   uint16_t protocol = 0;
@@ -348,7 +348,7 @@ PointToPointLaserNetDevice::Receive (Ptr<Packet> packet)
       // If we have an error model and it indicates that it is time to lose a
       // corrupted packet, don't forward this packet up, let it go.
       //
-      m_phyRxDropTrace (packet);
+      m_phyRxDropTrace (m_node, packet, rxtime);
     }
   else 
     {
@@ -381,7 +381,7 @@ PointToPointLaserNetDevice::Receive (Ptr<Packet> packet)
           m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
         }
 
-      m_macRxTrace (originalPacket);
+      m_macRxTrace (m_node, originalPacket, rxtime);
       m_rxCallback (this, packet, protocol, GetRemote ());
     }
 }
@@ -531,16 +531,17 @@ PointToPointLaserNetDevice::Send (
   uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << packet << dest << protocolNumber);
-  NS_LOG_LOGIC ("p=" << packet << ", dest=" << &dest);
+  NS_LOG_LOGIC ("p=" << packet->ToString() << ", dest=" << &dest);
   NS_LOG_LOGIC ("UID is " << packet->GetUid ());
-
+  NS_LOG_LOGIC ("node is " << this->GetNode()->GetId());
+  NS_LOG_LOGIC ("queue size is " << m_queue->GetCurrentSize());
   //
   // If IsLinkUp() is false it means there is no channel to send any packet 
   // over so we just hit the drop trace on the packet and return an error.
   //
   if (IsLinkUp () == false)
     {
-      m_macTxDropTrace (packet);
+      m_macTxDropTrace (m_node,  packet);
       return false;
     }
 
@@ -573,7 +574,7 @@ PointToPointLaserNetDevice::Send (
 
   // Enqueue may fail (overflow)
 
-  m_macTxDropTrace (packet);
+  m_macTxDropTrace (m_node,  packet);
   return false;
 }
 
@@ -630,7 +631,8 @@ void
 PointToPointLaserNetDevice::DoMpiReceive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
-  Receive (p);
+  NS_ABORT_MSG("MPI receive not implemented");
+  Receive (p, Time(0));
 }
 
 Address 

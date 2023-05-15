@@ -17,6 +17,8 @@
  * Author: Simon               2020
  */
 
+#include "ns3/topology-satellite-network.h"
+
 #include "gsl-if-bandwidth-helper.h"
 
 namespace ns3 {
@@ -25,7 +27,7 @@ namespace ns3 {
         std::cout << "SETUP GSL IF BANDWIDTH HELPER" << std::endl;
         m_basicSimulation = basicSimulation;
         m_nodes = nodes;
-        m_gsl_data_rate_megabit_per_s = parse_positive_double(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
+        m_gsl_data_rate_megabit_per_s_map = parse_dict_string(m_basicSimulation->GetConfigParamOrFail("gsl_data_rate_megabit_per_s"));
 
         // Load first forwarding state
         m_dynamicStateUpdateIntervalNs = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("dynamic_state_update_interval_ns"));
@@ -57,6 +59,9 @@ namespace ns3 {
 
             // Go over each line
             size_t line_counter = 0;
+            int64_t if_id_max;
+            double m_gsl_data_rate_megabit_per_s;
+            Ptr<GSLNetDevice> gslnetdev =nullptr;
             while (getline(fstate_file, line)) {
 
                 // Split on ,
@@ -64,19 +69,32 @@ namespace ns3 {
 
                 // Retrieve node identifiers
                 int64_t node_id = parse_positive_int64(comma_split[0]);
-                int64_t if_id = parse_positive_int64(comma_split[1]);
+                int64_t if_id = parse_positive_int64(comma_split[1])+1;//if 0 is lo
                 double bandwidth_fraction = parse_positive_double(comma_split[2]);
 
                 // Check the node
                 NS_ABORT_MSG_IF(node_id < 0 || node_id >= m_nodes.GetN(), "Invalid node id.");
 
                 // Check the interface
-                NS_ABORT_MSG_IF(if_id < 0 || if_id + 1 >= m_nodes.Get(node_id)->GetObject<Ipv4>()->GetNInterfaces(), "Invalid interface");
+                auto thisnode=m_nodes.Get(node_id);
+                if_id_max=thisnode->GetObject<Ipv4>()->GetNInterfaces();
+                NS_ABORT_MSG_IF(if_id <= 0 || if_id >= if_id_max, "Invalid interface");
+
+                std::string nodespecie = thisnode->GetObject<Specie>()->GetName();
+                m_gsl_data_rate_megabit_per_s = std::stod(m_gsl_data_rate_megabit_per_s_map[nodespecie]);
 
                 // Set data rate (the ->GetObject<GSLNetDevice>() will fail if it is not a GSL network device)
-                m_nodes.Get(node_id)->GetObject<Ipv4>()->GetNetDevice(1 + if_id)->GetObject<GSLNetDevice>()->SetDataRate(
-                        DataRate (std::to_string(m_gsl_data_rate_megabit_per_s * bandwidth_fraction) + "Mbps")
-                );
+                gslnetdev=m_nodes.Get(node_id)->GetObject<Ipv4>()->GetNetDevice(if_id)->GetObject<GSLNetDevice>();
+                while (gslnetdev!=0){
+                    gslnetdev->SetDataRate(DataRate (std::to_string( m_gsl_data_rate_megabit_per_s * bandwidth_fraction) + "Mbps"));
+                    if_id+=1;
+                    if (if_id < if_id_max){
+                        gslnetdev=m_nodes.Get(node_id)->GetObject<Ipv4>()->GetNetDevice(if_id)->GetObject<GSLNetDevice>();
+                    } else {
+                        gslnetdev = 0;
+                    }
+                    
+                }
 
                 // Next line
                 line_counter++;

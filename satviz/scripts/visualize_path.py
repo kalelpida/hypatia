@@ -23,7 +23,7 @@
 import math
 import ephem
 import pandas as pd
-import sys
+import sys, os
 import re
 
 try:
@@ -60,7 +60,7 @@ NUM_ORBS = 72
 NUM_SATS_PER_ORB = 22
 INCLINATION_DEGREE = 53
 """
-"""
+
 # KUIPER 630
 NAME = "kuiper_630"
 
@@ -77,30 +77,11 @@ MAX_ISL_LENGTH_M = 2 * math.sqrt(math.pow(EARTH_RADIUS + ALTITUDE_M, 2) - math.p
 NUM_ORBS = 34
 NUM_SATS_PER_ORB = 34
 INCLINATION_DEGREE = 51.9
-"""
 
-# Telesat 1015
-NAME = "telesat_1015"
-
-################################################################
-# The below constants are taken from Telesat's FCC filing as below:
-# [1]: https://fcc.report/IBFS/SAT-MPL-20200526-00053/2378318.pdf
-################################################################
-
-MEAN_MOTION_REV_PER_DAY = 13.66  # Altitude ~1015 km
-ALTITUDE_M = 1015000  # Altitude ~1015 km
-SATELLITE_CONE_RADIUS_M = ALTITUDE_M / math.tan(math.radians(10.0))  # Considering an elevation angle of 10 degrees;
-MAX_GSL_LENGTH_M = math.sqrt(math.pow(SATELLITE_CONE_RADIUS_M, 2) + math.pow(ALTITUDE_M, 2))
-# ISLs are not allowed to dip below 80 km altitude in order to avoid weather conditions
-MAX_ISL_LENGTH_M = 2 * math.sqrt(math.pow(EARTH_RADIUS + ALTITUDE_M, 2) - math.pow(EARTH_RADIUS + 80000, 2))
-NUM_ORBS = 27
-NUM_SATS_PER_ORB = 13
-INCLINATION_DEGREE = 98.98
 
 # General files needed to generate visualizations; Do not change for different simulations
 topFile = "../static_html/top.html"
 bottomFile = "../static_html/bottom.html"
-city_detail_file = "../../paper/satellite_networks_state/input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_1000.basic.txt"
 
 # Time in ms for which visualization will be generated
 GEN_TIME=3000  #ms
@@ -114,11 +95,11 @@ path_file = "../../papier2/sauvegardes/svgde_paths_hypatia_graine2_pas2s_for_8s/
 if len(sys.argv) > 1:
 	path_file=sys.argv[1]
 	print(path_file)
-	
+city_detail_file = os.path.join(re.search(".*svgde_[^/]*",path_file).group(), "ground_stations.txt"	)
 
 # Output directory for creating visualization html files
 OUT_DIR = "../viz_output/"
-debit = "_10Mbps" * ("10Mbps" in path_file) + "_2Mbps" * ("2Mbps" in path_file)
+debit = "" + "_10Mbps" * ("10Mbps" in path_file) + "_2Mbps" * ("2Mbps" in path_file)
 algo, = re.search("over(_isls[^/]*)/", path_file).groups()
 
 OUT_HTML_FILE = OUT_DIR + NAME + debit + algo + "_path" 

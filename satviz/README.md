@@ -33,16 +33,4 @@ a Cesium access token (via [https://cesium.com/]()).
 
 6. `visualize_utilization.py`: Visualizes link utilization for all end-end paths at a specific time instance.
 
-## Visualizations in the paper
-
-1. `Fig. 11: Constellation trajectories`: Use script `visualize_constellation.py` to generate constellations. To generate Starlink, Kuiper, or Telesat, one should uncomment the corresponding parameter block in the script, and comment out the other parameter blocks. The default is Starlink 5-shell.
-
-2. `Fig. 12: Ground observer's view`: Use script `visualize_horizon_over_time.py`. To change observer location, change the `LOCATION` coordinates. In order to visualize for X seconds at a granularity of Y seconds, set `VIZ_TIME = X` and `VIZ_GRAN = Y`. The default values are: `LOCATION = (59.9311, 30.3609)` corresponding to St. Petersburg, `X = 170`, and `Y = 5`.
-
-3. `Fig. 13: Shortest path changes over time`: Use script `visualize_path.py`. Change the values of `GEN_TIME` and `path_file` for various visualization generation times and city pairs respectively. The default values generate `Fig. 13 (left)`. The same script can be used to generate `Fig. 16(a) and 17(a)`.
-
-4. `Fig. 14: Congestion shifts over time`: Use script `visualize_path_wise_utilization.py`. Change the values of `GEN_TIME`, `path_file`, and `IN_UTIL_FILE` for specifying visualization time, end-to-end path, and utilization. The default values generate `Fig. 14 (top)`.
-
-5. `Fig. 15: Constellation-wide utilization`: Use script `visualize_utilization.py`. Change the values of `GEN_TIME` and `IN_UTIL_FILE` for specifying visualization generation time and utilization. The default values generate `Fig. 15`.
-
-6. `Fig. 16(b) and 17(b)`: Use script `visualize_path_no_isl.py` to visualize paths when constellation does not have inter-satellite connectivity. Change the values of `GEN_TIME` and `path_file` for various visualization generation times and city pairs respectively. The default values generate `Fig 17(b)`.
+Among above scripts, `visualize_utilization.py` and `visualize_path.py` have been updated. The first can be called on a directory, while the latter can be called using `visualize_multipath.sh`, others may not work as expected. 

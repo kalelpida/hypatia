@@ -7,7 +7,7 @@ with open("../commodites.temp") as f:
 
 coms=eval(coms[0])
 #for telesat_1015 (27*13=351 satellites
-dico_villes={int(ligne.split(",")[0])+351 : ligne.split(",")[1] for ligne in villes}
+dico_villes={int(ligne.split(",")[0])+756 : ligne.split(",")[1] for ligne in villes}
 
 with open("commodites.txt", "w") as f:
 	for idcom,com in enumerate(coms):
