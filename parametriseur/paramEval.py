@@ -14,17 +14,30 @@ def evaluation():
     for elt, util in sorted(dico_util.items()):
         print(f"\n\nExpérience {elt}\n")
         tableau(dico_params[elt], util.val3q, util.valmax)
+        stats(util.dico_resultats_tcp, "TCP")
 
 def tableau(dico_param, dico_util3q, dico_utilmax):
     print("|paramètres:")
     for p, val in dico_param.items():
-        if p not in dico_util3q:
+        for vp in sorted(dico_util3q, key=lambda k: len(k), reverse=True):
+            if vp.startswith(p):
+                break
+        else:#si le paramètre n'est pas utilisé dans la simu, ce n'est pas une constante
             print("|",p, val)
-    
-    print('\n|{: <25} | {: ^8} | {: ^8} | {: ^8}'.format("champ", "capacité", "util Q3", "util max"))
-    strformat='|{: <25} | {: ^8.1f} | {: ^8.1f} | {: ^8.1f}'
-    for p, val3q in sorted(dico_util3q.items()):
-        print(strformat.format(p, dico_param[p], dico_param[p]*val3q, dico_param[p]*dico_utilmax[p]))
+    print('\n|{: <40} | {: ^8} | {: ^8} | {: ^8}'.format("champ", "capacité", "util Q3", "util max"))
+    strformat='|{: <40} | {: ^8.1f} | {: ^8.1f} | {: ^8.1f}'
+    for vp, val3q in sorted(dico_util3q.items()):
+        for p in sorted(dico_param, key=lambda k: len(k), reverse=True):
+            if vp.startswith(p):
+                print(strformat.format(vp, dico_param[p], dico_param[p]*val3q, dico_param[p]*dico_utilmax[vp]))
+                break
+        else:
+            raise Exception (f"la valeur mesurée n'a pas d'information associée")
+
+def stats(statistiques, titre):
+    print('\nStatistiques {}\n|{: <40} | {: ^8}'.format(titre, "champ", "valeur"))
+    for cpl in sorted(statistiques.items()):
+        print("|{: <40} | {: ^8.2f}".format(*cpl))
 
 
 def ecriture_params(dico_nvx_params, base_dir=EXPE_LOG_BASE_DIR, info_ficname=INFO_FILE):

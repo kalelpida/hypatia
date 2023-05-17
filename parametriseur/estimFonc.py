@@ -1,5 +1,5 @@
 import pickle
-import sys, os
+import sys, os, csv
 import numpy as np
 
 
@@ -16,12 +16,14 @@ def fonction():
 
 class Resultat():
     VERSION = '0' # à modifier chaque fois qu'un paramètre ci-dessous est ajouté/modifié
-    INSTANT = '7s'
-    DUREE = '20ms'
+    INSTANT = '10s'
+    DUREE = '19999ms'
     def __init__(self, **kwargs):
         dico_typelien_utilisation=kwargs['dico_typelien_utilisation']
+        self.dico_resultats_tcp=kwargs['dico_resultats_tcp']
         self.val3q = {nom : np.quantile(vals, 0.75) for nom, vals in dico_typelien_utilisation.items()}
         self.valmax = {nom : np.max(vals) for nom, vals in dico_typelien_utilisation.items()}
+        self.infoparams=self.attributs_ns()
     
     @classmethod
     def attributs(cls):
@@ -53,10 +55,11 @@ def maj_resultats():
             del dico_res[dos]
     for dos in os.listdir(EXPE_LOG_BASE_DIR):
         dircomplet=os.path.join(EXPE_LOG_BASE_DIR,dos)
-        if os.path.isdir(dircomplet) and ( dos not in dico_res or dico_res[dos].attributs() != Resultat.attributs()):
+        if os.path.isdir(dircomplet) and ( dos not in dico_res or dico_res[dos].infoparams != Resultat.attributs()):
             changement=True
             dico_typelien_utilisation = collecte_utilisation(dircomplet, **Resultat.attributs_ns())
-            dico_res[dos] = Resultat(dico_typelien_utilisation=dico_typelien_utilisation)
+            dico_resultats_tcp = collecte_resultats_tcp(dircomplet)
+            dico_res[dos] = Resultat(dico_typelien_utilisation=dico_typelien_utilisation, dico_resultats_tcp=dico_resultats_tcp)
     if changement:
         with open(RESFIC, 'wb') as f:
             pickle.dump(dico_res, f)
@@ -64,17 +67,10 @@ def maj_resultats():
     return dico_res
 
 
-def type_lien(info:str, idcom:int, src:int, dst:int, retour:bool)-> str:
-    reponse = 'debit-if-'+info[:info.find('-')].lower()
-    if reponse.endswith('gsl'):
-        if src<dst:
-            reponse+='&satellite'
-        elif idcom%2 == retour:
-            reponse+='&ue'
-        else:
-            reponse+='&gateway'
-    else:
-        assert reponse.endswith('isl')
+def type_lien(info:str, src:str, dst:str)-> str:
+    modelien=info[:info.find('-')].lower()
+    assert modelien in ('gsl', 'isl', 'tl')
+    reponse = f'debit-if-{modelien}&{src}*{dst}'
     return reponse
 
 
@@ -97,15 +93,16 @@ def collecte_utilisation(dos, instant, duree, **kwargs):
     assert os.path.isfile(txfic)
 
     with open(txfic, 'r') as f:
-        while (l:=f.readline()):
+        lecteur=csv.reader(f, delimiter=',')
+        next(lecteur)#skip header. Sinon utiliser csv.DictReader
+        for l in lecteur:
             #30000,767,431,2,0,1502,1201599,GSL-tx
-            deb, fin =l.find(','), l.rfind(',')
-            if (t_ns:=int(l[:deb])) < debut_ns:
+            t_ns, src, typesrc, dst, typedst, idcom, idseq, offset, payload, txtime_ns, isTCP, isRetour, info_lien = l
+            t_ns, src, dst, idcom, txtime_ns=int(t_ns), int(src), int(dst), int(idcom), int(txtime_ns)
+            if t_ns < debut_ns:
                 continue
             elif t_ns>= fin_interval_ns:
                 break
-            info_lien=l[fin+1:].strip()
-            src, dst, idcom, idseq, offset, payload, txtime_ns, isTCP, isRetour = eval(l[deb+1:fin])
             txtime_ns=min(txtime_ns,fin_interval_ns-t_ns)
             assert txtime_ns > 0
             #bandwidth is shared between destinations for gs links
@@ -121,12 +118,12 @@ def collecte_utilisation(dos, instant, duree, **kwargs):
                 else:
                     dico_links_src_gsl[src]={dst}
                 """
-                cle=(src, 'gsl')
+                cle=(src, f'gsl-{typedst}')
             if cle in dico_links:
                 dico_links[cle]+=txtime_ns/duree_ns
             else:
                 dico_links[cle]=txtime_ns/duree_ns
-                tl=type_lien(info_lien, idcom, src, dst, isRetour)
+                tl=type_lien(info_lien, typesrc, typedst)
                 if tl in dico_links_type:
                     dico_links_type[tl].append(cle)
                 else:
@@ -137,5 +134,45 @@ def collecte_utilisation(dos, instant, duree, **kwargs):
             resultats[tl].append(dico_links[lien])
     return resultats
 
+def TCPRes(ligne):
+    dico={}
+    commId, src, dst, taille_o, deb_ns, fin_ns, duree_ns, tx_o, fini, groupe = ligne
+    dico["commId"] = int(commId)
+    dico["src"] = int(src)
+    dico["dst"] = int(dst)
+    dico["taille_o"] = int(taille_o)
+    dico["debut_ns"] = int(deb_ns)
+    dico["fin_ns"] = int(fin_ns)
+    dico["duree_ns"] = int(duree_ns)
+    dico["tx_o"] = int(tx_o)
+    dico["fini"] = True if fini=='YES' else False
+    dico["groupe"] = groupe
+    dico['debit_Mb/s']=dico['tx_o']*8000/dico["duree_ns"]
+    return dico
 
 
+def collecte_resultats_tcp(dos):
+    #find run directory
+    run_trouve=False
+    for glob in os.listdir(dos):
+        if glob.startswith('run_loaded') and os.path.isdir(os.path.join(dos, glob)):
+            assert not run_trouve
+            run_trouve = True
+            run_glob= glob
+    assert run_trouve
+    # tx file
+    tcpfic=os.path.join(dos, run_glob, "logs_ns3", "tcp_flows.csv")
+    assert os.path.isfile(tcpfic)
+    liste=[] 
+    with open(tcpfic, 'r') as f:
+        lecteur=csv.reader(f, delimiter=',')
+        #94,804,847,3999250,2946944,16000000000,15997053056,3241620,NO_ONGOING,base
+        #commId, src, dst, taille_o, deb_ns, fin_ns, duree_ns, tx_o, fini, groupe
+        for ligne in lecteur:
+            liste.append(TCPRes(ligne))
+    stats={}
+    stats['Total transmis (Mb)'] = sum(x["tx_o"]*8e-6 for x in liste)
+    stats['Total upload (Mb)'] = sum(x["tx_o"]*8e-6 for x in liste if not x['commId']%2)
+    stats['Ecart-type debits pairs (Mb/s)'] = np.std([x['debit_Mb/s'] for x in liste if x['commId']%2==0])
+    stats['Ecart-type debits impairs (Mb/s)'] = np.std([x['debit_Mb/s'] for x in liste if x['commId']%2])
+    return stats
