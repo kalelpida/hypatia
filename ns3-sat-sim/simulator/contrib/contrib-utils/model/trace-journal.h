@@ -5,6 +5,8 @@
 #include "ns3/id-seq-header.h"
 #include "ns3/output-stream-wrapper.h"
 #include "ns3/nstime.h"
+#include "ns3/queue-item.h"
+#include <memory> //for shared_ptr
 //#include "ns3/internet-module.h"
 
 namespace ns3 {
@@ -19,6 +21,7 @@ namespace ns3 {
     struct structCbParams{
         mapflow_t *m_conversion;
         acceptNodeObj m_log_condition_NodeId;
+        Ptr<const Node> log_node;
     };
     
     typedef struct structCbParams cbparams;
@@ -26,6 +29,7 @@ namespace ns3 {
     void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> src_node, Ptr<const Node> dst_node,  Ptr<const Packet> packet, const Time& txTime);
     void PacketEventTracerSimple(Ptr<OutputStreamWrapper> stream, cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> node, Ptr<const Packet> packet, const Time& rxTime);
     void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> node, Ptr<const Packet> packet);
+    void QitEventTracerReduit(Ptr<OutputStreamWrapper> stream, std::shared_ptr<cbparams> cbparams_val, const std::string& infodrop, Ptr<QueueDiscItem const> qit);
 
 }   
 #endif

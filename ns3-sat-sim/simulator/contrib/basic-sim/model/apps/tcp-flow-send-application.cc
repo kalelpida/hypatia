@@ -183,18 +183,18 @@ void TcpFlowSendApplication::StartApplication(void) { // Called at time specifie
             AsciiTraceHelper asciiTraceHelper;
 
             m_prog_stream = asciiTraceHelper.CreateFileStream (m_baseLogsDir + "/" + format_string("tcp_flow_%" PRIu64 "_progress.csv", m_tcpFlowId));
-            *m_prog_stream->GetStream() << "id,instant,avancemtbytes" << std::endl << m_tcpFlowId << "," << Simulator::Now ().GetNanoSeconds () << "," << GetAckedBytes() << std::endl;
+            *m_prog_stream->GetStream() << "commId,instant,avancemtbytes" << std::endl << m_tcpFlowId << "," << Simulator::Now ().GetNanoSeconds () << "," << GetAckedBytes() << std::endl;
 
             m_cwnd_stream = asciiTraceHelper.CreateFileStream (m_baseLogsDir + "/" + format_string("tcp_flow_%" PRIu64 "_cwnd.csv", m_tcpFlowId));
             // Congestion window is only set upon SYN reception, so retrieving it early will just yield 0
             // As such there "is" basically no congestion window till then, so we are not going to write 0
-            *m_cwnd_stream->GetStream() << "id,instant,cwndbytes" << std::endl;
+            *m_cwnd_stream->GetStream() << "commId,instant,cwndbytes" << std::endl;
             m_socket->TraceConnectWithoutContext ("CongestionWindow", MakeCallback (&TcpFlowSendApplication::CwndChange, this));
 
             m_rtt_stream = asciiTraceHelper.CreateFileStream (m_baseLogsDir + "/" + format_string("tcp_flow_%" PRIu64 "_rtt.csv", m_tcpFlowId));
             // At the socket creation, there is no RTT measurement, so retrieving it early will just yield 0
             // As such there "is" basically no RTT measurement till then, so we are not going to write 0
-            *m_rtt_stream->GetStream() << "id,instant,rttns" << std::endl;
+            *m_rtt_stream->GetStream() << "commId,instant,rttns" << std::endl;
             m_socket->TraceConnectWithoutContext ("RTT", MakeCallback (&TcpFlowSendApplication::RttChange, this));        
         }
     }

@@ -22,6 +22,8 @@
 #include <string>
 
 #include "topology-satellite-network.h"
+#include "ns3/traffic-control-layer.h"
+
 namespace ns3 {
 
 static void SetErrorModel(NetDeviceContainer &netDevices, std::string &line){
@@ -495,6 +497,8 @@ namespace ns3 {
                     //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
                     netDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-channelError"));
                 }
+                TCLogDrop(c.Get(0), netDevices.Get(0));
+                TCLogDrop(c.Get(1), netDevices.Get(1));
             }
 
             counter += 1;
@@ -525,7 +529,10 @@ namespace ns3 {
         if (m_enable_rx_log || m_enable_tx_log || m_enable_drop_log){
             for (uint32_t i=0; i< devices.GetN(); i++)
             {
-                if (m_enable_drop_log) {devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "GSL-bufOvflwLinkErr")); }
+                if (m_enable_drop_log) {
+                    devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "GSL-bufOvflwLinkErr")); 
+                    TCLogDrop(devices.Get(i)->GetNode(), devices.Get(i));
+                }
                 if (m_enable_tx_log) {devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "GSL-tx")); }
                 if (m_enable_rx_log) {devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "GSL-rx")); }
             }
@@ -614,6 +621,8 @@ namespace ns3 {
                 if (m_enable_drop_log){
                     p2pDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
                     p2pDevices.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
+                    TCLogDrop(n1, p2pDevices.Get(0));
+                    TCLogDrop(n2, p2pDevices.Get(1));
                 }
             }
         }
@@ -767,6 +776,18 @@ namespace ns3 {
 
     void TopologySatelliteNetwork::RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> triplet, uint64_t flowId){
         (*(m_cbparams.m_conversion))[triplet]=flowId;
+    }
+
+    void TopologySatelliteNetwork::TCLogDrop(Ptr<Node> noeud, Ptr<NetDevice> netdev){
+        m_temp_tc = noeud->GetObject<TrafficControlLayer>();
+        if (m_temp_tc){
+            std::shared_ptr<cbparams> loc_cbparams = std::make_shared<cbparams>(m_cbparams);
+            loc_cbparams->log_node = noeud;
+            m_temp_qd = m_temp_tc->GetRootQueueDiscOnDevice(netdev);
+            if (m_temp_qd){
+                m_temp_qd->TraceConnectWithoutContext("Drop", MakeBoundCallback (&QitEventTracerReduit, m_drop_stream, loc_cbparams, "TL-tc"));
+            }
+        }
     }
 
 }

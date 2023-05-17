@@ -5,6 +5,7 @@
 #include "ns3/ipv4-header.h"
 #include "ns3/node.h"
 #include "ns3/simulator.h"
+#include "ns3/ipv4-queue-disc-item.h"
 
 namespace ns3 {
 
@@ -177,9 +178,31 @@ void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     // Extract burst identifier and packet sequence number
-    if (cbparams_val->m_log_condition_NodeId.minNodeId >= node->GetId()){
+    if (cbparams_val->m_log_condition_NodeId.minNodeId <= node->GetId()){
     resAnalysePacket analysePacket = {true, false, false, 0, 0, 0, 0};
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
+    // Log precise timestamp received of the sequence packet if needed
+    if (analysePacket.succes){
+    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
+    *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize;
+    *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    }
+    }
+}
+
+void QitEventTracerReduit(Ptr<OutputStreamWrapper> stream, std::shared_ptr<cbparams> cbparams_val, const std::string& infodrop, Ptr<QueueDiscItem const> qit)
+{
+    //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
+    // Extract burst identifier and packet sequence number
+    Ptr<const Node> node = cbparams_val->log_node;
+    if (cbparams_val->m_log_condition_NodeId.minNodeId <= node->GetId()){
+    resAnalysePacket analysePacket = {true, false, false, 0, 0, 0, 0};
+
+    //never did anything so dirty until now. A better way would be to patch the ns source code, if possible ?
+    Ipv4QueueDiscItem qitcpy(qit->GetPacket(), qit->GetAddress(), qit->GetProtocol(), Ipv4Header());
+    mempcpy(&qitcpy, &(*qit), sizeof(Ipv4QueueDiscItem));
+    qitcpy.AddHeader();
+    getPacketFlux(qitcpy.GetPacket(), cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
     if (analysePacket.succes){
     *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs

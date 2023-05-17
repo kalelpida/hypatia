@@ -69,6 +69,7 @@
 
 #include "ns3/trace-journal.h"
 
+#include <memory> //for shared_ptr
 namespace ns3 {
     
 
@@ -124,6 +125,9 @@ namespace ns3 {
         Ipv4AddressHelper m_ipv4_helper;
         void PopulateArpCaches();
 
+        // Log
+        void TCLogDrop(Ptr<Node> noeud, Ptr<NetDevice> netdev); //for Traffic Control
+
         // Input
         Ptr<BasicSimulation> m_basicSimulation;       //<! Basic simulation instance
         std::string m_satellite_network_dir;          //<! Directory containing satellite network information
@@ -170,6 +174,8 @@ namespace ns3 {
         std::string m_current_link_filename;
         std::map<std::string, std::string> m_channelparams;
         std::map<std::string, std::map<std::string, std::string>> m_paramaps;
+        Ptr<TrafficControlLayer> m_temp_tc;
+        Ptr<QueueDisc> m_temp_qd;
     };
 }
 
