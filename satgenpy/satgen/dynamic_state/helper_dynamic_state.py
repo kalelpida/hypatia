@@ -67,7 +67,7 @@ def clean_recursive(chem):
         for fic in os.listdir(chem):
             clean_recursive(os.path.join(chem, fic))
         os.rmdir(chem)
-    else:
+    elif os.path.exists(chem):
         os.remove(chem)
 
 def help_dynamic_state(

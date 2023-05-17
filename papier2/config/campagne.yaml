@@ -1,7 +1,7 @@
 quaesumus: #nom de la campagne
   graine: [0]
-  constellation: [ kuiper_630 ] # name will be inflated from files chosen in this directory
-  duree: [ 20 ] #en s
+  constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
+  duree: [ 6 ] #en s
   pas: [2000] #en ms
   isls: [ isls_plus_grid ]
   # examples of ISL deteriorators
@@ -15,8 +15,8 @@ quaesumus: #nom de la campagne
   threads: [ 4 ]
   debit-if-isl: [ 20 ] #[ 3, 10 ] #Mb/s
   debit-if-gsl: [ {'ue':2, 'gateway':150, 'satellite':80} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
-  logs-actifs: [ ['rx', 'tx', 'drop', 'coms', 'ping'] ] #('rx', 'tx', 'drop', 'coms', 'ping') # 'drop' callbacks won't be effective when Traffic Control is set 
-  estimDelai: [{"isl": 5, 'gsl': 4, 'extremite': 20 }, {"isl": 5, 'gsl': 4, 'extremite': 80 }, {"isl": 10, 'gsl': 8, 'extremite': 80 }]
+  logs-actifs: [ ['rx', 'tx', 'drop', 'coms', 'ping'] ] #('rx', 'tx', 'drop', 'coms', 'ping', 'rtt') # 'drop' callbacks won't be effective when Traffic Control is set 
+  estimDelai: [{"isl": 5, 'gsl': 4, 'extremite': 20 }] #, {"isl": 5, 'gsl': 4, 'extremite': 80 }, {"isl": 10, 'gsl': 8, 'extremite': 80 }]
 
   ##------------------
   # satellite_network_min_node_log: rx log only 1st station and satellites
@@ -46,8 +46,8 @@ quaesumus: #nom de la campagne
     #  MaxSize: QueueSize 30p #type value
     #  ChildQueueDisc: "ns3::FifoQueueDisc"
     #  ChildRate: DataRate 2Mbps # in TbfQueueDisc #Child prefix is removed to set the attribute of the ChildQueueDisc
-    - {"QueueDisc": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 100p", "Interval": "String 10ms", "Target": "String 100ms"} 
-    - {}
+    - {"QueueDisc": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 3p", "Interval": "String 10ms", "Target": "String 100ms"} 
+    #- {}
     #- {"QueueDisc": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 300ms", "Target": "String 200ms"} 
 
 info-sauvegarde:

@@ -7,6 +7,7 @@ from constants import *
 import scipy
 
 TYPE_OBJET='ue'
+PROTECTION_DEG=7 # marge pour les zones non couvertes
 
 this_file_path=os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(this_file_path,"../../../satgenpy"))
@@ -29,7 +30,7 @@ def create_users_randomGlobe(Nb, constellation='tas_700'):
         cstlconfig=yaml.load(f, Loader=yaml.Loader)
     heightsat=cstlconfig['ALTITUDE_M']
     latsat=np.deg2rad(cstlconfig['INCLINATION_DEGREE'])
-    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation'])
+    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation']+PROTECTION_DEG) # avoid users out of bounds
     latMaxUE = np.arccos(EARTH_RADIUS*np.cos(elev_ue)/(EARTH_RADIUS+heightsat))-elev_ue+latsat
     assert 0<=latMaxUE<=90
     
@@ -69,7 +70,7 @@ def create_users_villesGlobe(Nb, constellation='tas_700', ficVille='ground_stati
         cstlconfig=yaml.load(f, Loader=yaml.Loader)
     heightsat=cstlconfig['ALTITUDE_M']
     latsat=np.deg2rad(cstlconfig['INCLINATION_DEGREE'])
-    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation'])
+    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation']+PROTECTION_DEG) # avoid users out of bounds
     latMaxUE_rad = np.arccos(EARTH_RADIUS*np.cos(elev_ue)/(EARTH_RADIUS+heightsat))-elev_ue+latsat
     assert 0<=latMaxUE_rad<=np.pi/2
     
@@ -145,7 +146,7 @@ def create_users_villeschoisies(Nb, constellation='tas_700', ficVille='ground_st
         cstlconfig=yaml.load(f, Loader=yaml.Loader)
     heightsat=cstlconfig['ALTITUDE_M']
     latsat=np.deg2rad(cstlconfig['INCLINATION_DEGREE'])
-    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation'])
+    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation']+PROTECTION_DEG) # avoid users out of bounds
     latMaxUE_rad = np.arccos(EARTH_RADIUS*np.cos(elev_ue)/(EARTH_RADIUS+heightsat))-elev_ue+latsat
     assert 0<=latMaxUE_rad<=np.pi/2
     

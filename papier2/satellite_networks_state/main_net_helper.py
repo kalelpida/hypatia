@@ -138,7 +138,7 @@ class MainNetHelper:
                         elev=self.cstl_config[obj].get('minElevation', False)
                         if elev:
                             t=EARTH_RADIUS*math.sin(math.radians(elev))
-                            max_gsl_m=(math.sqrt((EARTH_RADIUS+self.cstl_config['ALTITUDE_M'])**2-EARTH_RADIUS**2+t**2) -t)*self.cstl_config["RADIO_K_FACTOR"]
+                            max_gsl_m=(math.sqrt((EARTH_RADIUS+self.cstl_config['ALTITUDE_M'])**2-EARTH_RADIUS**2+t**2) -t)*RADIO_K_FACTOR
                             self.cstl_config['LINKS'][i][2]["max_length_m"][obj]=max_gsl_m
 
 
