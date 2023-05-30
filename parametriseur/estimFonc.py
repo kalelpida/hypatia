@@ -55,7 +55,7 @@ def maj_resultats():
             del dico_res[dos]
     for dos in os.listdir(EXPE_LOG_BASE_DIR):
         dircomplet=os.path.join(EXPE_LOG_BASE_DIR,dos)
-        if os.path.isdir(dircomplet) and ( dos not in dico_res or dico_res[dos].infoparams != Resultat.attributs()):
+        if os.path.isdir(dircomplet) and ( dos not in dico_res or dico_res[dos].infoparams != Resultat.attributs_ns()):
             changement=True
             dico_typelien_utilisation = collecte_utilisation(dircomplet, **Resultat.attributs_ns())
             dico_resultats_tcp = collecte_resultats_tcp(dircomplet)

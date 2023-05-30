@@ -35,6 +35,7 @@ def create_users_randomGlobe(Nb, constellation='tas_700'):
     assert 0<=latMaxUE<=90
     
     liste_ues=[]
+    plt.subplot(projection='3d')
     for prenom in prenoms_sel:
         u = np.random.random()
         v = np.random.uniform(-np.sin(latMaxUE), np.sin(latMaxUE))
@@ -42,13 +43,14 @@ def create_users_randomGlobe(Nb, constellation='tas_700'):
         phi = np.arcsin(v)
         #altitude normal law around 200m+/-
         altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
+        plt.plot(*xyz(phi, theta), '.')
         liste_ues.append({
             "nom": prenom.strip(),
             "lon": str(theta*180/np.pi), #degrees
             "lat": str(phi*180/np.pi), #degrees
             "elev": str(altitude_above_msl), #altitude, meters
         })
-
+    plt.show()
     with open(os.path.join(this_file_path,f"UEs_randomGlobe_{constellation.replace('_', '')}.txt"), 'w') as f:
         for i,ue in enumerate(liste_ues):
             f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
@@ -229,6 +231,28 @@ def kent_randomgen(lat, lon, kappa, latmax):
     assert -np.pi/2<latobj<np.pi/2
     return [latobj, lonobj]
 
+def zone_randomgen(lat, lon, dmax_km, dmin_km=50):
+    """
+    lon, lat in rads
+    dmax, dmin in km
+    """
+    assert dmax_km>dmin_km>0
+    sl, sL, cl, cL = np.sin(lon), np.sin(lat), np.cos(lon), np.cos(lat)
+    vec_central=np.array([cl*cL, sl*cL, sL])
+    vec_normal=np.array([-cl*sL, -sl*sL, cL]) #vecteur normal au précédent
+    vec_orth=np.array([-sl, cl, 0]) # vecteur normal aux deux précédents
+    #choix de la direction d'écartement depuis le vecteur d'origine
+    theta= np.random.uniform(-np.pi, np.pi)
+    vec_tournant = np.cos(theta)*vec_normal+np.sin(theta)*vec_orth
+    #choix de la distance d'écartement depuis l'origine
+    if dmax_km*180/np.pi/EARTH_RADIUS>10:
+        raise Exception("trop loin, changer la distribution (ajouter un sinus.. )")
+    phi=np.sqrt(np.random.uniform(dmin_km**2, dmax_km**2))/EARTH_RADIUS# uniforme sur la Terre aplatie localement
+    nv_vec=np.sin(phi)*vec_tournant+np.cos(phi)*vec_central
+    latobj, lonobj = np.arcsin(nv_vec[2]), np.arccos(nv_vec[0]/(1-nv_vec[2]**2)**0.5)
+    assert -np.pi/2<latobj<np.pi/2
+    return [latobj, lonobj]
+
 def ramene_pi(x):
     while x > np.pi:
         x-=2*np.pi
@@ -264,10 +288,48 @@ def test_distrib():
     plt.show()
 
 
+def create_voisins_villeschoisies(Nb, ficVille='ground_stations_Lille.csv'):
+    np.random.seed(32)
+
+    fic_communes=os.path.join(this_file_path,"villes_villages.txt")
+    with open(fic_communes, 'r') as f:
+        villages=f.readlines()[1:]
+    if Nb>len(villages):
+        raise Exception("Pas assez de prenoms, compléter le fichier")
+    prenoms_sel=np.random.choice(villages, Nb, replace=False)
+    
+    #get the cities
+    villes=satgen.read_ground_stations_basic(ficVille)
+    #"gid",  "name", "latitude_degrees_str", "longitude_degrees_str", "elevation_m_float","population_k": int
+    villes_pos=[np.radians([float(ville["latitude_degrees_str"]), float(ville["longitude_degrees_str"])]) for ville in villes]
+    villes_probas=np.array([ville['population_k'] for ville in villes])
+    villes_choisies = np.random.choice(list(range(len(villes))), size=Nb, p=villes_probas/sum(villes_probas))
+    liste_emplacements=[]
+    plt.subplot(projection='3d')
+    for prenom, idville in zip(prenoms_sel, villes_choisies):
+        latlonrad=zone_randomgen(*villes_pos[idville], dmax_km=700, dmin_km=50)
+        lat, lon = np.degrees(latlonrad)
+        plt.plot(*xyz(*latlonrad), '.')
+        plt.plot(*xyz(*villes_pos[idville]), '.', color='k')
+        #altitude normal law around 200m+/-
+        altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
+        liste_emplacements.append({
+            "nom": prenom.strip(),
+            "lon": str(lon), #degrees
+            "lat": str(lat), #degrees
+            "elev": str(altitude_above_msl), #altitude, meters
+        })
+    plt.show()
+    #raise Exception("data not written, comment out this exception to generate emplacements")
+    with open(os.path.join(this_file_path,f"emplacements_{len(villes)}ville.txt"), 'w') as f:
+        for i,ue in enumerate(liste_emplacements):
+            f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
+
 if __name__ =='__main__':
     #create_users_randomGlobe(100)
     #test_distrib()
-    #create_users_randomGlobe(250)
-    create_users_villesGlobe(1000)
-    create_users_villeschoisies(1000)
+    create_users_randomGlobe(250)
+    #create_users_villesGlobe(1000)
+    #create_users_villeschoisies(1000)
+    #create_voisins_villeschoisies(100)
 

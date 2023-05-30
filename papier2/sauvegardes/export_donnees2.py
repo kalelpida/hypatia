@@ -89,7 +89,7 @@ def getcomInfos(dossier, cle):
 	udpcoms=os.path.join(chemin, "udp_burst_schedule.csv")
 	if os.path.isfile(udpcoms):
 		dico_udp={}
-		with open(tcpcoms, 'r') as f:
+		with open(udpcoms, 'r') as f:
 			rdr = csv.reader(f, delimiter=',')
 			for ligne in rdr:
 				idcom, groupe = ligne[0], ligne[7]

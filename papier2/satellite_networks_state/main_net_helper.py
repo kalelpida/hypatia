@@ -149,6 +149,14 @@ class MainNetHelper:
                     *[self.dict_type_ivl[obj] for obj in objets]
                 )
                 self.interfaces.update(nvelles_interfaces)
+            
+            elif type_lien=='pyl':
+                network_links[nom_lien], nvelles_interfaces=generate_pyl_net(
+                    os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
+                    interfaces_number,
+                    self.dict_type_ivl[objets[0]], [self.dict_type_ivl[obj] for obj in objets[1:]]
+                )
+                self.interfaces.update(nvelles_interfaces)
 
             else:
                 raise Exception("type de lien non reconnu")
@@ -314,6 +322,36 @@ def generate_tl_net(output_filename_tls, interfaces_number, objetsA, objetsB):
         interfaces_number[b] += 1
     
     with open(output_filename_tls, 'w') as f:
+        for (a, b) in liste_liens:
+            f.write(f"{a},{b} \n")
+
+    return liste_liens, nvelles_interfaces
+
+def generate_pyl_net(output_filename_pyls, interfaces_number, objetsA, lesobjetsB):
+    """
+    Generate plus grid ISL file.
+
+    :param output_filename_isls     Output filename
+    :param interfaces_number        dictionary containing the next interface number
+
+    """
+    
+    nvelles_interfaces={}
+    liste_liens = []
+    if len(lesobjetsB)!=len(objetsA):
+        raise Exception("erreur TL: il doit y avoir bijection entre les objets A et chaque groupe dans B")
+    
+    for i, a in enumerate(objetsA):
+        for b in lesobjetsB[i]:
+        
+            liste_liens.append((a, b))
+
+            nvelles_interfaces[(a, b)] = interfaces_number[a]
+            nvelles_interfaces[(b, a)] = interfaces_number[b]
+            interfaces_number[a] += 1
+            interfaces_number[b] += 1
+    
+    with open(output_filename_pyls, 'w') as f:
         for (a, b) in liste_liens:
             f.write(f"{a},{b} \n")
 

@@ -629,6 +629,59 @@ namespace ns3 {
         std::cout << "    >> TL interfaces are setup" << std::endl;
     }
 
+    /*
+    void TopologySatelliteNetwork::ReadPyLs(const std::string &lien)
+    {        
+        PointToPointTracenHelper p2p_helper(m_paramaps, m_channelparams);
+
+        std::string filename = m_satellite_network_dir + "/"+m_current_link_filename;
+        if (!file_exists(filename)) {
+            throw std::runtime_error(format_string("File %s does not exist.", filename.c_str()));
+        }
+        // Read file contents
+        std::string line;
+        std::ifstream fstate_file(filename);
+        NS_ABORT_MSG_UNLESS(fstate_file.is_open(), "File " + filename + " could not be opened");
+        std::string nd_prec;
+        NetDeviceContainer pyraDevs;
+        if (fstate_file) {
+            while (getline(fstate_file, line)) {
+                std::vector<std::string> comma_split = split_string(trim(line), ",", 2);
+                Ptr<Node> n1 = m_allNodes.Get(parse_positive_int64(comma_split[0]));
+                Ptr<Node> n2 = m_allNodes.Get(parse_positive_int64(comma_split[1]));
+                if (m_paramaps.find(n1->GetObject<Specie>()->GetName()) == m_paramaps.end() || m_paramaps.find(n2->GetObject<Specie>()->GetName()) == m_paramaps.end()){
+                    continue;
+                }
+
+                NodeContainer p2pNodes;
+                p2pNodes.Add(n1);
+                p2pNodes.Add(n2);
+                pyraDevs.Add( p2p_helper.Install(p2pNodes));
+
+                // Assign some IP address (nothing smart, no aggregation, just some IP address)
+                m_ipv4_helper.Assign(pyraDevs);
+                m_ipv4_helper.NewNetwork();
+                // Tracking
+                if (m_enable_rx_log){
+                    p2pDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
+                    p2pDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
+                }
+                if (m_enable_tx_log){
+                    p2pDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
+                    p2pDevices.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
+                }
+                if (m_enable_drop_log){
+                    p2pDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
+                    p2pDevices.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
+                    TCLogDrop(n1, p2pDevices.Get(0));
+                    TCLogDrop(n2, p2pDevices.Get(1));
+                }
+                
+            }
+        }
+        std::cout << "    >> TL interfaces are setup" << std::endl;
+    }*/
+
     void
     TopologySatelliteNetwork::PopulateArpCaches() {
 
