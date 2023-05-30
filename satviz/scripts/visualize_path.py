@@ -60,7 +60,7 @@ NUM_ORBS = 72
 NUM_SATS_PER_ORB = 22
 INCLINATION_DEGREE = 53
 """
-"""
+
 # KUIPER 630
 NAME = "kuiper_630"
 
@@ -77,22 +77,6 @@ MAX_ISL_LENGTH_M = 2 * math.sqrt(math.pow(EARTH_RADIUS + ALTITUDE_M, 2) - math.p
 NUM_ORBS = 34
 NUM_SATS_PER_ORB = 34
 INCLINATION_DEGREE = 51.9
-"""
-
-# Telesat 1015
-NAME = "tas_700"
-
-################################################################
-# The below constants are taken from Telesat's FCC filing as below:
-# [1]: https://fcc.report/IBFS/SAT-MPL-20200526-00053/2378318.pdf
-################################################################
-ECCENTRICITY= 0.0000001  # Circular orbits are zero, but pyephem does not permit 0, so lowest possible value
-ARG_OF_PERIGEE_DEGREE= 0.0
-
-ALTITUDE_M = 700000  # Altitude ~700 km
-NUM_ORBS = 28
-NUM_SATS_PER_ORB = 27
-INCLINATION_DEGREE= 65
 MU_EARTH= 3.98574405e+14
 SECONDS_SIDEREAL_DAY= 86164
 MEAN_MOTION_REV_PER_DAY = SECONDS_SIDEREAL_DAY*math.sqrt(MU_EARTH/(ALTITUDE_M+EARTH_RADIUS)**3)/math.pi/2

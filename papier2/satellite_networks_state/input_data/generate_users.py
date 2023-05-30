@@ -14,7 +14,7 @@ sys.path.append(os.path.join(this_file_path,"../../../satgenpy"))
 import satgen
             
 
-def create_users_randomGlobe(Nb, constellation='tas_700'):
+def create_users_randomGlobe(Nb, constellation='kuiper_630'):
     np.random.seed(32)
 
     fic_prenoms=os.path.join(this_file_path,"prenoms.txt")
@@ -30,7 +30,7 @@ def create_users_randomGlobe(Nb, constellation='tas_700'):
         cstlconfig=yaml.load(f, Loader=yaml.Loader)
     heightsat=cstlconfig['ALTITUDE_M']
     latsat=np.deg2rad(cstlconfig['INCLINATION_DEGREE'])
-    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation']+PROTECTION_DEG) # avoid users out of bounds
+    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation'])
     latMaxUE = np.arccos(EARTH_RADIUS*np.cos(elev_ue)/(EARTH_RADIUS+heightsat))-elev_ue+latsat
     assert 0<=latMaxUE<=90
     
@@ -55,7 +55,7 @@ def create_users_randomGlobe(Nb, constellation='tas_700'):
         for i,ue in enumerate(liste_ues):
             f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
             
-def create_users_villesGlobe(Nb, constellation='tas_700', ficVille='ground_stations_cities_by_estimated_2025_pop_300k_UN.csv'):
+def create_users_villesGlobe(Nb, constellation='kuiper_630', ficVille='ground_stations_cities_by_estimated_2025_pop_300k_UN.csv'):
     np.random.seed(32)
 
     fic_prenoms=os.path.join(this_file_path,"prenoms.txt")
@@ -131,7 +131,7 @@ def create_users_villesGlobe(Nb, constellation='tas_700', ficVille='ground_stati
             f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
 
 
-def create_users_villeschoisies(Nb, constellation='tas_700', ficVille='ground_stations_Lille.csv'):
+def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='ground_stations_Lille.csv'):
     np.random.seed(32)
 
     fic_prenoms=os.path.join(this_file_path,"prenoms.txt")

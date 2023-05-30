@@ -5,7 +5,7 @@ a-conserver-dans-campagne:
 
 paramTester:
   graine: [0]
-  constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
+  constellation: [ kuiper_630 ] # name will be inflated from files chosen in this directory
   duree: [ 30 ] #en s
   pas: [2000] #en ms
   isls: [ isls_plus_grid ]

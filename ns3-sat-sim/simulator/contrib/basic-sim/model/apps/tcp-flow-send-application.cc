@@ -37,7 +37,6 @@
 #include "ns3/exp-util.h"
 #include "tcp-flow-send-application.h"
 #include <fstream>
-#include <utility>
 
 namespace ns3 {
 
