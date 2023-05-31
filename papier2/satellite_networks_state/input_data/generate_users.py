@@ -1,7 +1,7 @@
 #generate X users spread uniformly on Earth
 import numpy as np
 import matplotlib.pyplot as plt
-import os, sys
+import os, sys, csv
 import yaml
 from constants import *
 import scipy
@@ -51,11 +51,12 @@ def create_users_randomGlobe(Nb, constellation='kuiper_630'):
             "elev": str(altitude_above_msl), #altitude, meters
         })
     plt.show()
-    with open(os.path.join(this_file_path,f"UEs_randomGlobe_{constellation.replace('_', '')}.txt"), 'w') as f:
+    with open(os.path.join(this_file_path,f"os_randomGlobe_{constellation.replace('_', '')}.txt"), 'w') as f:
         for i,ue in enumerate(liste_ues):
             f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
             
-def create_users_villesGlobe(Nb, constellation='kuiper_630', ficVille='ground_stations_cities_by_estimated_2025_pop_300k_UN.csv'):
+
+def create_users_villesGlobe(Nb, constellation='kuiper_630', ficVille='os_cities_by_estimated_2025_pop_300k_UN.csv'):
     np.random.seed(32)
 
     fic_prenoms=os.path.join(this_file_path,"prenoms.txt")
@@ -80,8 +81,8 @@ def create_users_villesGlobe(Nb, constellation='kuiper_630', ficVille='ground_st
     Nb_proches_villes=int(Nb*0.9)
     #get the cities
     villes=satgen.read_ground_stations_basic(ficVille)
-    #"gid",  "name", "latitude_degrees_str", "longitude_degrees_str", "elevation_m_float","population_k": int
-    villes_pos=[np.radians([float(ville["latitude_degrees_str"]), float(ville["longitude_degrees_str"])]) for ville in villes]
+    #"gid",  "name", "latitude_degrees", "longitude_degrees", "elevation_m","population_k": int
+    villes_pos=[np.radians([float(ville["latitude_degrees"]), float(ville["longitude_degrees"])]) for ville in villes]
     villes_probas=np.array([ville['population_k'] for ville in villes])
     villes_choisies = np.random.choice(list(range(len(villes))), size=Nb_proches_villes, p=villes_probas/sum(villes_probas))
     liste_ues=[]
@@ -126,12 +127,12 @@ def create_users_villesGlobe(Nb, constellation='kuiper_630', ficVille='ground_st
         })
     plt.show()
     #raise Exception("data not written, comment out this exception to generate users")
-    with open(os.path.join(this_file_path,f"UEs_villesGlobe_{constellation.replace('_', '')}.txt"), 'w') as f:
+    with open(os.path.join(this_file_path,f"os_villesGlobe_{constellation.replace('_', '')}.txt"), 'w') as f:
         for i,ue in enumerate(liste_ues):
             f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
 
 
-def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='ground_stations_Lille.csv'):
+def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='os_Lille.csv'):
     np.random.seed(32)
 
     fic_prenoms=os.path.join(this_file_path,"prenoms.txt")
@@ -156,8 +157,8 @@ def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='ground
     Nb_proches_villes=int(Nb*0.8)
     #get the cities
     villes=satgen.read_ground_stations_basic(ficVille)
-    #"gid",  "name", "latitude_degrees_str", "longitude_degrees_str", "elevation_m_float","population_k": int
-    villes_pos=[np.radians([float(ville["latitude_degrees_str"]), float(ville["longitude_degrees_str"])]) for ville in villes]
+    #"gid",  "name", "latitude_degrees", "longitude_degrees", "elevation_m","population_k": int
+    villes_pos=[np.radians([float(ville["latitude_degrees"]), float(ville["longitude_degrees"])]) for ville in villes]
     villes_probas=np.array([ville['population_k'] for ville in villes])
     villes_choisies = np.random.choice(list(range(len(villes))), size=Nb_proches_villes, p=villes_probas/sum(villes_probas))
     liste_ues=[]
@@ -203,7 +204,7 @@ def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='ground
         })
     plt.show()
     #raise Exception("data not written, comment out this exception to generate users")
-    with open(os.path.join(this_file_path,f"UEs_{len(villes)}ville_{constellation.replace('_', '')}.txt"), 'w') as f:
+    with open(os.path.join(this_file_path,f"os_{len(villes)}villes_{constellation.replace('_', '')}.txt"), 'w') as f:
         for i,ue in enumerate(liste_ues):
             f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
 
@@ -288,7 +289,7 @@ def test_distrib():
     plt.show()
 
 
-def create_voisins_villeschoisies(Nb, ficVille='ground_stations_Lille.csv'):
+def create_voisins_villeschoisies(Nb, ficVille='os_Lille.csv'):
     np.random.seed(32)
 
     fic_communes=os.path.join(this_file_path,"villes_villages.txt")
@@ -300,13 +301,15 @@ def create_voisins_villeschoisies(Nb, ficVille='ground_stations_Lille.csv'):
     
     #get the cities
     villes=satgen.read_ground_stations_basic(ficVille)
-    #"gid",  "name", "latitude_degrees_str", "longitude_degrees_str", "elevation_m_float","population_k": int
-    villes_pos=[np.radians([float(ville["latitude_degrees_str"]), float(ville["longitude_degrees_str"])]) for ville in villes]
-    villes_probas=np.array([ville['population_k'] for ville in villes])
+    #"gid",  "name", "latitude_degrees", "longitude_degrees", "elevation_m","population_k": int
+    villes_pos=[np.radians([float(ville["latitude_degrees"]), float(ville["longitude_degrees"])]) for ville in villes]
+    villes_probas=np.array([float(ville['population_k']) for ville in villes])
     villes_choisies = np.random.choice(list(range(len(villes))), size=Nb, p=villes_probas/sum(villes_probas))
+    nomvillefic=villes[villes_choisies[0]]['name']
+    villes_choisies.sort()
     liste_emplacements=[]
     plt.subplot(projection='3d')
-    for prenom, idville in zip(prenoms_sel, villes_choisies):
+    for gid, (prenom, idville) in enumerate(zip(prenoms_sel, villes_choisies)):
         latlonrad=zone_randomgen(*villes_pos[idville], dmax_km=700, dmin_km=50)
         lat, lon = np.degrees(latlonrad)
         plt.plot(*xyz(*latlonrad), '.')
@@ -314,22 +317,26 @@ def create_voisins_villeschoisies(Nb, ficVille='ground_stations_Lille.csv'):
         #altitude normal law around 200m+/-
         altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
         liste_emplacements.append({
-            "nom": prenom.strip(),
-            "lon": str(lon), #degrees
-            "lat": str(lat), #degrees
-            "elev": str(altitude_above_msl), #altitude, meters
+            'gid': gid,
+            "name": prenom.strip(),
+            "longitude_degrees": lon, #degrees
+            "latitude_degrees": lat, #degrees
+            "elevation_m": altitude_above_msl, #altitude, meters
+            "maitre": idville
         })
     plt.show()
     #raise Exception("data not written, comment out this exception to generate emplacements")
-    with open(os.path.join(this_file_path,f"emplacements_{len(villes)}ville.txt"), 'w') as f:
-        for i,ue in enumerate(liste_emplacements):
-            f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
+    with open(os.path.join(this_file_path,f"os_{Nb}emplacements_{nomvillefic}.csv"), 'w') as f:
+        champs = ['gid', 'name', 'latitude_degrees', 'longitude_degrees', 'elevation_m', 'maitre']
+        ecrivain = csv.DictWriter(f, fieldnames=champs)
+        ecrivain.writeheader()
+        ecrivain.writerows(liste_emplacements)
 
 if __name__ =='__main__':
     #create_users_randomGlobe(100)
     #test_distrib()
-    create_users_randomGlobe(250)
+    #create_users_randomGlobe(250)
     #create_users_villesGlobe(1000)
     #create_users_villeschoisies(1000)
-    #create_voisins_villeschoisies(100)
+    create_voisins_villeschoisies(100)
 

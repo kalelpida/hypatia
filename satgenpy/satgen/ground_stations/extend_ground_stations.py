@@ -23,6 +23,7 @@
 from satgen.distance_tools import *
 from .read_ground_stations import *
 import numpy as np
+import os
 
 
 def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_stations_out):
@@ -30,17 +31,17 @@ def extend_ground_stations(filename_ground_stations_basic_in, filename_ground_st
     with open(filename_ground_stations_out, "w+") as f_out:
         for ground_station in ground_stations:
             cartesian = geodetic2cartesian(
-                float(ground_station["latitude_degrees_str"]),
-                float(ground_station["longitude_degrees_str"]),
-                ground_station["elevation_m_float"]
+                float(ground_station["latitude_degrees"]),
+                float(ground_station["longitude_degrees"]),
+                float(ground_station["elevation_m"])
             )
             f_out.write(
                 "%d,%s,%f,%f,%f,%f,%f,%f,station\n" % (
                     ground_station["gid"],
                     ground_station["name"],
-                    float(ground_station["latitude_degrees_str"]),
-                    float(ground_station["longitude_degrees_str"]),
-                    ground_station["elevation_m_float"],
+                    float(ground_station["latitude_degrees"]),
+                    float(ground_station["longitude_degrees"]),
+                    float(ground_station["elevation_m"]),
                     cartesian[0],
                     cartesian[1],
                     cartesian[2]
@@ -58,17 +59,9 @@ def extend_ground_objects(graine, cstl_config, filename_ground_out):
     ground_object_positions=[]
     for objet_sol in cstl_config['TYPES_OBJETS_SOL']:
         positions = cstl_config[objet_sol]['positions']
-        if objet_sol == cstl_config['ENDPOINTS'][0]:# ue par défaut
-            liste_positions_sol=read_ground_stations_basic("input_data/UEs_{}.txt".format(positions))
-
-        elif positions == 'topCitiesHypatia':
-            liste_positions_sol = read_ground_stations_basic("input_data/ground_stations_cities_sorted_by_estimated_2025_pop_top_100.basic.txt")
-        elif positions == 'topCitiesUN':
-            liste_positions_sol = read_ground_stations_basic("input_data/ground_stations_cities_by_estimated_2025_pop_300k_UN.csv")
-        elif positions == 'Lille':
-            liste_positions_sol = read_ground_stations_basic("input_data/ground_stations_Lille.csv")
-        else: # autres cas à faire
-            raise Exception("config not recognised")
+        if not os.path.isfile(nomfic:="input_data/{}.txt".format(positions)):
+            assert os.path.isfile(nomfic:="input_data/{}.csv".format(positions))
+        liste_positions_sol=read_ground_stations_basic(nomfic)
 
         if cstl_config[objet_sol]["nombre"] > len(liste_positions_sol):
             raise Exception('please, generate more positions. For UEs, this can be done using `generate_users.py` in satellite_networks_state/input_data/')
@@ -78,17 +71,17 @@ def extend_ground_objects(graine, cstl_config, filename_ground_out):
         selection_positions_sol[objet_sol] = liste_positions_sol
         for ids, position in enumerate(liste_positions_sol):
             cartesian = geodetic2cartesian(
-            float(position["latitude_degrees_str"]),
-            float(position["longitude_degrees_str"]),
-            position["elevation_m_float"]
+            float(position["latitude_degrees"]),
+            float(position["longitude_degrees"]),
+            float(position["elevation_m"])
             )
             ground_object_positions.append(
                 "%d,%s,%f,%f,%f,%f,%f,%f,%s\n" % (
                     ids+decalage_id_sol,
                     position["name"],
-                    float(position["latitude_degrees_str"]),
-                    float(position["longitude_degrees_str"]),
-                    position["elevation_m_float"],
+                    float(position["latitude_degrees"]),
+                    float(position["longitude_degrees"]),
+                    float(position["elevation_m"]),
                     cartesian[0],
                     cartesian[1],
                     cartesian[2],
@@ -134,12 +127,12 @@ def extend_ground_objects(graine, cstl_config, filename_ground_out):
     for type_client in types_client:
         nb=cstl_config[type_client]["nombre"]
         for pos_client in selection_positions_sol[type_client]:
-            id_client = pos_client['gid']
+            id_client = int(pos_client['gid'])
             # add source and dest of commodities 
             if id_client < 0.2*nb:#20% flots longs
                 id_serveur=np.random.randint(0, nbserveurs)
             else: #80% flots courts
-                id_serveur=sorted([(geodesic_distance_m_between_ground_stations(pos_client, pos_serveur), pos_serveur['gid']) for pos_serveur in selection_positions_sol[type_serveur]])[0][1]
+                id_serveur=sorted([(geodesic_distance_m_between_ground_stations(pos_client, pos_serveur), int(pos_serveur['gid'])) for pos_serveur in selection_positions_sol[type_serveur]])[0][1]
 
             # remember that for convenience in later routing, IDs in commodities are allocated from 0 to infinite
             list_from_to.append([id_client+decalages[type_client], id_serveur+decalages[type_serveur]])

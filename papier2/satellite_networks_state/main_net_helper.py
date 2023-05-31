@@ -151,10 +151,22 @@ class MainNetHelper:
                 self.interfaces.update(nvelles_interfaces)
             
             elif type_lien=='pyl':
+                assert len(objets) == 2
+                nom_objs=list(objets.keys())
+                
+                rng0, rng1 = self.dict_type_ivl[nom_objs[0]], self.dict_type_ivl[nom_objs[1]]
+                if len(rng0) < len(rng1):
+                    master, slave = self.cstl_config[nom_objs[0]], self.cstl_config[nom_objs[1]]
+                    slave['range'], master['range']= rng1, rng0
+                else:
+                    slave, master = self.cstl_config[nom_objs[0]], self.cstl_config[nom_objs[1]]
+                    slave['range'], master['range']= rng0, rng1
+                    
                 network_links[nom_lien], nvelles_interfaces=generate_pyl_net(
                     os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
                     interfaces_number,
-                    self.dict_type_ivl[objets[0]], [self.dict_type_ivl[obj] for obj in objets[1:]]
+                    master, slave, 
+                    delai_lien(proprietes_lien)
                 )
                 self.interfaces.update(nvelles_interfaces)
 
@@ -327,7 +339,7 @@ def generate_tl_net(output_filename_tls, interfaces_number, objetsA, objetsB):
 
     return liste_liens, nvelles_interfaces
 
-def generate_pyl_net(output_filename_pyls, interfaces_number, objetsA, lesobjetsB):
+def generate_pyl_net(output_filename_pyls, interfaces_number, master, slave, delai_additionnel=0):
     """
     Generate plus grid ISL file.
 
@@ -338,22 +350,34 @@ def generate_pyl_net(output_filename_pyls, interfaces_number, objetsA, lesobjets
     
     nvelles_interfaces={}
     liste_liens = []
-    if len(lesobjetsB)!=len(objetsA):
-        raise Exception("erreur TL: il doit y avoir bijection entre les objets A et chaque groupe dans B")
-    
-    for i, a in enumerate(objetsA):
-        for b in lesobjetsB[i]:
-        
-            liste_liens.append((a, b))
 
-            nvelles_interfaces[(a, b)] = interfaces_number[a]
-            nvelles_interfaces[(b, a)] = interfaces_number[b]
-            interfaces_number[a] += 1
-            interfaces_number[b] += 1
+    maitres = list(master['range'])
+    esclaves = list(slave['range'])
+    
+    #juste pour vérifier cohérence
+    if not os.path.isfile(nomficmaitres:="input_data/{}.txt".format(master['positions'])):
+        assert os.path.isfile(nomficmaitres:="input_data/{}.csv".format(master['positions']))
+    liste_maitres=satgen.read_ground_stations_basic(nomficmaitres)
+    if len(liste_maitres)<len(maitres):
+        raise Exception("erreur liens pyramide, incohérence entre le nombre d'esclaves et de maîtres") 
+    
+    if not os.path.isfile(nomficesclaves:="input_data/{}.txt".format(slave['positions'])):
+        assert os.path.isfile(nomficesclaves:="input_data/{}.csv".format(slave['positions']))
+    liste_esclaves=satgen.read_ground_stations_basic(nomficesclaves)
+    for ville in liste_esclaves[:len(esclaves)]:
+            num_es= esclaves[int(ville['gid'])]
+            num_mtr= maitres[int(ville['maitre'])]
+            delai_s = satgen.geodesic_distance_m_between_ground_stations(ville, liste_maitres[int(ville['maitre'])])/3e8+delai_additionnel
+            liste_liens.append((num_es, num_mtr, delai_s))
+
+            nvelles_interfaces[(num_es, num_mtr)] = interfaces_number[num_es]
+            nvelles_interfaces[(num_mtr, num_es)] = interfaces_number[num_mtr]
+            interfaces_number[num_es] += 1
+            interfaces_number[num_mtr] += 1
     
     with open(output_filename_pyls, 'w') as f:
-        for (a, b) in liste_liens:
-            f.write(f"{a},{b} \n")
+        for (a, b, delai_s) in liste_liens:
+            f.write(f"{a},{b},{delai_s}s \n")
 
     return liste_liens, nvelles_interfaces
 
@@ -364,3 +388,14 @@ def generate_gsl_interfaces(nom_lien, interfaces_number, *objets):
             nvelles_interfaces[(i, nom_lien)] = interfaces_number[i]
             interfaces_number[i]+=1
     return nvelles_interfaces
+
+def delai_lien(parametres):
+    if 'Delay' in parametres:
+        strpoids=parametres['Delay'].split('~')[1]
+        poids=float(strpoids.rstrip("msn"))
+        if 'ms' in strpoids:
+            poids*=1e-3
+        elif 'ns' in strpoids:
+            poids*=1e-9
+        return poids
+    return 0

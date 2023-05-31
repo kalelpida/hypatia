@@ -303,14 +303,14 @@ class TestDistanceTools(unittest.TestCase):
 
         # Check what happens with cartesian coordinates
         a = geodetic2cartesian(
-            float(shadow_18["latitude_degrees_str"]),
-            float(shadow_18["longitude_degrees_str"]),
-            shadow_18["elevation_m_float"],
+            float(shadow_18["latitude_degrees"]),
+            float(shadow_18["longitude_degrees"]),
+            shadow_18["elevation_m"],
         )
         b = geodetic2cartesian(
-            float(shadow_19["latitude_degrees_str"]),
-            float(shadow_19["longitude_degrees_str"]),
-            shadow_19["elevation_m_float"],
+            float(shadow_19["latitude_degrees"]),
+            float(shadow_19["longitude_degrees"]),
+            shadow_19["elevation_m"],
         )
 
         # For now, we will keep a loose bound of 1% here, but it needs to be tightened

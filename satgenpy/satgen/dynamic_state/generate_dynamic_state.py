@@ -158,11 +158,18 @@ def generate_dynamic_state_at(
 
             
         elif type_lien=='tl':
+            if poids==None:
+                raise Exception("mettre à jour mesure de distance pour TLs")
             for (a, b) in net_gen_infos['network links'][nom_lien]:
-                if poids==None:
-                    raise Exception("mettre à jour mesure de distance pour TLs")
                 full_net_graph_penalised.add_edge(
                         a, b, weight=poids, delai=poids)
+        
+        elif type_lien=='pyl':
+            if poids==None:
+                poids=0
+            for (a, b, delai) in net_gen_infos['network links'][nom_lien]:
+                full_net_graph_penalised.add_edge(
+                        a, b, weight=poids+delai, delai=poids+delai)
 
     #################################
 

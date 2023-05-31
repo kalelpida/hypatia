@@ -91,9 +91,9 @@ def distance_m_ground_station_to_satellite(ground_station, satellite, epoch_str,
     observer = ephem.Observer()
     observer.epoch = epoch_str
     observer.date = date_str
-    observer.lat = str(ground_station["latitude_degrees_str"])   # Very important: string argument is in degrees.
-    observer.lon = str(ground_station["longitude_degrees_str"])  # DO NOT pass a float as it is interpreted as radians
-    observer.elevation = ground_station["elevation_m_float"]
+    observer.lat = str(ground_station["latitude_degrees"])   # Very important: string argument is in degrees.
+    observer.lon = str(ground_station["longitude_degrees"])  # DO NOT pass a float as it is interpreted as radians
+    observer.elevation = ground_station["elevation_m"]
 
     # Compute distance from satellite to observer
     satellite.compute(observer)
@@ -116,8 +116,8 @@ def geodesic_distance_m_between_ground_stations(ground_station_1, ground_station
     earth_radius_km = 6378.135  # 6378135.0 meters
 
     return great_circle(
-        (float(ground_station_1["latitude_degrees_str"]), float(ground_station_1["longitude_degrees_str"])),
-        (float(ground_station_2["latitude_degrees_str"]), float(ground_station_2["longitude_degrees_str"])),
+        (float(ground_station_1["latitude_degrees"]), float(ground_station_1["longitude_degrees"])),
+        (float(ground_station_2["latitude_degrees"]), float(ground_station_2["longitude_degrees"])),
         radius=earth_radius_km
     ).m
 
@@ -165,9 +165,9 @@ def create_basic_ground_station_for_satellite_shadow(satellite, epoch_str, date_
     return {
         "gid": -1,
         "name": "Shadow of " + satellite.name,
-        "latitude_degrees_str": str(math.degrees(satellite.sublat)),
-        "longitude_degrees_str": str(math.degrees(satellite.sublong)),
-        "elevation_m_float": 0,
+        "latitude_degrees": str(math.degrees(satellite.sublat)),
+        "longitude_degrees": str(math.degrees(satellite.sublong)),
+        "elevation_m": 0,
     }
 
 

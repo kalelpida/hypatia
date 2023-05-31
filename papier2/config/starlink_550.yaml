@@ -57,18 +57,18 @@ TYPES_OBJETS_SOL: ['gateway', 'ue', 'server'] #/!\ /!\ /!\ NE PAS CHANGER L'ORDR
 #a change in interface configuration must be reflected in the system configuration (topology-satellite-network files)
 
 gateway: 
-  positions: Lille # topCitiesHypatia: 100 biggest cities, Hypatia base file; topCitiesUN: +300k cities, United Nations estimate
+  positions: os_Lille # ground_stations_cities_sorted_by_estimated_2025_pop_top_100_basic: 100 biggest cities, Hypatia base file; ground_stations_cities_by_estimated_2025_pop_300k_UN: +300k cities, United Nations estimate
   nombre: 1 #random, give IDs and place them, or set it in config?
   minElevation: 20 #degrees above horizon
 
 ue:
-  positions: 1ville_starlink550 #villesGlobe_starlink550 #1ville_starlink550 #randomGlobe_starlink550 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
+  positions: os_1villes_starlink550 #villesGlobe_starlink550 #os_1villes_starlink550 #randomGlobe_starlink550 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
   minElevation: 20 #degrees above horizon
   nombre: $config/nb-UEs-sol #voir dans config
   estimDelai: $config/estimDelai/extremite #special for  extremities of the connection.
   
 server:
-  positions: Lille
+  positions: os_Lille
   nombre: 1
   estimDelai: $config/estimDelai/extremite #special for  extremities of the connection.
 

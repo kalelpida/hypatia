@@ -29,71 +29,23 @@ def read_ground_stations_basic(filename_ground_stations_basic):
 
     :return: List of ground stations
     """
-    with open(filename_ground_stations_basic, 'r') as f:
+    ground_stations_basic = []
+    gid = 0
+    with open(filename_ground_stations_basic, 'r') as fic:
         if filename_ground_stations_basic.endswith('txt'):
-            return read_basic_txt(f)
+            lecteur=csv.DictReader(fic, fieldnames=['gid', 'name', 'latitude_degrees', 'longitude_degrees', 'elevation_m', 'population_k'])
         elif filename_ground_stations_basic.endswith('csv'):
-            return read_basic_csv(f)
+            lecteur=csv.DictReader(fic)
         else:
             raise Exception("fichier non reconnu")
-
-def read_basic_txt(fic):
-    """
-    Reads ground stations from the input file.
-
-    :param filename_ground_stations_basic: Filename of ground stations basic (typically /path/to/ground_stations.txt)
-
-    :return: List of ground stations
-    """
-    ground_stations_basic = []
-    gid = 0
-    for line in fic:
-        split = line.split(',')
-        if len(split) != 5:
-            raise ValueError("Basic ground station file has 5 columns")
-        if int(split[0]) != gid:
-            raise ValueError("Ground station id must increment each line")
-        ground_station_basic = {
-            "gid": gid,
-            "name": split[1],
-            "latitude_degrees_str": split[2],
-            "longitude_degrees_str": split[3],
-            "elevation_m_float": float(split[4]),
-        }
-        ground_stations_basic.append(ground_station_basic)
-        gid += 1
-    return ground_stations_basic
-
-def read_basic_csv(fic):
-    """
-    Reads ground stations from the input file.
-
-    :param filename_ground_stations_basic: Filename of ground stations basic (typically /path/to/ground_stations.txt)
-
-    :return: List of ground stations
-    """
-    lecteur=csv.reader(fic, dialect='excel')
-
-    ground_stations_basic = []
-    gid = 0
-    for ligne in lecteur:
-        if len(ligne) != 6:
-            raise ValueError("Basic ground station file has 5 columns")
-        if not ligne[0].isdecimal():
-            continue
-        if int(ligne[0]) != gid:
-            raise ValueError("Ground station id must increment each line")
-        ground_station_basic = {
-            "gid": gid,
-            "name": ligne[1].replace(',', " ~"),
-            "latitude_degrees_str": ligne[2],
-            "longitude_degrees_str": ligne[3],
-            "elevation_m_float": float(ligne[4]),
-            "population_k": int(ligne[5])
-        }
-        ground_stations_basic.append(ground_station_basic)
-        gid += 1
-    return ground_stations_basic
+        
+        for ligne in lecteur:
+            if int(ligne['gid']) != gid:
+                raise ValueError("Ground station id must increment each line")
+            ligne["name"]=ligne['name'].replace(',', " ~")
+            ground_stations_basic.append(dict(ligne))
+            gid += 1
+        return ground_stations_basic
 
 def read_ground_stations_extended(filename_ground_stations_extended):
     """
@@ -115,9 +67,9 @@ def read_ground_stations_extended(filename_ground_stations_extended):
             ground_station_basic = {
                 "gid": gid,
                 "name": split[1],
-                "latitude_degrees_str": split[2],
-                "longitude_degrees_str": split[3],
-                "elevation_m_float": float(split[4]),
+                "latitude_degrees": split[2],
+                "longitude_degrees": split[3],
+                "elevation_m": float(split[4]),
                 "cartesian_x": float(split[5]),
                 "cartesian_y": float(split[6]),
                 "cartesian_z": float(split[7]),
