@@ -59,7 +59,7 @@ info-sauvegarde:
     "satellite_networks_state/gen_data/{constellation}_{isls}_{algo}": ground_stations.txt
     "satellite_networks_state/gen_data/{constellation}_{isls}_{algo}/dynamic_state_{pas}ms_for_{duree}s": paths
     ns3_experiments/runs: "run_loaded_tm_pairing_for_{duree}s_with_{protocolesNom}_{algo}"
-    config: ^(?!campagne).*$ #all but starting with campagne
+    config: [ "courante.*", ".*{constellation}.*"] # ^(?!campagne).*$ #all but starting with campagne
     satellite_networks_state: commodites.temp
   #currinfo: currlog #pour savoir où on en est, si lancé en arrière-plan
 

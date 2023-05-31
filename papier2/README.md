@@ -4,9 +4,9 @@ Ce dossier a été remanié de Hypatia pour lancer des simulations. Les appels �
 
 # Résumé de hypatia
 
-+ hypatia/ns3+sat+sim contient le simulateur ns3 + des modules spécifiques dans contrib
++ hypatia/ns3-sat-sim contient le simulateur ns3 + des modules spécifiques dans contrib
 	+ le fichier principal est hypatia/ns3+sat+sim/simulator/scratch/main_satnet/main_satnet.cc
-+ hypatia/paper2 contient les scripts de configuration de la topologie et de ns3, ainsi que les résultats lorsque le script a été correctement executé
++ hypatia/papier2 contient les scripts de configuration de la topologie et de ns3, ainsi que les résultats lorsque le script a été correctement executé
 + hypatia/satgenpy contient la génération des constellations, du routage, et des outils d'analyse.
 + hypatia/satviz permet de générer les visualisations 3D avec Cesium
 	+ À noter pour césium: il faut créer un compte sur https://cesium.com/ion/signup/tokens pour récupérer un token
@@ -51,5 +51,9 @@ En fonction des paramètres de la campagne, les fichiers enregistrés peuvent va
    * link.rx contient tout les paquets reçus par tous les nœuds. Il contient notamment les champs 'instant (ns), src, id commodité, numero de séquence (si UDP), offset (si TCP), taille données (o), estUnFluxTCP, estRetour, information
    * link.drops contient tous les paquets perdus. Il contient notamment les champs instant (ns), nœud, id commodité, numero de séquence (si UDP), offset (si TCP), taille données (o), estUnFluxTCP, estRetour, cause de la perte
    * link.tx contient tous les paquets transmis. Il contient notamment les champs instant (ns), src, dst, id commodité, numero de séquence (si UDP), offset (si TCP), taille données (o), estUnFluxTCP, estRetour, info'
+
+# Configuration d'une campagne
+
+Voir config/README.md
 
 

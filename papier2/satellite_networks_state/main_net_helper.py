@@ -108,6 +108,7 @@ class MainNetHelper:
             nom_lien=f"lix{i}"
             if type_lien=='isl':
                 assert list(objets.keys())==["satellite"]
+                assert self.config['isls'] == "isls_plus_grid"
                 network_links[nom_lien], nvelles_interfaces=generate_plus_grid_isls(
                     os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
                     self.NUM_ORBS,

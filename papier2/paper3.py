@@ -141,11 +141,14 @@ class Experiences():
         sources_a_svgder=[]
         str_courante=str_recursif(self.courante)
         str_courante['protocolesNom'] = '_and_'.join(sorted({dic['nom'] for dic in self.courante['protocoles'].values()}))
-        for dir, regex in sources.items():
+        for dir, regexs in sources.items():
             dir_str=dir.format(**str_courante)
-            regex_str=regex.format(**str_courante)
             if os.path.isdir(dir_str):
-                sources_a_svgder+=[os.path.join(dir_str,x) for x in os.listdir(dir_str) if re.match(regex_str, x) ]
+                if type(regexs)!=list:
+                    regexs=[regexs]
+                for regex in regexs:
+                    regex_str=regex.format(**str_courante)
+                    sources_a_svgder+=[os.path.join(dir_str,x) for x in os.listdir(dir_str) if re.match(regex_str, x) ]
             else:
                 print(f"\n\n \t << {dir_str} >> is not a directory \n\n")
         subprocess.check_call(["mkdir", "-p", nomdestdir])

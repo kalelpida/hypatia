@@ -73,42 +73,6 @@ server:
   nombre: 1
   estimDelai: $config/estimDelai/extremite #special for  extremities of the connection.
 
-#syntaxe des liens:
-#   [nom, dico propriétés des interfaces, dico propriétés du lien ]
-# Pour définir un lien il faut des objets (NetDevice dans ns3) sur lesquels seront créées des interfaces. 
-# Ces interfaces permettront d'accéder à un canal qui transportera l'information.
-#     La principale propriété d'une interface est son débit. 
-#     Dans ns3, les interfaces sont crées l'une après l'autre, en commençant par la loopback (lo)
-#     Suivent les autres interfaces, définies ici. 
-#     L'ordre de définition des interfaces est très important, car il sera utilisé par l'algorithme de routage.
-#     Les tables de routages sont définies avant la simulation et mises à jour régulièrement. 
-#     Les algorithmes prennent en compte un numéro d'interface. 
-# Un canal aggrège des interfaces, et transmet l'information d'une interface à l'autre (ou 1 vers plusieurs, non implémenté pour l'instant)
-
-# le nom permet de définir le canal, et crée une interface par objet relié
-# isl "lien inter-satellite" définit un canal simple entre 2 satellites. La délai est basé sur la distance géométrique entre les deux satellites.
-# gsl "lien sol-satellite" définit un canal entre des objets divers. Tous peuvent transmettre à tous.
-# tl "lien terrestre" définit un canal entre 2 ordinateurs. 
-
-# "dico propriétés" contient toutes les informations complémentaires nécessaires à la création du lien
-# exemples d'attributs utiles définis dans le "dico propriétés"
-# agg_max_bandwidth
-
-
-# Le dico propriétés est constitué des paramètres des différents objets.
-# En clé principale, le nom des objets
-# Puis: 
-#     Attribut : Unité_ns3~Valeurns3
-# Pour définir et ajouter un contrôleur de traffic, spécifier
-#   "QueueDisc" : ns3::classe_de_traffic_control
-#    Attribut : Unité_ns3 Valeurns3 (avec un espace entre le type et la valeur)
-# On peut ajouter le préfixe Child
-# un attribut particulier: le netdevice a une file d'attente d'émission, DropTailQueue. Seule sa taille est définie, avec 
-#    devQMaxSize: Valeurns3 (par ex "2kB", "100p") 
-# les arguments non typés ne sont lus que par python
-# Les paramètres des objets sont ceux d'un Netdevice, notamment
-# 'DataRate': "DataRate~[debit][unité]" //débit du netdevice
-# maxSatellites: uint //pour les gsl, limite le nombre de satellites avec lesquels communiquer (dans la limite de ceux visibles avec minElevation)
 
 LINKS:
     - ["isl", {"satellite": { 'DataRate': "DataRate~$config/debit-if-isl/Mbps"}}, {"limiteDist": True, "detraque": $config/deteriorISL, "estimDelai": $config/estimDelai/isl }] #interfaces between satellites, to be used together with the "plus grid"
