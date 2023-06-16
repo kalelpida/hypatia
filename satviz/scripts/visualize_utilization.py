@@ -34,10 +34,10 @@ except (ImportError, SystemError):
 import sys
 
 
-IN_UTIL_DIR='../../papier2/sauvegardes/pbrtt'
-MODE = 1 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
+IN_UTIL_DIR='../../papier2/sauvegardes/reglageBuff'
+MODE = 2 #0: "S->UE seuls", 1: "UE->S seuls" 2:"TOUS"
 # Time in ms for which visualization will be generated
-GEN_TIME = 5000  #ms
+GEN_TIME = 35000  #ms
 UTIL_INTERVAL = 100 #ms
 
 

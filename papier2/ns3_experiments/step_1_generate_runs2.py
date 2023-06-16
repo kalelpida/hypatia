@@ -187,7 +187,7 @@ class main_step1:
         liens=self.cstl_dico.get('LINKS', [])
         noms_liens=[f"lix{i}" for i in range(len(liens))]
         paramliens=[]
-        nb_dev_reference=self.cstl_dico[self.obj_reference]['nombre']
+        #nb_dev_reference=self.cstl_dico[self.obj_reference]['nombre']
         for nom_lien, lien in zip(noms_liens, liens):
             paramliens.append(f"{nom_lien}_type={lien[0]}")
             objets=list(lien[1].keys())
@@ -195,26 +195,14 @@ class main_step1:
             for obj, conf in lien[1].items():
                 strconf=f"{nom_lien}_{obj}_params="
                 
-                if "QueueDisc" in conf and "MaxSize" in conf:
-                    conf["devQMaxSize"]="2kB" # tout est géré par le traffic Control
+                debit=debitMbps(conf["DataRate"])
+                delai=self.cstl_dico[obj].get('estimDelai', lien[2]['estimDelai'])#By default, get the delay from the object conf, otherwise get the link delay. Utile pour les extrémités. Mettre autre valeur prédominante dans `conf` ?
+                queue_size_kB= max(int(np.ceil(debit/8*delai)), 2) # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
+                if "QueueDisc" in conf and conf.get("MaxSize", 'auto')=='auto': # tout est géré par le traffic Control
+                    conf["devQMaxSize"]="2kB" 
+                    conf["MaxSize"]=f"QueueSize {queue_size_kB}kB"
                 else:
-                    debit=debitMbps(conf["DataRate"])
-                    delai=self.cstl_dico[obj].get('estimDelai', lien[2]['estimDelai'])#if this is the extremity, get the estimated delay to reach the other side. Otherwise, get the link delay
-                    if obj in self.cstl_dico['TYPES_OBJETS_SOL']:
-                        queue_size_kB = debit/8*delai # setting Qsize to BDP : DataRate_Mbps/8 * estimated_RTT_ms = Qsize in kilobyte
-                        queue_size_kB = max(int(queue_size_kB*(self.cstl_dico[obj]['nombre']/nb_dev_reference)**0.5), 2) # at least more than 1 paquet
-                    else:
-                        assert obj=="satellite"
-                        queue_size_kB= max(int(debit/8*delai), 2)
-                    if "QueueDisc" in conf: #vraiment utile?
-                        conf["devQMaxSize"]="2kB" 
-                        conf["MaxSize"]=f"QueueSize {queue_size_kB}kB"
-                    elif "tcp" in protocol_chosen_name: # long queues penalise TCP
-                        conf["devQMaxSize"]=f"{queue_size_kB}kB"
-                    elif "udp" in protocol_chosen_name:  # UDP does not have this problem, so we cap it at 100 packets
-                        conf["devQMaxSize"]=f"{min(queue_size_kB, 100)}kB"
-                    else:
-                        raise ValueError("Unknown protocol chosen: " + protocol_chosen_name)
+                    conf["devQMaxSize"]=f"{queue_size_kB}kB"
                 paramliens.append(strconf+str(conf))
             paramliens.append(f"{nom_lien}_params={ns3paramchecker(lien[2])}")
 

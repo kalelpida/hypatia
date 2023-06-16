@@ -34,7 +34,7 @@ test: #nom de la campagne
     #  agresseurs: { 'nom': "tcp", 'debut_ms': [30000, 30100], 'duree_ms': 7000, 'ratio': 0.5, 'debit': 2 }
     #- UDPbase: {'nom': "udp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'ratio': 1.5, 'debit': 2}
     #  UDPagresseurs: { 'nom': "udp", 'debut_ms': [30000, 30100], 'duree_ms': 7000, 'ratio': 0.5, 'debit': 2 }
-    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'debit': 2 }
+    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', "ratio": 2, 'debit': 2 }
     #- base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'nb': 120, 'debit': 5 } #, 'extra_parameters' : 'pacingDR0.9Mb/s' }
     #  agresseurs: { 'nom': "tcp", 'debut_ms': [20000, 20100], 'duree_ms': 'max', 'nb': 80, "debit": 3}
   # debit: by default debit-if-gsl['ue'] for UDP. used to compute the size of the data sent by TCP

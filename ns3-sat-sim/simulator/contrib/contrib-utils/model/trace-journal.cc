@@ -76,6 +76,7 @@ static void getPacketFlux(Ptr<const Packet> p, mapflow_t *conversion, resAnalyse
             incomingIdSeq.Deserialize(item.current);
             analysePacket.dataSize = item.currentSize;
             analysePacket.idcomm = incomingIdSeq.GetId();
+            analysePacket.idseq = incomingIdSeq.GetSeq();
             
             // get into payload
             item = it.Next();
