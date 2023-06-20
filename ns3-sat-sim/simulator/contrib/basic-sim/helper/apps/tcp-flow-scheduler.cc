@@ -108,11 +108,13 @@ TcpFlowScheduler::TcpFlowScheduler(Ptr<BasicSimulation> basicSimulation, Ptr<Top
         );
 
         // Check that the TCP flow IDs exist in the logging
+        /* Easier not to check: the config does not make any difference between logging tcp and udp flows
         for (int64_t tcp_flow_id : m_enable_logging_for_tcp_flow_ids) {
             if ((size_t) tcp_flow_id >= complete_schedule.size()) {
                 throw std::invalid_argument("Invalid TCP flow ID in tcp_flow_enable_logging_for_tcp_flow_ids: " + std::to_string(tcp_flow_id));
             }
         }
+        */
 
         // Filter the schedule to only have applications starting at nodes which are part of this system
         if (m_enable_distributed) {

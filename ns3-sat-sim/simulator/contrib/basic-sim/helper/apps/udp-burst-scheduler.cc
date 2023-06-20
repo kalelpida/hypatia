@@ -56,11 +56,12 @@ namespace ns3 {
             );
 
             // Check that the UDP burst IDs exist in the logging
+            /* Easier not to check: the config does not make any difference between logging tcp and udp flows
             for (int64_t udp_burst_id : m_enable_logging_for_udp_burst_ids) {
                 if ((size_t) udp_burst_id >= m_schedule.size()) {
                     throw std::invalid_argument("Invalid UDP burst ID in udp_burst_enable_logging_for_udp_burst_ids: " + std::to_string(udp_burst_id));
                 }
-            }
+            }*/
 
             // Schedule read
             printf("  > Read schedule (total UDP bursts: %lu)\n", m_schedule.size());

@@ -26,20 +26,24 @@ test: #nom de la campagne
   # { 'nom':"udp"}
   # { 'nom': "tcp"}
   # { 'nom': 'udp', 'debut_ms': [1, 4],'duree_ms': 'min,max'
+  protocoles: 
+    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', "nb": 200, 'debit': 2 }
+      terBrusque: {nom: udp, debut_ms: 20000, duree_ms: max, nb: 100, debit: 2}
+    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', "nb": 200, 'debit': 2 }
+      terDoux: {nom: udp, debut_ms: [20000, 25000], duree_ms: max, nb: 100, debit: 2}
+    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', "nb": 270, 'debit': 2 }
+      dxmBrusque: {nom: udp, debut_ms: 20000, duree_ms: max, nb: 30, debit: 2}
+    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', "nb": 270, 'debit': 2 }
+      dxmDoux: {nom: udp, debut_ms: [20000, 25000], duree_ms: max, nb: 30, debit: 2}
+  # Dans UDP, le debit (par défaut le débit de la plus petite interface du premier ENDPOINT dans le fichier de constellation)
+  # Le débits des commmodités UDP sont dérivés aléatoirement de celui-ci par 0.3*debit_reference+0.7*random_exponential(0.7*debit_reference)
+  # Cela donne une distribution exponentialle décalée coupée de débit moyen 0.3*debit+debit*(1-exp(-0.7)) = 0.8*debit
   # in UDP, 'debit' is capped to debit_gsl
   # a tcp flow is defined by its size, which is calculated with debit and duree_ms
   # Débit UDP : max(udp_list_flow_size_proportion[i], 0.999*data_rate_GSL_megabit_per_s))
-  protocoles: 
-    #- base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'ratio': 1.5} #, 'extra_parameters' : 'pacingDR0.9Mb/s' }
-    #  agresseurs: { 'nom': "tcp", 'debut_ms': [30000, 30100], 'duree_ms': 7000, 'ratio': 0.5, 'debit': 2 }
-    #- UDPbase: {'nom': "udp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'ratio': 1.5, 'debit': 2}
-    #  UDPagresseurs: { 'nom': "udp", 'debut_ms': [30000, 30100], 'duree_ms': 7000, 'ratio': 0.5, 'debit': 2 }
-    - base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', "ratio": 2, 'debit': 2 }
-    #- base: {'nom': "tcp", 'debut_ms':[0, 1000], 'duree_ms': 'max', 'nb': 120, 'debit': 5 } #, 'extra_parameters' : 'pacingDR0.9Mb/s' }
-    #  agresseurs: { 'nom': "tcp", 'debut_ms': [20000, 20100], 'duree_ms': 'max', 'nb': 80, "debit": 3}
-  # debit: by default debit-if-gsl['ue'] for UDP. used to compute the size of the data sent by TCP
+  # Dans TCP l'argument de débit sert à calculer la taille du fichier à envoyer
   # extra_parameters : string, thought as space-separated coefficients
-  # pacingDR[double][unit or default to bit per sec] is at application level, so only takes into account the payload
+  # pacingDR[double][unit or default to bit per sec] is an application level throttle, it only takes into account the payload
   srvTrafficControl:
     #- QueueDisc: "ns3::RRFQueueDisc" #ns3::ITbfQueueDisc, ns3::RRQueueDisc, etc..ns3::FifoQueueDisc par defaut 
     #  MaxSize: QueueSize 30p #type value
