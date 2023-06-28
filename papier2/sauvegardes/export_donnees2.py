@@ -73,6 +73,7 @@ def retrouveLogsBrutRecursif(chemin_initial=DOSSIER):#,'2022-05-06'}):
 						raise Exception("erreur: cle variantes déjà définies, résoudre la fusion des configurations/données")
 					with open(x, 'r') as f:
 						cles_variantes=eval(f.readline())
+					cles_variantes+=['graine']*(len(cles_variantes)==0)#il faut un str_variant non nul
 	return trouves, sorted(cles_variantes)
 
 def getcomInfos(dossier, cle):

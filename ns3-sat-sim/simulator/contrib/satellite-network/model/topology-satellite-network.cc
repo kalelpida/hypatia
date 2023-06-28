@@ -434,7 +434,7 @@ namespace ns3 {
         int counter = 0;
 
         std::smatch match;
-        const std::regex nodeIDs("(\\d+) (\\d+)");
+        const std::regex nodeIDs("^(\\d+) (\\d+)");
         const std::regex trackLinkDrops("trackLinkDrops");
         while (std::getline(fs, line)) {
 
@@ -501,8 +501,8 @@ namespace ns3 {
                     //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
                     netDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-channelError"));
                 }
-                TCLogDrop(c.Get(0), netDevices.Get(0));
-                TCLogDrop(c.Get(1), netDevices.Get(1));
+                TCLogDrop(c.Get(0), netDevices.Get(0), "ISL-tc");
+                TCLogDrop(c.Get(1), netDevices.Get(1), "ISL-tc");
             }
 
             counter += 1;
@@ -535,7 +535,7 @@ namespace ns3 {
             {
                 if (m_enable_drop_log) {
                     devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "GSL-bufOvflwLinkErr")); 
-                    TCLogDrop(devices.Get(i)->GetNode(), devices.Get(i));
+                    TCLogDrop(devices.Get(i)->GetNode(), devices.Get(i), "GSL-tc");
                 }
                 if (m_enable_tx_log) {devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "GSL-tx")); }
                 if (m_enable_rx_log) {devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "GSL-rx")); }
@@ -595,11 +595,16 @@ namespace ns3 {
         std::string line;
         std::ifstream fstate_file(filename);
         NS_ABORT_MSG_UNLESS(fstate_file.is_open(), "File " + filename + " could not be opened");
+        std::smatch match;
+        const std::regex nodeIDs("^(\\d+),(\\d+)");
+        const std::regex trackLinkDrops("trackLinkDrops");
+
         if (fstate_file) {
             while (getline(fstate_file, line)) {
-                std::vector<std::string> comma_split = split_string(trim(line), ",", 2);
-                Ptr<Node> n1 = m_allNodes.Get(parse_positive_int64(comma_split[0]));
-                Ptr<Node> n2 = m_allNodes.Get(parse_positive_int64(comma_split[1]));
+                // Retrieve satellite identifiers
+                NS_ABORT_MSG_UNLESS(std::regex_search(line, match, nodeIDs), "Error parsing TL nodes. Abort line: " << line);
+                Ptr<Node> n1 = m_allNodes.Get(parse_positive_int64(match[1].str()));
+                Ptr<Node> n2 = m_allNodes.Get(parse_positive_int64(match[2].str()));
                 if (m_paramaps.find(n1->GetObject<Specie>()->GetName()) == m_paramaps.end() || m_paramaps.find(n2->GetObject<Specie>()->GetName()) == m_paramaps.end()){
                     continue;
                 }
@@ -608,6 +613,8 @@ namespace ns3 {
                 p2pNodes.Add(n1);
                 p2pNodes.Add(n2);
                 NetDeviceContainer p2pDevices = p2p_helper.Install(p2pNodes);
+
+                SetErrorModel(p2pDevices, line);
 
                 // Assign some IP address (nothing smart, no aggregation, just some IP address)
                 m_ipv4_helper.Assign(p2pDevices);
@@ -625,8 +632,14 @@ namespace ns3 {
                 if (m_enable_drop_log){
                     p2pDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
                     p2pDevices.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
-                    TCLogDrop(n1, p2pDevices.Get(0));
-                    TCLogDrop(n2, p2pDevices.Get(1));
+                    TCLogDrop(n1, p2pDevices.Get(0), "TL-tc");
+                    TCLogDrop(n2, p2pDevices.Get(1), "TL-tc");
+                    if (std::regex_search(line, match, trackLinkDrops)){
+                        //const std::string str_sat0 = format_string("channelError-ISL-Sat%" PRId64, sat0_id);
+                        p2pDevices.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-channelError"));
+                        //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
+                        p2pDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-channelError"));
+                    }
                 }
             }
         }
@@ -646,46 +659,56 @@ namespace ns3 {
         std::string line;
         std::ifstream fstate_file(filename);
         NS_ABORT_MSG_UNLESS(fstate_file.is_open(), "File " + filename + " could not be opened");
-        std::string nd_prec;
+        std::smatch match;
+        const std::regex nodeIDs("^(\\d+),(\\d+),(\\S+)");
+        const std::regex trackLinkDrops("trackLinkDrops");
+
         if (fstate_file) {
             while (getline(fstate_file, line)) {
-                std::vector<std::string> comma_split = split_string(trim(line), ",", 3);
-                Ptr<Node> n1 = m_allNodes.Get(parse_positive_int64(comma_split[0]));
-                Ptr<Node> n2 = m_allNodes.Get(parse_positive_int64(comma_split[1]));
-                p2p_helper.SetChannelAttribute("Delay", TimeValue(Time(comma_split[2])));
+                NS_ABORT_MSG_UNLESS(std::regex_search(line, match, nodeIDs), "Error parsing PyL nodes. Abort line: " << line);
+                Ptr<Node> n1 = m_allNodes.Get(parse_positive_int64(match[1].str()));
+                Ptr<Node> n2 = m_allNodes.Get(parse_positive_int64(match[2].str()));
+                p2p_helper.SetChannelAttribute("Delay", TimeValue(Time(match[3].str())));
 
                 if (m_paramaps.find(n1->GetObject<Specie>()->GetName()) == m_paramaps.end() || m_paramaps.find(n2->GetObject<Specie>()->GetName()) == m_paramaps.end()){
                     continue;
                 }
 
                 NodeContainer p2pNodes;
-                NetDeviceContainer pyraDevs;
                 p2pNodes.Add(n1);
                 p2pNodes.Add(n2);
-                pyraDevs.Add( p2p_helper.Install(p2pNodes));
+                NetDeviceContainer pyraDevs = p2p_helper.Install(p2pNodes);
+
+                SetErrorModel(pyraDevs, line);
 
                 // Assign some IP address (nothing smart, no aggregation, just some IP address)
                 m_ipv4_helper.Assign(pyraDevs);
                 m_ipv4_helper.NewNetwork();
                 // Tracking
                 if (m_enable_rx_log){
-                    pyraDevs.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
-                    pyraDevs.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
+                    pyraDevs.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "PyL-rx"));
+                    pyraDevs.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "PyL-rx"));
                 }
                 if (m_enable_tx_log){
-                    pyraDevs.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
-                    pyraDevs.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
+                    pyraDevs.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "PyL-tx"));
+                    pyraDevs.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "PyL-tx"));
                 }
                 if (m_enable_drop_log){
-                    pyraDevs.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
-                    pyraDevs.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
-                    TCLogDrop(n1, pyraDevs.Get(0));
-                    TCLogDrop(n2, pyraDevs.Get(1));
+                    pyraDevs.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-bufOvflwLinkErr"));
+                    pyraDevs.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-bufOvflwLinkErr"));
+                    TCLogDrop(n1, pyraDevs.Get(0), "PyL-tc");
+                    TCLogDrop(n2, pyraDevs.Get(1), "PyL-tc");
+                    if (std::regex_search(line, match, trackLinkDrops)){
+                        //const std::string str_sat0 = format_string("channelError-ISL-Sat%" PRId64, sat0_id);
+                        pyraDevs.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-channelError"));
+                        //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
+                        pyraDevs.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-channelError"));
+                    }
                 }
                 
             }
         }
-        std::cout << "    >> TL interfaces are setup" << std::endl;
+        std::cout << "    >> PyL interfaces are setup" << std::endl;
     }
 
     void
@@ -837,14 +860,14 @@ namespace ns3 {
         (*(m_cbparams.m_conversion))[triplet]=flowId;
     }
 
-    void TopologySatelliteNetwork::TCLogDrop(Ptr<Node> noeud, Ptr<NetDevice> netdev){
+    void TopologySatelliteNetwork::TCLogDrop(Ptr<Node> noeud, Ptr<NetDevice> netdev, const std::string& err_str){
         m_temp_tc = noeud->GetObject<TrafficControlLayer>();
         if (m_temp_tc){
             std::shared_ptr<cbparams> loc_cbparams = std::make_shared<cbparams>(m_cbparams);
             loc_cbparams->log_node = noeud;
             m_temp_qd = m_temp_tc->GetRootQueueDiscOnDevice(netdev);
             if (m_temp_qd){
-                m_temp_qd->TraceConnectWithoutContext("Drop", MakeBoundCallback (&QitEventTracerReduit, m_drop_stream, loc_cbparams, "TL-tc"));
+                m_temp_qd->TraceConnectWithoutContext("Drop", MakeBoundCallback (&QitEventTracerReduit, m_drop_stream, loc_cbparams, err_str));
             }
         }
     }

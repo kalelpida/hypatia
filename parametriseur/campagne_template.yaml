@@ -14,7 +14,7 @@ paramTester:
   algo: [ "algorithm_penal_gsl" ]
   threads: [ 4 ]
   debit-if-isl: [ 20 ] #[ 3, 10 ] #Mb/s
-  debit-if-gsl: [ {'ue':2, 'gateway':150, 'satellite':80} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
+  debit-if-gsl: debit-if-gsl: [ {'ue':2, 'gateway':150, 'satues':80, 'satgw':80} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
   logs-actifs: [ ['tx'] ] #('rx', 'tx', 'drop', 'coms', 'ping', 'rtt') # 'drop' callbacks won't be effective when Traffic Control is set 
   estimDelai: [{"isl": 5, 'gsl': 4, 'extremite': 20 }] #, {"isl": 5, 'gsl': 4, 'extremite': 80 }, {"isl": 10, 'gsl': 8, 'extremite': 80 }]
 

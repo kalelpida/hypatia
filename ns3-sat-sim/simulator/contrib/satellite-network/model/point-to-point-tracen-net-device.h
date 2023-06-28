@@ -402,7 +402,7 @@ private:
    * This happens if the receiver is not enabled or the error model is active
    * and indicates that the packet is corrupt.
    */
-  TracedCallback<Ptr<const Packet> > m_phyRxDropTrace;
+  TracedCallback<Ptr<const Node>, Ptr<const Packet>> m_phyRxDropTrace;
 
   /**
    * A trace source that emulates a non-promiscuous protocol sniffer connected 

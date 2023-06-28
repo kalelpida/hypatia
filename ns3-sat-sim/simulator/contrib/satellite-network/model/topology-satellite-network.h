@@ -127,7 +127,7 @@ namespace ns3 {
         void PopulateArpCaches();
 
         // Log
-        void TCLogDrop(Ptr<Node> noeud, Ptr<NetDevice> netdev); //for Traffic Control
+        void TCLogDrop(Ptr<Node> noeud, Ptr<NetDevice> netdev, const std::string& err_str); //for Traffic Control
 
         // Input
         Ptr<BasicSimulation> m_basicSimulation;       //<! Basic simulation instance

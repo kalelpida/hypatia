@@ -7,7 +7,7 @@ vestimDelai = [ {"isl": 5, 'gsl': 4, 'extremite': 20 }, {"isl": 10, 'gsl': 8, 'e
 #gwTrafficControl1 = {"type": "ns3::RRQueueDisc", "MaxSize": "QueueSize 60p", "ChildQueueDisc": "ns3::ITbfQueueDisc", "ChildRate": "DataRate 2Mbps"} 
 #gwTrafficControl2 = {"type": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 100ms", "Target": "String 300ms"} 
 #deterior_dico={ "sel": "topUtil50", "errModel": "gilbertElliottMdl-brstRate:0.1-brstSize:5-interval:0,7999ms"}
-valeurs=[[30, 90, delais, 150, 40, 2, 20, 150] for delais in vestimDelai]#, [300, gwTrafficControl2, 150, 80, 2, 20,deterior_dico, 3]]
+valeurs=[[30, 90, delais, 150, 40, 2, 20, 150] for delais in vestimDelai]#, [300, gwTrafficControl2, 150, 80, 2, 20,deterior_dico, 3]]protocoles: 
 def main():
     #selection param
     deja_testes=lecture_params()

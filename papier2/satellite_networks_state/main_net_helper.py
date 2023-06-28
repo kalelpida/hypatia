@@ -62,7 +62,7 @@ class MainNetHelper:
 
     def init_ground_stations(self):
         # Add base name to setting
-        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['algo']
+        name = self.cstl_config['BASE_NAME'] + "_" + self.config['algo']
 
         # Create output directories
         if not os.path.isdir(self.output_generated_data_dir):
@@ -80,7 +80,7 @@ class MainNetHelper:
         # This function generates network links and compute interfaces
 
         # Add base name to setting
-        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['algo']
+        name = self.cstl_config['BASE_NAME'] + "_" + self.config['algo']
 
         # TLEs
         print("Generating TLEs...")
@@ -108,7 +108,6 @@ class MainNetHelper:
             nom_lien=f"lix{i}"
             if type_lien=='isl':
                 assert list(objets.keys())==["satellite"]
-                assert self.config['isls'] == "isls_plus_grid"
                 network_links[nom_lien], nvelles_interfaces=generate_plus_grid_isls(
                     os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
                     self.NUM_ORBS,
@@ -197,9 +196,9 @@ class MainNetHelper:
         )
 
     def detraqueISL(self):
-        name = self.cstl_config['BASE_NAME'] + "_" + self.config['isls'] + "_" + self.config['algo']
-        rep_fics_chemins = os.path.join(self.output_generated_data_dir, name, "dynamic_state_"+str(self.config['pas'])+"ms_for_" + str(self.config['duree'])+ "s")
-        chemins={}
+        name = self.cstl_config['BASE_NAME'] + "_" + self.config['algo']
+        rep_fics_chemins = os.path.join(self.output_generated_data_dir, name, "dynamic_state_"+str(self.config['pas'])+"ms_for_" + str(self.config['duree'])+ "s", "paths")
+        dico_t_chemins={}
         for fic in os.listdir(rep_fics_chemins):
             if not fic.startswith('paths_'):
                 continue
@@ -210,7 +209,7 @@ class MainNetHelper:
             for ligne in lignes:
                 paire, duree, chemin = eval(ligne)
                 locdico[tuple(paire)]=(duree, chemin)
-            chemins[instant]=locdico
+            dico_t_chemins[instant]=locdico
         
         for numlien, lien in enumerate(self.cstl_config['LINKS']):
             nomficlien=f"lix{numlien}.txt"
@@ -228,6 +227,7 @@ class MainNetHelper:
             except Exception:
                 print("détraque sur tout l'intervalle")
                 borne_inf, borne_sup = 0, self.config['duree']*int(1e9)
+                raise Exception("TODO: modifier topology-satellite-network.cc pour gérer ce cas")
             objets=list(lien[1].keys())
             #find out which interface connects two neighbours in the graph
             match lien[0]:
@@ -237,15 +237,18 @@ class MainNetHelper:
                 case "tl":
                     itf_connects = lambda paire: all(paire[i] in self.dict_type_ivl[objets[i]] for i in (0, 1)) or all(paire[i] in self.dict_type_ivl[objets[1-i]] for i in (0, 1))
                     liens_compromis_str="{},{} "
+                case "pyl":
+                    itf_connects = lambda paire: all(paire[i] in self.dict_type_ivl[objets[i]] for i in (0, 1)) or all(paire[i] in self.dict_type_ivl[objets[1-i]] for i in (0, 1))
+                    liens_compromis_str="{},{},"
                 case _: #'gsl'
                     raise Exception("cas non implémenté/reconnu")
             utilisations={}
-            for cle, dico in chemins.items():
+            for cle, dico in dico_t_chemins.items():
                 if not (borne_inf<=cle<borne_sup):
                     continue
                 
-                for paire, (delai, chemins) in dico.items():
-                    for curr, suiv in zip(chemins[:-1], chemins[1:]):
+                for paire, (delai, chemin) in dico.items():
+                    for curr, suiv in zip(chemin[:-1], chemin[1:]):
                         if itf_connects((curr, suiv)):
                             try:
                                 utilisations[(curr, suiv)]+=1
@@ -258,7 +261,7 @@ class MainNetHelper:
                 lignes=f_itfs.readlines()
             for i, ligne in enumerate(lignes):
                 for a_modifier in liens_a_modifier:
-                    if a_modifier in ligne:
+                    if ligne.startswith(a_modifier):
                         lignes[i] = ligne.strip()+ajout_str_isl
                         break
             with open(os.path.join(self.output_generated_data_dir, name, nomficlien), "w") as f_itfs:

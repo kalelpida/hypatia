@@ -340,7 +340,7 @@ PointToPointTracenNetDevice::Receive (Ptr<Packet> packet, Time rxtime)
       // If we have an error model and it indicates that it is time to lose a
       // corrupted packet, don't forward this packet up, let it go.
       //
-      m_phyRxDropTrace (packet);
+      m_phyRxDropTrace (m_node, packet);
     }
   else 
     {

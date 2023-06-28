@@ -57,9 +57,11 @@ class main_step1:
 
         #true_gsl_max_data_rate_megabit_per_s = data_rate_megabit_per_s*100 # used to generate bursty traffic. maybe admission control from the ground will change that 
         duration_s = int(dico_params['duree'])
-        liste_params=('constellation', 'duree', 'pas', 'isls', 'algo', 'threads')
+        liste_params=('constellation', 'duree', 'pas', 'algo')
         params=[dico_params[cle] for cle in liste_params]
         total_nb_commodites=len(list_from_to)
+
+        self.desactive_impairs = dico_params.get('desactive-impairs', False)
 
         list_start_time = np.zeros(total_nb_commodites, dtype=int)
         durees_prevues = np.zeros(total_nb_commodites, dtype=int)
@@ -126,6 +128,8 @@ class main_step1:
                 :param list_metadata:               List of strings (can be anything, just not containing a comma)
                 """
                 for i in range(offset_commodite, fin_groupe_commodites):
+                    if self.desactive_impairs and i%2:
+                        continue
                     tcp_vals.append((
                         i,
                         list_from_to[i][0],
@@ -139,6 +143,8 @@ class main_step1:
             # udp_burst_schedule.csv
             elif "udp" == protocol_chosen_name:
                 for i in range(offset_commodite, fin_groupe_commodites):
+                    if self.desactive_impairs and i%2:
+                        continue
                     udp_vals.append((i,
                                 list_from_to[i][0],
                                 list_from_to[i][1],
@@ -208,7 +214,7 @@ class main_step1:
 
         # Prepare run directory
         run_dir = "runs/run_loaded_tm_pairing_for_{}s_with_{}_{}".format(
-            params[1], protocol_chosen_name, params[4]
+            params[1], protocol_chosen_name, params[3]
         )
         local_shell.remove_force_recursive(run_dir)
         local_shell.make_full_dir(run_dir)
@@ -217,7 +223,7 @@ class main_step1:
             "templates/template_config_ns3_" + protocol_chosen_name + "3.properties",
             run_dir + "/config_ns3.properties"
         )
-        sat_net_dir="../../../satellite_networks_state/gen_data/{}_{}_{}".format(params[0],params[3],params[4])
+        sat_net_dir="../../../satellite_networks_state/gen_data/{}_{}".format(params[0],params[3])
         with open(run_dir + "/config_ns3.properties", 'r') as f:
             lignes=f.readlines()
         replace_in_lines(lignes, "[SAT-NET-DIR]", sat_net_dir)
