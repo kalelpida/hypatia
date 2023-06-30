@@ -249,11 +249,12 @@ class MainNetHelper:
                 
                 for paire, (delai, chemin) in dico.items():
                     for curr, suiv in zip(chemin[:-1], chemin[1:]):
-                        if itf_connects((curr, suiv)):
+                        a,b=sorted((curr, suiv))
+                        if itf_connects((a, b)):
                             try:
-                                utilisations[(curr, suiv)]+=1
+                                utilisations[(a, b)]+=1
                             except KeyError:
-                                utilisations[(curr, suiv)]=1
+                                utilisations[(a, b)]=1
             nbsel= int(detraque['sel'].removeprefix('topUtil'))
             x = sorted([[util, paire] for paire, util in utilisations.items()], reverse=True)[:nbsel]
             liens_a_modifier=[liens_compromis_str.format(*paire) for _, paire in x]

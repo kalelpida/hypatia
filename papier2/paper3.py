@@ -18,29 +18,24 @@ nomfic_campagne=os.path.join(basedir, "config/campagne.yaml")
 #where the script will read the config
 nomfic_courante=os.path.join(basedir, "config/courante.yaml")
 
-
-#si aucune des variables en cle ne change, les actions sont inutiles
-rend_indispensable={
-    ("graine", "constellation", "duree", "pas", "isls", "sol", "nb-UEs-sol", "algo"): ("analyse theorique", "casse liens sat")
-}
-
-def genere_cles(campagne):
+def genere_cles(campagne, rend_inutile):
     #ordonner les clefs dans l'ordre le plus efficace pour lancer le moins d'opérations possible
     liste=list(campagne.keys())
     note={cle:0 for cle in liste}
     for cle in campagne.keys():
-        for genantes in rend_indispensable:
-            if cle in genantes:
+        for cles_simples in rend_inutile.values():
+            if cle in cles_simples:
                 note[cle]+=1
     liste.sort(key=lambda x: note[x])
     return liste
     
 #base
 class Experiences():
-    def __init__(self, campagne, actions):
+    def __init__(self, campagne, actions, rend_inutile):
         self.courante={}
         self.campagne=campagne
-        self.cles=genere_cles(campagne)
+        self.rend_inutile=rend_inutile
+        self.cles=genere_cles(campagne, rend_inutile)
         self.indices_cles=[0]*len(self.cles)
         self.toutes_actions=set(actions)
         self.actions_non_indispensables=set()
@@ -88,9 +83,9 @@ class Experiences():
         if cle==self.cles[-1] and self.indices_cles[-1]==0:
             return True
         # si ce n'est pas le dernier cas, on sait quelle cle a été modifiée, donc optimisation
-        for cle_activantes in rend_indispensable:
-            if not cle in cle_activantes:
-                self.actions_non_indispensables.update(rend_indispensable[cle_activantes])
+        for action in self.rend_inutile:
+            if cle in self.rend_inutile.get(action, []):
+                self.actions_non_indispensables.add(action)
         self.actions=self.toutes_actions-self.actions_non_indispensables
         return False
 
@@ -220,13 +215,14 @@ def main():
     sources=dic.get('sources', [])
 
     liste_actions=dico_campagne.pop('actions', [])
+    rend_inutile=dico_campagne.pop('info-actions-inutiles-si',{})
 
     for nom_campagne, campagne in dico_campagne.items():
         print("nom: ", nom_campagne)
         cles_variantes=[cle for cle, vals in campagne.items() if len(vals)>1]
         fini = False
         campagne['nom_campagne'] = [nom_campagne]
-        exp=Experiences(campagne, liste_actions)
+        exp=Experiences(campagne, liste_actions, rend_inutile)
         exp.paramExperience()
         exp.setStrDate(strdate)
         estPremiere=True
