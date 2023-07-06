@@ -83,7 +83,7 @@ def create_users_villesGlobe(Nb, constellation='kuiper_630', ficVille='os_cities
     villes=satgen.read_ground_stations_basic(ficVille)
     #"gid",  "name", "latitude_degrees", "longitude_degrees", "elevation_m","population_k": int
     villes_pos=[np.radians([float(ville["latitude_degrees"]), float(ville["longitude_degrees"])]) for ville in villes]
-    villes_probas=np.array([ville['population_k'] for ville in villes])
+    villes_probas=np.array([ville['population_k'] for ville in villes], dtype=float)
     villes_choisies = np.random.choice(list(range(len(villes))), size=Nb_proches_villes, p=villes_probas/sum(villes_probas))
     liste_ues=[]
     ectype= np.radians(3) # ~ ecart-type de la distribution
@@ -159,7 +159,7 @@ def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='os_Lil
     villes=satgen.read_ground_stations_basic(ficVille)
     #"gid",  "name", "latitude_degrees", "longitude_degrees", "elevation_m","population_k": int
     villes_pos=[np.radians([float(ville["latitude_degrees"]), float(ville["longitude_degrees"])]) for ville in villes]
-    villes_probas=np.array([ville['population_k'] for ville in villes])
+    villes_probas=np.array([ville['population_k'] for ville in villes], dtype=float)
     villes_choisies = np.random.choice(list(range(len(villes))), size=Nb_proches_villes, p=villes_probas/sum(villes_probas))
     liste_ues=[]
     ectype= np.radians(10) # ~ ecart-type de la distribution
@@ -289,7 +289,7 @@ def test_distrib():
     plt.show()
 
 
-def create_voisins_villeschoisies(Nb, ficVille='os_Lille.csv'):
+def create_voisins_villeschoisies(Nb, ficVille='os_11villes.csv'):
     np.random.seed(32)
 
     fic_communes=os.path.join(this_file_path,"villes_villages.txt")
@@ -303,7 +303,7 @@ def create_voisins_villeschoisies(Nb, ficVille='os_Lille.csv'):
     villes=satgen.read_ground_stations_basic(ficVille)
     #"gid",  "name", "latitude_degrees", "longitude_degrees", "elevation_m","population_k": int
     villes_pos=[np.radians([float(ville["latitude_degrees"]), float(ville["longitude_degrees"])]) for ville in villes]
-    villes_probas=np.array([float(ville['population_k']) for ville in villes])
+    villes_probas=np.array([ville['population_k'] for ville in villes], dtype=float)
     villes_choisies = np.random.choice(list(range(len(villes))), size=Nb, p=villes_probas/sum(villes_probas))
     nomvillefic=villes[villes_choisies[0]]['name']
     villes_choisies.sort()
@@ -326,7 +326,7 @@ def create_voisins_villeschoisies(Nb, ficVille='os_Lille.csv'):
         })
     plt.show()
     #raise Exception("data not written, comment out this exception to generate emplacements")
-    with open(os.path.join(this_file_path,f"os_{Nb}emplacements_{nomvillefic}.csv"), 'w') as f:
+    with open(os.path.join(this_file_path,f"os_{Nb}emplacements_{len(villes)}{nomvillefic}.csv"), 'w') as f:
         champs = ['gid', 'name', 'latitude_degrees', 'longitude_degrees', 'elevation_m', 'maitre']
         ecrivain = csv.DictWriter(f, fieldnames=champs)
         ecrivain.writeheader()

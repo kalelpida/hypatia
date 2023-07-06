@@ -1,4 +1,4 @@
-﻿id,ville,latitude (deg),longitude (deg),altitude (0),"population(milliers, estimée 2025)"
+﻿gid,name,latitude_degrees,longitude_degrees,elevation_m,population_k
 0,Tokyo,35.6895,139.6917,0,37036
 1,Delhi,28.6667,77.2167,0,34665
 2,Shanghai,31.2222,121.4581,0,30482

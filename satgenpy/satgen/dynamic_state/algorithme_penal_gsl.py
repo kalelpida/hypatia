@@ -126,6 +126,10 @@ def algorithm_penal_gsl(
             if paire==reversed(prev_paire):
                 #the graph is not oriented, so the path is reversible
                 chemin=reversed(prev_chemin)
+            elif len(full_net_graph_penalised[paire[0]])==0 or len(full_net_graph_penalised[paire[1]])==0:
+                #is_connected ?
+                chemin=paire
+                duree=0
             else:
                 chemin=nx.shortest_path(full_net_graph_penalised, *paire, weight="weight")
                 duree=0
@@ -143,15 +147,17 @@ def algorithm_penal_gsl(
                         interfaces[(curr, suiv)],
                         interfaces[(suiv, curr)]
                     )
-                else:
+                elif (curr, suiv) in full_net_graph_penalised.edges:
                     #find a common channel
-                    itf=full_net_graph_penalised.edges[(curr, suiv)]["lix"]
-                    assert ((curr, itf) in interfaces) and ((suiv, itf) in interfaces)
+                    canalcommun=full_net_graph_penalised.edges[(curr, suiv)]["lix"]
+                    assert ((curr, canalcommun) in interfaces) and ((suiv, canalcommun) in interfaces)
                     next_hop_decision = (
                         suiv,
-                        interfaces[(curr, itf)],
-                        interfaces[(suiv, itf)]
+                        interfaces[(curr, canalcommun)],
+                        interfaces[(suiv, canalcommun)]
                     )
+                else:
+                    print(f'paire {paire}: pas de chemin au temps {time_since_epoch_ns*1e-9}s')
                 if not prev_fstate or prev_fstate[(curr, dst)] != next_hop_decision:
                     f_out.write("%d,%d,%d,%d,%d\n" % (
                         curr,

@@ -1,0 +1,13 @@
+gid,name,latitude_degrees,longitude_degrees,elevation_m,population_k
+0,Tokyo,35.6895,139.6917,0,37036
+1,Delhi,28.6667,77.2167,0,34665
+2,Shanghai,31.2222,121.4581,0,30482
+3,Dhaka,23.7104,90.4074,0,24652
+4,Al-Qahirah (Cairo),30.0392,31.2394,0,23074
+5,São Paulo,-23.5475,-46.6361,0,22990
+6,Ciudad de México (Mexico City),19.4273,-99.1419,0,22752
+7,Beijing,39.9075,116.3972,0,22596
+8,Mumbai (Bombay),19.0740,72.8808,0,22088
+9,New York-Newark,40.7170,-74.0037,0,19154
+10,Kinki M.M.A. (Osaka),34.6758,135.5538,0,18921
+11,Chongqing,29.5628,106.5528,0,18171

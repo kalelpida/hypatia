@@ -264,7 +264,7 @@ def value_or_random(param, nb, minmax):
     param:
     """
     if type(param) == str:#exemples: 'min,max', '3,5'
-        listeminmax = np.array(eval(param.replace('min', repr(minmax[0])).replace('max', repr(minmax[1]))))
+        listeminmax = np.array(eval(param.replace('min', 'minmax[0]').replace('max', 'minmax[1]')))
     else:
         listeminmax = np.array(param)
     

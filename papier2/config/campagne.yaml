@@ -1,9 +1,9 @@
-tagetes: #nom de la campagne
+test2: #nom de la campagne
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [ 20 ] #en s
   pas: [2000] #en ms
-  deterior: [ { sel: topUtil1, errModel: "recvErrRate:0.01-interval:10000,20000ms"} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
+  deteriorISL: [ { sel: topUtil10, errModel: "recvErrRate:0.01-interval:10000,30000ms"}, { sel: topUtil10, errModel: "recvErrRate:0.1-interval:10000,30000ms"} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   nb-UEs-sol: [ 100 ]
   algo: [ "algorithm_penal_gsl" ]
   threads: [ 4 ]
@@ -22,11 +22,17 @@ tagetes: #nom de la campagne
   # { 'nom': "tcp"}
   # { 'nom': 'udp', 'debut_ms': [1, 4],'duree_ms': 'min,max'
   protocoles:
-    - grp0: {nom: tcp, debut_ms: [0, 400], duree_ms: 'max', nb: 200, debit: 2 }
+    - test: {nom: udp, debut_ms: [0, 100], duree_ms: 'max', ratio: 2, debit: 2}
+    #- grp0: {nom: tcp, debut_ms: [0, 100], duree_ms: 'max', nb: 100, debit: 2 }
+    #  grp1: {nom: tcp, debut_ms: [20000, 20100], duree_ms: 'max', nb: 100, debit: 2}
+     # grp2: {nom: tcp, debut_ms: [20000, 20100], duree_ms: 'max', nb: 50, debit: 2}
+     # grp3: {nom: tcp, debut_ms: [30000, 30100], duree_ms: 'max', nb: 50, debit: 2}
+     # grp4: {nom: tcp, debut_ms: [40000, 40100], duree_ms: 'max', nb: 50, debit: 2}
+     # grp5: {nom: tcp, debut_ms: [50000, 50100], duree_ms: 'max', nb: 50, debit: 2}
     #- test: {nom: tcp, debut_ms: [0, 100], duree_ms: 'max', ratio: 2, debit: 2 }
   # Dans UDP, le debit (par défaut le débit de la plus petite interface du premier ENDPOINT dans le fichier de constellation)
   # Le débits des commmodités UDP sont dérivés aléatoirement de celui-ci par 0.3*debit_reference+0.7*random_exponential(0.7*debit_reference)
-  # Cela donne une distribution exponentialle décalée coupée de débit moyen 0.3*debit+debit*(1-exp(-0.7)) = 0.8*debit
+  # Cela donne une distribution exponentielle décalée coupée de débit moyen 0.3*debit+debit*(1-exp(-0.7)) = 0.8*debit
   # in UDP, 'debit' is capped to debit_gsl
   # a tcp flow is defined by its size, which is calculated with debit and duree_ms
   # Débit UDP : max(udp_list_flow_size_proportion[i], 0.999*data_rate_GSL_megabit_per_s))
@@ -66,4 +72,4 @@ actions: #[]
   - routes
   - "casse liens sat"
   #- "analyse theorique"
-  #- simulation
+  - simulation

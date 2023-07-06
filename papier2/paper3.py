@@ -125,6 +125,7 @@ class Experiences():
             os.chdir(basedir)
         
         # NS-3 EXPERIMENTS
+        a=input("valider pour continuer")
         if "simulation" in self.actions:
             os.chdir("ns3_experiments")
             subprocess.check_call(["python", "step_2_run.py", "0", nomfic_courante], stdout=sys.stdout, stderr=sys.stderr)
