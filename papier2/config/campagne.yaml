@@ -64,7 +64,7 @@ info-sauvegarde:
 
 info-actions-inutiles-si:
   #inutile d'effectuer l'action si la cle changeante est
-  "casse liens sat": [ "protocoles", "srvTrafficControl", "debit-if-isl", "debit-if-gsl", "desactive-impairs"]
+  "casse liens sat": [ "protocoles", "srvTrafficControl", "debit-ifs", "desactive-impairs"]
 
 actions: #[]
   - noeuds

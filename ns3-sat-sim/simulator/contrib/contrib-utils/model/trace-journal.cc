@@ -151,10 +151,12 @@ void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val,
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
     if (analysePacket.succes){
-    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << src_node->GetId() << "," << src_node->GetObject<Specie>()->GetName() << ",";
+    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << "," << src_node->GetId() << "," << src_node->GetObject<Specie>()->GetName() << ",";
     *stream->GetStream() << dst_node->GetId() << "," << dst_node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm;
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize << "," << txTime.GetNanoSeconds();
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    } else {
+        *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << ",,,," ",,,," ",,,," << std::endl;
     }
     }
 }
@@ -168,9 +170,11 @@ void PacketEventTracerSimple(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
     if (analysePacket.succes){
-    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
+    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize << "," << rxTime.GetNanoSeconds();
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    } else {
+        *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << ",,,," ",,,," ",," << std::endl;
     }
     }
 }
@@ -184,9 +188,11 @@ void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
     // Log precise timestamp received of the sequence packet if needed
     // this function is used for losses, I prefer to log them all
     if (analysePacket.succes){
-    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
+    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize;
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    } else {
+        *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << ",,,," ",,,," "," << std::endl;
     }
 }
 
@@ -205,9 +211,11 @@ void QitEventTracerReduit(Ptr<OutputStreamWrapper> stream, std::shared_ptr<cbpar
     getPacketFlux(qitcpy.GetPacket(), cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
     if (analysePacket.succes){
-    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
+    *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << qitcpy.GetPacket()->GetUid() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.idcomm; // we only know the node receiving/where the error occurs
     *stream->GetStream() << "," << analysePacket.idseq << "," << analysePacket.dataOffset << "," << analysePacket.dataSize;
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
+    } else {
+        *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << qitcpy.GetPacket()->GetUid() << ",,,," ",,,," "," << std::endl;
     }
 }
 }
