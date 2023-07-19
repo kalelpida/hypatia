@@ -151,11 +151,11 @@ namespace ns3 {
         //Traces
         AsciiTraceHelper asciiTraceHelper;
         m_drop_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/link.drops");
-        *m_drop_stream->GetStream() << "instant,uid,noeud,typeObj,commId,seqNum,offset,taille,TCP,retour,info" << std::endl;
+        *m_drop_stream->GetStream() << "instant,uid,noeud,typeObj,horodtg,commId,seqNum,offset,taille,TCP,retour,info" << std::endl;
         m_tx_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/link.tx");
-        *m_tx_stream->GetStream() << "instant,uid,noeud,typeObj,dst,dstObj,commId,seqNum,offset,taille,dureePaquet,TCP,retour,info" << std::endl;
+        *m_tx_stream->GetStream() << "instant,uid,noeud,typeObj,dst,dstObj,horodtg,commId,seqNum,offset,taille,dureePaquet,TCP,retour,info" << std::endl;
         m_rx_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/link.rx");
-        *m_rx_stream->GetStream() << "instant,uid,noeud,typeObj,commId,seqNum,offset,taille,dureePaquet,TCP,retour,info" << std::endl;
+        *m_rx_stream->GetStream() << "instant,uid,noeud,typeObj,horodtg,commId,seqNum,offset,taille,dureePaquet,TCP,retour,info" << std::endl;
         
         // Initialize satellites
         ReadSatellites();
