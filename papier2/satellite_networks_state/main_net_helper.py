@@ -59,33 +59,33 @@ class MainNetHelper:
         for obj in self.cstl_config["TYPES_OBJETS_SOL"]:
             self.dict_type_ivl[obj]=range(prec, prec+self.cstl_config[obj]["nombre"])
             prec+=self.cstl_config[obj]["nombre"]
+        
+        # Add base name to setting
+        self.confdirname = self.cstl_config['BASE_NAME'] + "_" + self.config['algo'] + f"_{os.getpid()}"
 
     def init_ground_stations(self):
         # Add base name to setting
-        name = self.cstl_config['BASE_NAME'] + "_" + self.config['algo']
+        
 
         # Create output directories
         if not os.path.isdir(self.output_generated_data_dir):
             os.makedirs(self.output_generated_data_dir, exist_ok=True)
-        if not os.path.isdir(self.output_generated_data_dir + "/" + name):
-            os.makedirs(self.output_generated_data_dir + "/" + name, exist_ok=True)
+        if not os.path.isdir(self.output_generated_data_dir + "/" + self.confdirname):
+            os.makedirs(self.output_generated_data_dir + "/" + self.confdirname, exist_ok=True)
 
         # Ground stations
         print("Generating ground stations...")
         # create a from_to list
-        self.from_to_list =  satgen.extend_ground_objects(self.config['graine'], self.cstl_config, self.output_generated_data_dir + "/" + name + "/ground_stations.txt")
+        self.from_to_list =  satgen.extend_ground_objects(self.config['graine'], self.cstl_config, self.output_generated_data_dir + "/" + self.confdirname + "/ground_stations.txt")
         return self.from_to_list
 
     def calculate(self):
         # This function generates network links and compute interfaces
 
-        # Add base name to setting
-        name = self.cstl_config['BASE_NAME'] + "_" + self.config['algo']
-
         # TLEs
         print("Generating TLEs...")
         satgen.generate_tles_from_scratch_manual(
-            self.output_generated_data_dir + "/" + name + "/tles.txt",
+            self.output_generated_data_dir + "/" + self.confdirname + "/tles.txt",
             self.cstl_config['NICE_NAME'],
             self.NUM_ORBS,
             self.NUM_SATS_PER_ORB,
@@ -109,7 +109,7 @@ class MainNetHelper:
             if type_lien=='isl':
                 assert list(objets.keys())==["satellite"]
                 network_links[nom_lien], nvelles_interfaces=generate_plus_grid_isls(
-                    os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
+                    os.path.join(self.output_generated_data_dir, self.confdirname, nom_lien+".txt"),
                     self.NUM_ORBS,
                     self.NUM_SATS_PER_ORB,
                     interfaces_number,
@@ -144,7 +144,7 @@ class MainNetHelper:
 
             elif type_lien=='tl':
                 network_links[nom_lien], nvelles_interfaces=generate_tl_net(
-                    os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
+                    os.path.join(self.output_generated_data_dir, self.confdirname, nom_lien+".txt"),
                     interfaces_number,
                     *[self.dict_type_ivl[obj] for obj in objets]
                 )
@@ -163,7 +163,7 @@ class MainNetHelper:
                     slave['range'], master['range']= rng0, rng1
                     
                 network_links[nom_lien], nvelles_interfaces=generate_pyl_net(
-                    os.path.join(self.output_generated_data_dir, name, nom_lien+".txt"),
+                    os.path.join(self.output_generated_data_dir, self.confdirname, nom_lien+".txt"),
                     interfaces_number,
                     master, slave, 
                     delai_lien(proprietes_lien)
@@ -188,7 +188,7 @@ class MainNetHelper:
         satgen.help_dynamic_state(
             self.output_generated_data_dir,
             self.config['threads'],  # Number of threads
-            name,
+            self.confdirname,
             self.config['pas'],
             self.config['duree'],
             self.config['algo'],
@@ -196,8 +196,7 @@ class MainNetHelper:
         )
 
     def detraqueISL(self):
-        name = self.cstl_config['BASE_NAME'] + "_" + self.config['algo']
-        rep_fics_chemins = os.path.join(self.output_generated_data_dir, name, "dynamic_state_"+str(self.config['pas'])+"ms_for_" + str(self.config['duree'])+ "s", "paths")
+        rep_fics_chemins = os.path.join(self.output_generated_data_dir, self.confdirname, "dynamic_state_"+str(self.config['pas'])+"ms_for_" + str(self.config['duree'])+ "s", "paths")
         dico_t_chemins={}
         for fic in os.listdir(rep_fics_chemins):
             if not fic.startswith('paths_'):
@@ -258,14 +257,14 @@ class MainNetHelper:
             nbsel= int(detraque['sel'].removeprefix('topUtil'))
             x = sorted([[util, paire] for paire, util in utilisations.items()], reverse=True)[:nbsel]
             liens_a_modifier=[liens_compromis_str.format(*paire) for _, paire in x]
-            with open(os.path.join(self.output_generated_data_dir, name, nomficlien), "r") as f_itfs:
+            with open(os.path.join(self.output_generated_data_dir, self.confdirname, nomficlien), "r") as f_itfs:
                 lignes=f_itfs.readlines()
             for i, ligne in enumerate(lignes):
                 for a_modifier in liens_a_modifier:
                     if ligne.startswith(a_modifier):
                         lignes[i] = ligne.strip()+ajout_str_isl
                         break
-            with open(os.path.join(self.output_generated_data_dir, name, nomficlien), "w") as f_itfs:
+            with open(os.path.join(self.output_generated_data_dir, self.confdirname, nomficlien), "w") as f_itfs:
                 f_itfs.writelines(lignes)
             
 

@@ -4,10 +4,12 @@
 import os, sys
 import subprocess
 import yaml
-import re
+import re, copy
 import time # can be used in destdir
 from satellite_networks_state.main_net_helper import MainNetHelper
 from ns3_experiments.step_1_generate_runs2 import main_step1
+from ns3_experiments.step_2_run import main_step2
+from multiprocessing import Pool
 
 #papier2 directory
 basedir=os.getcwd()
@@ -15,8 +17,6 @@ assert re.match(basedir+'[^/]*', os.path.abspath(__file__))
 configdir=os.path.join(basedir, "config")
 #from where to set the config
 nomfic_campagne=os.path.join(basedir, "config/campagne.yaml")
-#where the script will read the config
-nomfic_courante=os.path.join(basedir, "config/courante.yaml")
 
 def genere_cles(campagne, rend_inutile):
     #ordonner les clefs dans l'ordre le plus efficace pour lancer le moins d'opérations possible
@@ -40,6 +40,7 @@ class Experiences():
         self.toutes_actions=set(actions)
         self.actions_non_indispensables=set()
         self.actions=set()
+        self.nomfic_courante=os.path.join(basedir, f"config/temp{os.getpid()}.campagne.yaml")#where the script will read the config
     
     def setCleSvgde(self, cle):
         # depreciee
@@ -58,7 +59,7 @@ class Experiences():
         with open(cstl_config_fic, 'r') as f:
             dico_cstl=yaml.load(f, Loader=yaml.Loader)
         remplace(dico_cstl, self.courante)
-        tmp_cstl_config_fic = os.path.join('config', 'temp.'+self.courante['constellation']+'.yaml')
+        tmp_cstl_config_fic = os.path.join('config', f'temp{os.getpid()}.'+self.courante['constellation']+'.yaml')
         with open(tmp_cstl_config_fic, 'w') as f:
             yaml.dump(dico_cstl, f)
             
@@ -78,7 +79,7 @@ class Experiences():
         #update missing information in constellation config file
         self.updateCstlInfo()
         # save current config
-        with open(nomfic_courante, 'w') as f:
+        with open(self.nomfic_courante, 'w') as f:
             yaml.dump(self.courante, f)
         if cle==self.cles[-1] and self.indices_cles[-1]==0:
             return True
@@ -94,7 +95,7 @@ class Experiences():
         #create ground nodes
         if 'noeuds' in self.actions:
             os.chdir("satellite_networks_state")
-            mh=MainNetHelper(self.courante, os.path.join(configdir, 'temp.'+self.courante['constellation']+'.yaml'), "gen_data")
+            mh=MainNetHelper(self.courante, os.path.join(configdir, f'temp{os.getpid()}.'+self.courante['constellation']+'.yaml'), "gen_data")
             list_from_to=mh.init_ground_stations()
             os.chdir(basedir)
 
@@ -121,21 +122,22 @@ class Experiences():
         # and 'list_update_interval_ms' in perform_full_analysis according to `liste_arguments`
         if "analyse theorique" in self.actions:
             os.chdir("satgenpy_analysis")
-            subprocess.check_call(["python", "perform_full_analysis.py", nomfic_courante], stdout=sys.stdout, stderr=sys.stderr)
+            subprocess.check_call(["python", "perform_full_analysis.py", self.nomfic_courante], stdout=sys.stdout, stderr=sys.stderr)
             os.chdir(basedir)
         
         # NS-3 EXPERIMENTS
         if "simulation" in self.actions:
             os.chdir("ns3_experiments")
-            subprocess.check_call(["python", "step_2_run.py", "0", nomfic_courante], stdout=sys.stdout, stderr=sys.stderr)
+            main_step2(self.nomfic_courante)
             os.chdir(basedir)
         
     
     def operation_sauvegarde(self, destdir, sources):
-        nomdestdir=destdir.format(strdate=time.strftime(self.strdate), **self.courante)
+        nomdestdir=destdir.format(strdate=time.strftime(self.strdate), pid=os.getpid(), **self.courante)
         sources_a_svgder=[]
         str_courante=str_recursif(self.courante)
         str_courante['protocolesNom'] = '_and_'.join(sorted({dic['nom'] for dic in self.courante['protocoles'].values()}))
+        str_courante['pid']=os.getpid()
         for dir, regexs in sources.items():
             dir_str=dir.format(**str_courante)
             if os.path.isdir(dir_str):
@@ -200,53 +202,85 @@ def remplace(dic_to, dic_from, prefix='$config/', sep='/'):
             elif isinstance(val, dict) or isinstance(val, list):
                 remplace(val, dic_from, prefix=prefix, sep=sep)
 
+def exec_campagne(campagne, nom_campagne, info_sauvegarde, liste_actions, rend_inutile):
+    if 'currinfo' in info_sauvegarde:
+        sys.stdout=open(info_sauvegarde['currinfo'], 'w')
+        sys.stderr=open('err'+info_sauvegarde['currinfo'], 'w')
+    strdate=info_sauvegarde.get('strdate', "%Y-%m-%d-%H%M")
+    campagnedir=info_sauvegarde.get('campagnedir', '').rstrip('/') #"sauvegardes/{nom_campagne}"
+    expedir=info_sauvegarde.get('expedir', '').lstrip('/')
+    sources=info_sauvegarde.get('sources', [])
+
+    fini = False
+    campagne['nom_campagne'] = [nom_campagne]
+    exp=Experiences(campagne, liste_actions, rend_inutile)
+    exp.paramExperience()
+    exp.setStrDate(strdate)
+    exp.actions=set(liste_actions)
+    #update missing information in constellation config file
+    exp.updateCstlInfo()
+    # save current config
+    with open(exp.nomfic_courante, 'w') as f:
+        yaml.dump(exp.courante, f)
+    destdir=campagnedir+'/'+expedir
+    while not fini:
+        exp.execution()
+        if destdir and sources:
+            exp.operation_sauvegarde(destdir, sources)
+        fini=exp.experienceSuivante()
         
+    for glob in os.scandir(configdir):#clean temp files in config
+        if glob.is_file() and glob.name.startswith('temp'):
+            subprocess.check_call(["rm",glob.path])
+    for glob in os.scandir(os.path.join(basedir, "satellite_networks_state", "gen_data")):#clean unnecessary routing tables
+        if glob.name.endswith(f"_{os.getpid()}"):
+            subprocess.check_call(["rm","-r", glob.path])
+    for glob in os.scandir(os.path.join(basedir, "ns3_experiments", "runs")):#clean finished experiments tables
+        if glob.name.endswith(f"_{os.getpid()}"):
+            subprocess.check_call(["rm","-r", glob.path])
+    return os.getpid()
+
+def divise_campagnes(campagne, cles, nbprocs):
+    sous_campagnes=[campagne]
+    while len(cles) and nbprocs>len(sous_campagnes):
+        cle=cles.pop(0)
+        n_ss_cpgns=len(sous_campagnes)
+        for _ in range(n_ss_cpgns):
+            ss_cpgn=sous_campagnes.pop(0)
+            val_possibles=ss_cpgn[cle]
+            for val in val_possibles:
+                nvl_ss_cpgn=copy.deepcopy(ss_cpgn)
+                nvl_ss_cpgn[cle]=[val]
+                sous_campagnes.append(nvl_ss_cpgn)
+    return sous_campagnes
+
 def main():
     with open(nomfic_campagne, 'r') as f:
         dico_campagne=yaml.load(f, Loader=yaml.Loader)
 
-    dic=dico_campagne.pop('info-sauvegarde',{})  
-    if 'currinfo' in dic:
-        sys.stdout=open(dic['currinfo'], 'w')
-        sys.stderr=open('err'+dic['currinfo'], 'w')
-    strdate=dic.get('strdate', "%Y-%m-%d-%H%M")
-    campagnedir=dic.get('campagnedir', '').rstrip('/') #"sauvegardes/{nom_campagne}"
-    expedir=dic.get('expedir', '').lstrip('/')
-    sources=dic.get('sources', [])
+    info_sauvegarde=dico_campagne.pop('info-sauvegarde',{}) 
 
-    liste_actions=dico_campagne.pop('actions', [])
-    rend_inutile=dico_campagne.pop('info-actions-inutiles-si',{})
+    info_campagne=dico_campagne.pop('info-campagne',{}) 
+
+    liste_actions=info_campagne.get('actions', [])
+    rend_inutile=info_campagne.get('actions-inutiles-si',{})
+    nb_processus=info_campagne.get('processus', 1)
 
     for nom_campagne, campagne in dico_campagne.items():
         print("nom: ", nom_campagne)
+        cd=info_sauvegarde.get('campagnedir').format(nom_campagne=nom_campagne)
         cles_variantes=[cle for cle, vals in campagne.items() if len(vals)>1]
-        fini = False
-        campagne['nom_campagne'] = [nom_campagne]
-        exp=Experiences(campagne, liste_actions, rend_inutile)
-        exp.paramExperience()
-        exp.setStrDate(strdate)
-        estPremiere=True
-        while not fini:
-            if estPremiere:
-                exp.actions=set(liste_actions)
-                #update missing information in constellation config file
-                exp.updateCstlInfo()
-                # save current config
-                with open(nomfic_courante, 'w') as f:
-                    yaml.dump(exp.courante, f)
-                estPremiere=False
-            exp.execution()
-            if (destdir:=campagnedir+'/'+expedir) and sources:
-                exp.operation_sauvegarde(destdir, sources)
-            fini=exp.experienceSuivante()
-        cd=campagnedir.format(nom_campagne=nom_campagne)
+        cles_variantes.sort(key= lambda x : sum(x in vals for vals in rend_inutile.values()))#les cles les moins contraignantes en bout de liste
+
         with open(os.path.join(cd,'variations.txt'), "w") as f:
-            f.write(str(cles_variantes))
+                f.write(str(cles_variantes))
         subprocess.check_call(["cp", '-t', cd, nomfic_campagne]) #finally save campagne config itself
-    for glob in os.listdir(configdir):#clean temp files in config
-        x=os.path.join(configdir, glob)
-        if os.path.isfile(x) and glob.startswith('temp.'):
-            subprocess.check_call(["rm",x])
+        sous_campagnes=divise_campagnes(campagne, cles_variantes, nb_processus)
+
+        sous_campagnes_infos=[(x, nom_campagne, info_sauvegarde, liste_actions, rend_inutile) for x in sous_campagnes]
+
+        with Pool(nb_processus) as p:
+            print(p.starmap(exec_campagne, sous_campagnes_infos))
             
 
 if __name__ == '__main__':

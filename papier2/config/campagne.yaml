@@ -1,17 +1,17 @@
-test2: #nom de la campagne
+test3: #nom de la campagne
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
-  duree: [ 20 ] #en s
+  duree: [ 6 ] #en s
   pas: [2000] #en ms
-  deteriorISL: [ { sel: topUtil10, errModel: "recvErrRate:0.01-interval:10000,30000ms"}, { sel: topUtil10, errModel: "recvErrRate:0.1-interval:10000,30000ms"} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
+  deteriorISL: [ { sel: topUtil10, errModel: "recvErrRate:0.01-interval:2000,4000ms"}, { sel: topUtil10, errModel: "recvErrRate:0.1-interval:2000,4000ms"} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   nb-UEs-sol: [ 100 ]
   algo: [ "algorithm_penal_gsl" ]
   threads: [ 4 ]
   desactive-impairs: [ True ]
-  debit-if-isl: [ 20 ] #[ 3, 10 ] #Mb/s
-  debit-if-gsl: [ {'ue':2, 'gateway':150, 'satellite':80} ] #Mb/s #ex: {'ue':1, 'gateway':20, 'satellite':5} 
-  logs-actifs: [ ['rx', 'tx', 'drop', 'coms', 'ping'] ] #('rx', 'tx', 'drop', 'coms', 'ping') # 'drop' callbacks won't be effective when Traffic Control is set 
-  estimDelai: [{"isl": 5, 'gsl': 4, 'extremite': 20 }, {"isl": 5, 'gsl': 4, 'extremite': 80 }, {"isl": 10, 'gsl': 8, 'extremite': 80 }]
+  debit-ifs: [ {'ue':2, 'sol':350, 'isl':60, 'satues':80, 'satgw':40}, {'ue':2, 'sol':200, 'isl':60, 'satues':80, 'satgw':80}   ] #Mb/s 
+  logs-actifs: [ ['rx', 'drop', 'tx', 'coms'] ] #('rx', 'tx', 'drop', 'coms', 'ping') # 'drop' callbacks are now effective with Traffic Control (just hope it wont crash) 
+  estimDelai: [{"isl": 5.5, 'gsl': 40, 'extremite': 30 }] # délai dans la file d'attente
+  # Théoriquement pour 1 flux TCP, le buffer doit avoir une capacité de RTT * débit_sortie_interface (thumb's rule). S'il y a beaucoup de flux, on peut diviser par sqrt(nb_flux)
 
   ##------------------
   # satellite_network_min_node_log: rx log only 1st station and satellites
@@ -51,25 +51,29 @@ test2: #nom de la campagne
 info-sauvegarde:
   strdate: '%Y-%m-%d-%H%M'
   campagnedir: "sauvegardes/{nom_campagne}"
-  expedir: "svgde_{strdate}_{graine}"
+  expedir: "svgde_{strdate}_{graine}_{pid}"
   sources: #select information that should be saved at the end of the experiment
     #directory: files or directory
     #"satgenpy_analysis/data/{constellation}_{isls}_{algo}/{pas}ms_for_{duree}s/": manual
-    "satellite_networks_state/gen_data/{constellation}_{algo}": ground_stations.txt
-    "satellite_networks_state/gen_data/{constellation}_{algo}/dynamic_state_{pas}ms_for_{duree}s": paths
-    ns3_experiments/runs: "run_loaded_tm_pairing_for_{duree}s_with_{protocolesNom}_{algo}"
+    "satellite_networks_state/gen_data/{constellation}_{algo}_{pid}": ground_stations.txt
+    "satellite_networks_state/gen_data/{constellation}_{algo}_{pid}/dynamic_state_{pas}ms_for_{duree}s": paths
+    ns3_experiments/runs: "run_loaded_tm_pairing_for_{duree}s_with_{protocolesNom}_{algo}_{pid}"
     config: [ "courante.*", ".*{constellation}.*"] # ^(?!campagne).*$ #all but starting with campagne
     satellite_networks_state: commodites.temp
   #currinfo: currlog #pour savoir où on en est, si lancé en arrière-plan
 
-info-actions-inutiles-si:
-  #inutile d'effectuer l'action si la cle changeante est
-  "casse liens sat": [ "protocoles", "srvTrafficControl", "debit-ifs", "desactive-impairs"]
+info-campagne:
+  actions-inutiles-si:
+    #inutile d'effectuer l'action si la cle changeante est
+    "casse liens sat": [ "protocoles", "srvTrafficControl", "debit-ifs", "desactive-impairs", "estimDelai"]
+    "routes": [ "protocoles", "srvTrafficControl", "debit-ifs", "desactive-impairs", "estimDelai"]
 
-actions: #[]
-  - noeuds
-  - commodites
-  - routes
-  - "casse liens sat"
-  #- "analyse theorique"
-  - simulation
+  actions: #[]
+    - noeuds
+    - commodites
+    - routes
+    - "casse liens sat"
+    #- "analyse theorique"
+    - simulation
+  
+  processus: 4

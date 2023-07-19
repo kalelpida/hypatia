@@ -22,7 +22,7 @@
 
 import exputil
 import random
-import sys
+import sys, os
 import numpy as np
 from numpy import array #for call on eval
 import yaml
@@ -39,11 +39,11 @@ class main_step1:
         self.list_from_to=list_from_to
 
 
-        config_file="../config/courante.yaml" #sys.argv[1]
+        config_file=f"../config/temp{os.getpid()}.campagne.yaml" #sys.argv[1]
         with open(config_file, 'r') as f:
             dico_params=yaml.load(f, Loader=yaml.Loader)
         constel_fic=dico_params.get('constellation')
-        constel_fic="../config/temp."+constel_fic+".yaml"
+        constel_fic=f"../config/temp{os.getpid()}."+constel_fic+".yaml"
         with open(constel_fic, 'r') as f:
             self.cstl_dico=yaml.load(f, Loader=yaml.Loader)
 
@@ -213,8 +213,8 @@ class main_step1:
             paramliens.append(f"{nom_lien}_params={ns3paramchecker(lien[2])}")
 
         # Prepare run directory
-        run_dir = "runs/run_loaded_tm_pairing_for_{}s_with_{}_{}".format(
-            params[1], protocol_chosen_name, params[3]
+        run_dir = "runs/run_loaded_tm_pairing_for_{}s_with_{}_{}_{}".format(
+            params[1], protocol_chosen_name, params[3], os.getpid()
         )
         local_shell.remove_force_recursive(run_dir)
         local_shell.make_full_dir(run_dir)
@@ -223,7 +223,7 @@ class main_step1:
             "templates/template_config_ns3_" + protocol_chosen_name + "3.properties",
             run_dir + "/config_ns3.properties"
         )
-        sat_net_dir="../../../satellite_networks_state/gen_data/{}_{}".format(params[0],params[3])
+        sat_net_dir="../../../satellite_networks_state/gen_data/{}_{}_{}".format(params[0],params[3], os.getpid())
         with open(run_dir + "/config_ns3.properties", 'r') as f:
             lignes=f.readlines()
         replace_in_lines(lignes, "[SAT-NET-DIR]", sat_net_dir)

@@ -21,38 +21,26 @@
 # SOFTWARE.
 
 import exputil
-import sys, yaml
+import sys, yaml, os
 local_shell = exputil.LocalShell()
 
 # Clear old runs
 #local_shell.perfect_exec("rm -rf runs/*/logs_ns3")
 
-# Get workload identifier from argument
-num_machines = 1
-args = sys.argv[1:]
-if int(args[0]) < 0 or int(args[0]) >= num_machines:
-    raise ValueError("Need to have have first argument in range [0, %d) to pick workload" % num_machines)
-workload_id = int(args[0])
-config_file = args[1]
-with open(config_file, 'r') as f:
-	    dico_params=yaml.load(f, Loader=yaml.Loader)
+def main_step2(config_file):
+	with open(config_file, 'r') as f:
+			dico_params=yaml.load(f, Loader=yaml.Loader)
 
-graine=dico_params.pop('graine')
-duration_s=dico_params.get('duree')
-algo = dico_params.get('algo')
+	graine=dico_params.pop('graine')
+	duration_s=dico_params.get('duree')
+	algo = dico_params.get('algo')
 
-# One-by-one run all experiments (such that they don't interfere with each other)
-unique_id = 0
-
-
-all_protocols_name = {dic['nom'] for dic in dico_params['protocoles'].values()} #["tcp", "udp"]:
-protocol_chosen_name= '_and_'.join(sorted(list(all_protocols_name)))
-
-if (unique_id % num_machines) == workload_id:
+	all_protocols_name = {dic['nom'] for dic in dico_params['protocoles'].values()} #["tcp", "udp"]:
+	protocol_chosen_name= '_and_'.join(sorted(list(all_protocols_name)))
 
 	# Prepare run directory
-	run_dir = "runs/run_loaded_tm_pairing_for_%ds_with_%s_%s" % (
-		duration_s, protocol_chosen_name, algo
+	run_dir = "runs/run_loaded_tm_pairing_for_%ds_with_%s_%s_%d" % (
+		duration_s, protocol_chosen_name, algo, os.getpid()
 	)
 	logs_ns3_dir = run_dir + "/logs_ns3"
 	local_shell.remove_force_recursive(logs_ns3_dir)
@@ -67,5 +55,3 @@ if (unique_id % num_machines) == workload_id:
 		" 2>&1 | tee '../../papier2/ns3_experiments/" + logs_ns3_dir + "/console.txt'",
 		output_redirect=exputil.OutputRedirect.CONSOLE
 	)
-
-	unique_id += 1
