@@ -7,6 +7,7 @@ import yaml
 import re, copy
 import time # can be used in destdir
 from satellite_networks_state.main_net_helper import MainNetHelper
+from satellite_networks_state.positionneur import Positionneur
 from ns3_experiments.step_1_generate_runs2 import main_step1
 from ns3_experiments.step_2_run import main_step2
 from multiprocessing import Pool
@@ -31,7 +32,7 @@ def genere_cles(campagne, rend_inutile):
     
 #base
 class Experiences():
-    def __init__(self, campagne, actions, rend_inutile):
+    def __init__(self, campagne, actions, rend_inutile, evals):
         self.courante={}
         self.campagne=campagne
         self.rend_inutile=rend_inutile
@@ -40,7 +41,9 @@ class Experiences():
         self.toutes_actions=set(actions)
         self.actions_non_indispensables=set()
         self.actions=set()
+        self.evals=evals
         self.nomfic_courante=os.path.join(basedir, f"config/temp{os.getpid()}.campagne.yaml")#where the script will read the config
+        self.dico_cstl={}
     
     def setCleSvgde(self, cle):
         # depreciee
@@ -49,19 +52,16 @@ class Experiences():
         self.cles.append(cle)
         #assert "graine"==self.cles[-1]
         # it should be the seed
-    
-    def setStrDate(self, strdate):
-        self.strdate=strdate
 
     def updateCstlInfo(self):
         cstl_config_fic = os.path.join('config', self.courante['constellation']+'.yaml')
         assert os.path.isfile(cstl_config_fic)
         with open(cstl_config_fic, 'r') as f:
-            dico_cstl=yaml.load(f, Loader=yaml.Loader)
-        remplace(dico_cstl, self.courante)
+            self.dico_cstl=yaml.load(f, Loader=yaml.Loader)
+        remplace(self.dico_cstl, self.courante|var_evals(self.evals))
         tmp_cstl_config_fic = os.path.join('config', f'temp{os.getpid()}.'+self.courante['constellation']+'.yaml')
         with open(tmp_cstl_config_fic, 'w') as f:
-            yaml.dump(dico_cstl, f)
+            yaml.dump(self.dico_cstl, f)
             
     def paramExperience(self):
         for i,cle in enumerate(self.cles):
@@ -91,7 +91,12 @@ class Experiences():
         return False
 
     def execution(self):
-        
+        #generate positions
+        if 'positionne' in self.actions:
+            os.chdir("satellite_networks_state")
+            Positionneur(self.courante['constellation'], self.dico_cstl)
+            os.chdir(basedir)
+
         #create ground nodes
         if 'noeuds' in self.actions:
             os.chdir("satellite_networks_state")
@@ -133,11 +138,10 @@ class Experiences():
         
     
     def operation_sauvegarde(self, destdir, sources):
-        nomdestdir=destdir.format(strdate=time.strftime(self.strdate), pid=os.getpid(), **self.courante)
-        sources_a_svgder=[]
-        str_courante=str_recursif(self.courante)
+        str_courante=str_recursif(self.courante|var_evals(self.evals))
         str_courante['protocolesNom'] = '_and_'.join(sorted({dic['nom'] for dic in self.courante['protocoles'].values()}))
-        str_courante['pid']=os.getpid()
+        nomdestdir=destdir.format(**str_courante)
+        sources_a_svgder=[]
         for dir, regexs in sources.items():
             dir_str=dir.format(**str_courante)
             if os.path.isdir(dir_str):
@@ -154,7 +158,30 @@ class Experiences():
                 subprocess.check_call(["cp", "-R", '-t', nomdestdir, src], stdout=sys.stdout, stderr=sys.stderr)
             else:
                 print(f"\n\n \t << {src} >> does not exists. Could not be saved \n\n")
+    
+    def operation_mrpropre(self, a_supprimer):
+        str_courante=str_recursif(self.courante|var_evals(self.evals))
+        str_courante['protocolesNom'] = '_and_'.join(sorted({dic['nom'] for dic in self.courante['protocoles'].values()}))
+        globs_a_supprimer=[]
+        for dir, regexs in a_supprimer.items():
+            dir_str=dir.format(**str_courante)
+            if os.path.isdir(dir_str):
+                if type(regexs)!=list:
+                    regexs=[regexs]
+                for regex in regexs:
+                    regex_str=regex.format(**str_courante)
+                    globs_a_supprimer+=[x.path for x in os.scandir(dir_str) if re.match(regex_str, x.name)]
+            else:
+                print(f"\n\n \t << {dir_str} >> is not a directory \n\n")
+        for glob in globs_a_supprimer:
+            if basedir!=os.path.commonpath([basedir, os.path.abspath(glob)]):
+                print(f"\n\n \t << {glob} >> should not be accessed. Skip delete \n\n")
+            elif os.path.exists(glob):
+                subprocess.check_call(["rm", "-r", glob], stdout=sys.stdout, stderr=sys.stderr)
+            else:
+                print(f"\n\n \t << {glob} >> does not exists. Could not be deleted \n\n")
 
+    
 
 def str_recursif(dico, prefix=''):
     #tranform a dict of dict of dict.. in a 1-level dict
@@ -165,6 +192,9 @@ def str_recursif(dico, prefix=''):
         else:
             dic.update(str_recursif(val, prefix=prefix+cle+'_'))
     return dic
+
+def var_evals(dic_evals):
+    return {c: eval(v) for c, v in dic_evals.items()}
 
 def remplace(dic_to, dic_from, prefix='$config/', sep='/'):
         """replace "prefix..." values of dic_to with related fields from dic_from"""
@@ -186,7 +216,7 @@ def remplace(dic_to, dic_from, prefix='$config/', sep='/'):
             enumerateur=enumerate(dic_to)
         #maj valeurs
         for cle, val in enumerateur:
-            if isinstance(val, str) and prefix in val:
+            while isinstance(val, str) and prefix in val:
                 debut=val.find(prefix)
                 liste=val[debut:].split(sep)
                 rempl_val=dic_from
@@ -194,28 +224,34 @@ def remplace(dic_to, dic_from, prefix='$config/', sep='/'):
                     try:
                         rempl_val=rempl_val[u]
                     except TypeError:
-                        dic_to[cle]=val.replace(val[debut:], f"{rempl_val}"+sep.join(liste[i+1:]).strip('/'))
+                        val=val.replace(val[debut:], f"{rempl_val}"+sep.join(liste[i+1:]).strip('/'))
                         break
                 else:
                     # loop ended correctly  
-                    dic_to[cle]=rempl_val
-            elif isinstance(val, dict) or isinstance(val, list):
+                    if debut:
+                        val=f"{val[:debut]}{rempl_val}"
+                    else:
+                        val=rempl_val
+                dic_to[cle]=val
+            if (isinstance(val, dict) or isinstance(val, list)):
                 remplace(val, dic_from, prefix=prefix, sep=sep)
 
-def exec_campagne(campagne, nom_campagne, info_sauvegarde, liste_actions, rend_inutile):
-    if 'currinfo' in info_sauvegarde:
-        sys.stdout=open(info_sauvegarde['currinfo'], 'w')
-        sys.stderr=open('err'+info_sauvegarde['currinfo'], 'w')
-    strdate=info_sauvegarde.get('strdate', "%Y-%m-%d-%H%M")
-    campagnedir=info_sauvegarde.get('campagnedir', '').rstrip('/') #"sauvegardes/{nom_campagne}"
-    expedir=info_sauvegarde.get('expedir', '').lstrip('/')
-    sources=info_sauvegarde.get('sources', [])
+def exec_campagne(campagne, nom_campagne, info_experience, info_campagne):
+    liste_actions=info_campagne.get('actions', [])
+    rend_inutile=info_campagne.get('actions-inutiles-si',{})
+    evals=info_campagne.get('evals', {})
+
+    if 'currinfo' in info_experience:
+        sys.stdout=open(info_experience['currinfo'], 'w')
+        sys.stderr=open('err'+info_experience['currinfo'], 'w')
+    campagnedir=info_experience.get('campagnedir', '').rstrip('/') #"sauvegardes/{nom_campagne}"
+    expedir=info_experience.get('expedir', '').lstrip('/')
+    sources=info_experience.get('sources', {})
 
     fini = False
     campagne['nom_campagne'] = [nom_campagne]
-    exp=Experiences(campagne, liste_actions, rend_inutile)
+    exp=Experiences(campagne, liste_actions, rend_inutile, evals)
     exp.paramExperience()
-    exp.setStrDate(strdate)
     exp.actions=set(liste_actions)
     #update missing information in constellation config file
     exp.updateCstlInfo()
@@ -228,16 +264,8 @@ def exec_campagne(campagne, nom_campagne, info_sauvegarde, liste_actions, rend_i
         if destdir and sources:
             exp.operation_sauvegarde(destdir, sources)
         fini=exp.experienceSuivante()
-        
-    for glob in os.scandir(configdir):#clean temp files in config
-        if glob.is_file() and glob.name.startswith('temp'):
-            subprocess.check_call(["rm",glob.path])
-    for glob in os.scandir(os.path.join(basedir, "satellite_networks_state", "gen_data")):#clean unnecessary routing tables
-        if glob.name.endswith(f"_{os.getpid()}"):
-            subprocess.check_call(["rm","-r", glob.path])
-    for glob in os.scandir(os.path.join(basedir, "ns3_experiments", "runs")):#clean finished experiments tables
-        if glob.name.endswith(f"_{os.getpid()}"):
-            subprocess.check_call(["rm","-r", glob.path])
+
+    exp.operation_mrpropre(info_campagne.get('mrpropre', {}))
     return os.getpid()
 
 def divise_campagnes(campagne, cles, nbprocs):
@@ -258,17 +286,15 @@ def main():
     with open(nomfic_campagne, 'r') as f:
         dico_campagne=yaml.load(f, Loader=yaml.Loader)
 
-    info_sauvegarde=dico_campagne.pop('info-sauvegarde',{}) 
+    info_exp=dico_campagne.pop('info-experience',{}) 
 
     info_campagne=dico_campagne.pop('info-campagne',{}) 
-
-    liste_actions=info_campagne.get('actions', [])
     rend_inutile=info_campagne.get('actions-inutiles-si',{})
     nb_processus=info_campagne.get('processus', 1)
 
     for nom_campagne, campagne in dico_campagne.items():
         print("nom: ", nom_campagne)
-        cd=info_sauvegarde.get('campagnedir').format(nom_campagne=nom_campagne)
+        cd=info_exp.get('campagnedir').format(nom_campagne=nom_campagne)
         cles_variantes=[cle for cle, vals in campagne.items() if len(vals)>1]
         cles_variantes.sort(key= lambda x : sum(x in vals for vals in rend_inutile.values()))#les cles les moins contraignantes en bout de liste
 
@@ -277,10 +303,16 @@ def main():
         subprocess.check_call(["cp", '-t', cd, nomfic_campagne]) #finally save campagne config itself
         sous_campagnes=divise_campagnes(campagne, cles_variantes, nb_processus)
 
-        sous_campagnes_infos=[(x, nom_campagne, info_sauvegarde, liste_actions, rend_inutile) for x in sous_campagnes]
+        sous_campagnes_infos=[(x, nom_campagne, info_exp, info_campagne) for x in sous_campagnes]
 
-        with Pool(nb_processus) as p:
-            print(p.starmap(exec_campagne, sous_campagnes_infos))
+        if info_campagne.get('parallelise', True):
+            with Pool(nb_processus) as p:
+                print(p.starmap(exec_campagne, sous_campagnes_infos))
+        else:
+            for ss_cpgn in sous_campagnes_infos:
+                exec_campagne(*ss_cpgn)
+        
+        
             
 
 if __name__ == '__main__':

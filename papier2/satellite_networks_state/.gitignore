@@ -2,4 +2,5 @@ gen_data
 *.pyc
 *.temp
 input_data/commodites.txt
+input_data/os_*
 

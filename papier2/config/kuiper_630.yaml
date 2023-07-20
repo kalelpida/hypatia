@@ -66,11 +66,21 @@ ue:
   minElevation: 20 #degrees above horizon
   nombre: $config/nb-UEs-sol #voir dans config
   estimDelai: $config/estimDelai/extremite #special for  extremities of the connection.
+  generateur: create_users_villeschoisies # fonction de génération de position. pas de génération de position si absente. Sinon un nouveau fichier 'positions' sera généré
+  genparams: [ ficVille, minElevation, affiche ] # cles des paramètres à passer au générateur, en plus de la constellation et du nombre.
+  ficVille: os_Lille.csv
+  affiche: False #mettre à True pour voir (vite fait) les positions générées
+  #graine: 8 #changer les positions générées
   
 server:
-  positions: os_Lille
+  positions: os_1voisinLille
   nombre: 1
   estimDelai: $config/estimDelai/extremite #special for  extremities of the connection.
+  generateur: create_voisins_villeschoisies
+  dependances: [ gateway ] #generate gateway file before this one
+  genparams: [ ficVille ]
+  ficVille : os_Lille.csv
+
 
 
 LINKS:

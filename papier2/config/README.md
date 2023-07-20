@@ -4,7 +4,7 @@ Une campagne est un ensemble d'expériences décrites dans `campagne.yaml`.
 Parmi ces sous-dictionnaires, on trouve:
 
 + des actions, c'est à dire définition des commodité, création des fichiers de route, simulation en elle-même. C'est ici que sont déterminées toutes les actions à effectuer. Les actions ne sont pas forcément effectuées lorsqu'elles sont inutiles (lire paper3.py directement)
-+ info-sauvegarde permet de définit quels fichiers sauvegarder pour chaque expérience. Les 'sources' seront copiées dans le dossier d'expérience (expedir), lui-même sauvegardé dans le dossier de campagne (campagnedir)
++ info-experience permet de définit quels fichiers sauvegarder pour chaque expérience. Les 'sources' seront copiées dans le dossier d'expérience (expedir), lui-même sauvegardé dans le dossier de campagne (campagnedir)
 + des configurations de campagne. Actuellement, hormis les deux mots-clef précédents, tous les autres sous-dictionnaires Yaml définissent une campagne, qui sera sauvegardée dans de dossier papier2/sauvegardes/nom-de-la-campagne.
 
 ## La campagne

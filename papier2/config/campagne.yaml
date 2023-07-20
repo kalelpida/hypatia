@@ -48,8 +48,7 @@ test3: #nom de la campagne
     - {}
     #- {"QueueDisc": "ns3::FqCoDelQueueDisc", "MaxSize": "QueueSize 60p", "Interval": "String 300ms", "Target": "String 200ms"} 
 
-info-sauvegarde:
-  strdate: '%Y-%m-%d-%H%M'
+info-experience:
   campagnedir: "sauvegardes/{nom_campagne}"
   expedir: "svgde_{strdate}_{graine}_{pid}"
   sources: #select information that should be saved at the end of the experiment
@@ -58,22 +57,34 @@ info-sauvegarde:
     "satellite_networks_state/gen_data/{constellation}_{algo}_{pid}": ground_stations.txt
     "satellite_networks_state/gen_data/{constellation}_{algo}_{pid}/dynamic_state_{pas}ms_for_{duree}s": paths
     ns3_experiments/runs: "run_loaded_tm_pairing_for_{duree}s_with_{protocolesNom}_{algo}_{pid}"
-    config: [ "courante.*", ".*{constellation}.*"] # ^(?!campagne).*$ #all but starting with campagne
-    satellite_networks_state: commodites.temp
+    config: "temp{pid}.*" # ^(?!campagne).*$ #all but starting with campagne
   #currinfo: currlog #pour savoir où on en est, si lancé en arrière-plan
 
 info-campagne:
+  evals: #ces variables sont évaluées avant utilisation, et ajoutées au dictionnaire de campagne
+    strdate: time.strftime('%Y-%m-%d-%H%M') #generate
+    pid: 'os.getpid()'
+  
   actions-inutiles-si:
     #inutile d'effectuer l'action si la cle changeante est
     "casse liens sat": [ "protocoles", "srvTrafficControl", "debit-ifs", "desactive-impairs", "estimDelai"]
     "routes": [ "protocoles", "srvTrafficControl", "debit-ifs", "desactive-impairs", "estimDelai"]
 
+  mrpropre: #à la fin de la campagne
+    "satellite_networks_state/gen_data" : ".*_{pid}"
+    satellite_networks_state/input_data : "os_.*_{pid}.csv"
+    ns3_experiments/runs: "run_loaded_tm_pairing_for_\\d+s_with_.*_.*_{pid}"
+    config: "temp{pid}.*\\.yaml"
+
+
   actions: #[]
+    - positionne #generate position files. Il vaut mieux éviter de lancer cette actions lorsqu'il y a plusieurs processus, l'accès au fichier est incertain. peut-être exécuter cette action seule au début, ou faire varier les fichiers générés, par ex en fonction du numero de processus
     - noeuds
     - commodites
     - routes
     - "casse liens sat"
-    #- "analyse theorique"
-    - simulation
+    #- "analyse theorique" #not sure it still works. should be adapted or removed
+    #- simulation
   
-  processus: 4
+  processus: 4 #number of experiments in parallel
+  parallelise: True #False helps to debug

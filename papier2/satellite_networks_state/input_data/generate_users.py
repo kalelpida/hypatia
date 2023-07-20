@@ -3,10 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os, sys, csv
 import yaml
-from constants import *
+from .constants import *
 import scipy
 
-TYPE_OBJET='ue'
 PROTECTION_DEG=7 # marge pour les zones non couvertes
 
 this_file_path=os.path.dirname(os.path.abspath(__file__))
@@ -14,8 +13,9 @@ sys.path.append(os.path.join(this_file_path,"../../../satgenpy"))
 import satgen
             
 
-def create_users_randomGlobe(Nb, constellation='kuiper_630'):
-    np.random.seed(32)
+def create_users_randomGlobe(Nb=10, constellation='kuiper_630', outfic="os_randomGlobe_kuiper_630.csv", affiche=False, **kwargs):
+    outfic=os.path.join(this_file_path, outfic)
+    np.random.seed(kwargs.get('graine', 32))
 
     fic_prenoms=os.path.join(this_file_path,"prenoms.txt")
     with open(fic_prenoms, 'r') as f:
@@ -26,38 +26,47 @@ def create_users_randomGlobe(Nb, constellation='kuiper_630'):
 
     #get the parameters of the constellation, set out of range criteria
     # Les utilisateurs possible sont tous ceux qui seront à portée de satellite au moins pour un instant  
-    with open("../../config/"+constellation+".yaml", 'r') as f:
+    with open(os.path.join(this_file_path, "../../config/"+constellation+".yaml"), 'r') as f:
         cstlconfig=yaml.load(f, Loader=yaml.Loader)
     heightsat=cstlconfig['ALTITUDE_M']
     latsat=np.deg2rad(cstlconfig['INCLINATION_DEGREE'])
-    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation'])
+    elev_ue=np.deg2rad(kwargs['minElevation']+PROTECTION_DEG) # avoid users out of bounds
     latMaxUE = np.arccos(EARTH_RADIUS*np.cos(elev_ue)/(EARTH_RADIUS+heightsat))-elev_ue+latsat
     assert 0<=latMaxUE<=90
     
     liste_ues=[]
-    plt.subplot(projection='3d')
-    for prenom in prenoms_sel:
+    if affiche:
+        plt.subplot(projection='3d')
+    for gid, prenom in enumerate(prenoms_sel):
         u = np.random.random()
         v = np.random.uniform(-np.sin(latMaxUE), np.sin(latMaxUE))
         theta = 2 * np.pi * u
         phi = np.arcsin(v)
         #altitude normal law around 200m+/-
         altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
-        plt.plot(*xyz(phi, theta), '.')
+        if affiche:
+            plt.plot(*xyz(phi, theta), '.')
         liste_ues.append({
-            "nom": prenom.strip(),
-            "lon": str(theta*180/np.pi), #degrees
-            "lat": str(phi*180/np.pi), #degrees
-            "elev": str(altitude_above_msl), #altitude, meters
+            "gid": gid,
+            "name": prenom.strip(),
+            "longitude_degrees": np.degrees(theta), #degrees
+            "latitude_degrees": np.degrees(phi), #degrees
+            "elevation_m": altitude_above_msl, #altitude, meters
         })
-    plt.show()
-    with open(os.path.join(this_file_path,f"os_randomGlobe_{constellation.replace('_', '')}.txt"), 'w') as f:
-        for i,ue in enumerate(liste_ues):
-            f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
+    if affiche:
+        plt.show()
+    with open(os.path.join(this_file_path,outfic), 'w') as f:
+        champs = list(liste_ues[0].keys())
+        ecrivain = csv.DictWriter(f, fieldnames=champs)
+        ecrivain.writeheader()
+        ecrivain.writerows(liste_ues)
+
             
 
-def create_users_villesGlobe(Nb, constellation='kuiper_630', ficVille='os_cities_by_estimated_2025_pop_300k_UN.csv'):
-    np.random.seed(32)
+def create_users_villeschoisies(Nb=10, constellation='kuiper_630', ficVille='os_Lille.csv', outfic="os_villes_kuiper_630.csv", affiche=False, **kwargs):
+    ficVille=os.path.join(this_file_path, ficVille)
+    outfic=os.path.join(this_file_path, outfic)
+    np.random.seed(kwargs.get('graine', 32))
 
     fic_prenoms=os.path.join(this_file_path,"prenoms.txt")
     with open(fic_prenoms, 'r') as f:
@@ -69,87 +78,11 @@ def create_users_villesGlobe(Nb, constellation='kuiper_630', ficVille='os_cities
     #get the parameters of the constellation, set out of range criteria
     # Les utilisateurs sont tous ceux qui seront potentiellement à portée d'un satellite au moins pour un instant 
     # dans main_net_helper, cette valeur est majorée par le K_FACTOR 
-    with open("../../config/"+constellation+".yaml", 'r') as f:
+    with open(os.path.join(this_file_path, "../../config/"+constellation+".yaml"), 'r') as f:
         cstlconfig=yaml.load(f, Loader=yaml.Loader)
     heightsat=cstlconfig['ALTITUDE_M']
     latsat=np.deg2rad(cstlconfig['INCLINATION_DEGREE'])
-    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation']+PROTECTION_DEG) # avoid users out of bounds
-    latMaxUE_rad = np.arccos(EARTH_RADIUS*np.cos(elev_ue)/(EARTH_RADIUS+heightsat))-elev_ue+latsat
-    assert 0<=latMaxUE_rad<=np.pi/2
-    
-    #generate users close to cities
-    Nb_proches_villes=int(Nb*0.9)
-    #get the cities
-    villes=satgen.read_ground_stations_basic(ficVille)
-    #"gid",  "name", "latitude_degrees", "longitude_degrees", "elevation_m","population_k": int
-    villes_pos=[np.radians([float(ville["latitude_degrees"]), float(ville["longitude_degrees"])]) for ville in villes]
-    villes_probas=np.array([ville['population_k'] for ville in villes], dtype=float)
-    villes_choisies = np.random.choice(list(range(len(villes))), size=Nb_proches_villes, p=villes_probas/sum(villes_probas))
-    liste_ues=[]
-    ectype= np.radians(3) # ~ ecart-type de la distribution
-    kappa=1/2/(ectype**2)
-    plt.subplot(projection='3d')
-    for prenom, idville in zip(prenoms_sel[:Nb_proches_villes], villes_choisies):
-        latrad=np.pi
-        iters=0
-        while latrad> latMaxUE_rad:
-            latlonrad=kent_randomgen(*villes_pos[idville], kappa=kappa, latmax=latMaxUE_rad)
-            latrad=latlonrad[0]
-            lat, lon = np.degrees(latlonrad)
-            iters+=1
-            if iters> 10:
-                raise Exception("trop de points aux pôles")
-        
-        plt.plot(*xyz(*latlonrad), '.')
-        #altitude normal law around 200m+/-
-        altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
-        liste_ues.append({
-            "nom": prenom.strip(),
-            "lon": str(lon), #degrees
-            "lat": str(lat), #degrees
-            "elev": str(altitude_above_msl), #altitude, meters
-        })
-
-    #generate other random users
-    koeff=Nb/(Nb-Nb_proches_villes)
-    for i, prenom in enumerate(prenoms_sel[Nb_proches_villes:]):
-        theta = np.random.uniform(0, 2*np.pi)
-        phi =  np.arcsin(np.random.uniform(-np.sin(latMaxUE_rad), np.sin(latMaxUE_rad)))
-
-        plt.plot(*xyz(phi, theta), '.')
-        #altitude normal law around 200m+/-
-        altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
-        liste_ues.insert(int(i*koeff), {
-            "nom": prenom.strip(),
-            "lon": str(np.degrees(theta)), #degrees
-            "lat": str(np.degrees(phi)), #degrees
-            "elev": str(altitude_above_msl), #altitude, meters
-        })
-    plt.show()
-    #raise Exception("data not written, comment out this exception to generate users")
-    with open(os.path.join(this_file_path,f"os_villesGlobe_{constellation.replace('_', '')}.txt"), 'w') as f:
-        for i,ue in enumerate(liste_ues):
-            f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
-
-
-def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='os_Lille.csv'):
-    np.random.seed(32)
-
-    fic_prenoms=os.path.join(this_file_path,"prenoms.txt")
-    with open(fic_prenoms, 'r') as f:
-        prenoms=f.readlines()[1:]
-    if Nb>len(prenoms):
-        raise Exception("Pas assez de prenoms, compléter le fichier")
-    prenoms_sel=np.random.choice(prenoms, Nb, replace=False)
-
-    #get the parameters of the constellation, set out of range criteria
-    # Les utilisateurs sont tous ceux qui seront potentiellement à portée d'un satellite au moins pour un instant 
-    # dans main_net_helper, cette valeur est majorée par le K_FACTOR 
-    with open("../../config/"+constellation+".yaml", 'r') as f:
-        cstlconfig=yaml.load(f, Loader=yaml.Loader)
-    heightsat=cstlconfig['ALTITUDE_M']
-    latsat=np.deg2rad(cstlconfig['INCLINATION_DEGREE'])
-    elev_ue=np.deg2rad(cstlconfig[TYPE_OBJET]['minElevation']+PROTECTION_DEG) # avoid users out of bounds
+    elev_ue=np.deg2rad(kwargs['minElevation']+PROTECTION_DEG) # avoid users out of bounds
     latMaxUE_rad = np.arccos(EARTH_RADIUS*np.cos(elev_ue)/(EARTH_RADIUS+heightsat))-elev_ue+latsat
     assert 0<=latMaxUE_rad<=np.pi/2
     
@@ -164,7 +97,8 @@ def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='os_Lil
     liste_ues=[]
     ectype= np.radians(10) # ~ ecart-type de la distribution
     kappa=1/2/(ectype**2)
-    plt.subplot(projection='3d')
+    if affiche:
+        plt.subplot(projection='3d')
     for prenom, idville in zip(prenoms_sel[:Nb_proches_villes], villes_choisies):
         latrad=np.pi
         iters=0
@@ -175,15 +109,15 @@ def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='os_Lil
             iters+=1
             if iters> 10:
                 raise Exception("trop de points aux pôles")
-        
-        plt.plot(*xyz(*latlonrad), '.')
+        if affiche:
+            plt.plot(*xyz(*latlonrad), '.')
         #altitude normal law around 200m+/-
         altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
         liste_ues.append({
-            "nom": prenom.strip(),
-            "lon": str(lon), #degrees
-            "lat": str(lat), #degrees
-            "elev": str(altitude_above_msl), #altitude, meters
+            "name": prenom.strip(),
+            "longitude_degrees": lon, #degrees
+            "latitude_degrees":lat, #degrees
+            "elevation_m": altitude_above_msl, #altitude, meters
         })
 
 
@@ -192,21 +126,25 @@ def create_users_villeschoisies(Nb, constellation='kuiper_630', ficVille='os_Lil
     for i, prenom in enumerate(prenoms_sel[Nb_proches_villes:]):
         theta = np.random.uniform(0, 2*np.pi)
         phi =  np.arcsin(np.random.uniform(-np.sin(latMaxUE_rad), np.sin(latMaxUE_rad)))
-
-        plt.plot(*xyz(phi, theta), '.')
+        if affiche:
+            plt.plot(*xyz(phi, theta), '.')
         #altitude normal law around 200m+/-
         altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
         liste_ues.insert(int(i*koeff), {
-            "nom": prenom.strip(),
-            "lon": str(np.degrees(theta)), #degrees
-            "lat": str(np.degrees(phi)), #degrees
-            "elev": str(altitude_above_msl), #altitude, meters
+            "name": prenom.strip(),
+            "longitude_degrees": np.degrees(theta), #degrees
+            "latitude_degrees": np.degrees(phi), #degrees
+            "elevation_m": altitude_above_msl, #altitude, meters
         })
-    plt.show()
+    if affiche:
+        plt.show()
+    liste_ues=[{'gid':gid}|infos for gid, infos in enumerate(liste_ues)]
     #raise Exception("data not written, comment out this exception to generate users")
-    with open(os.path.join(this_file_path,f"os_{len(villes)}villes_{constellation.replace('_', '')}.txt"), 'w') as f:
-        for i,ue in enumerate(liste_ues):
-            f.write(",".join([str(i), ue["nom"], ue["lat"], ue["lon"], ue["elev"]])+'\n')
+    with open(os.path.join(this_file_path,outfic), 'w') as f:
+        champs = list(liste_ues[0].keys())
+        ecrivain = csv.DictWriter(f, fieldnames=champs)
+        ecrivain.writeheader()
+        ecrivain.writerows(liste_ues)
 
 
 def kent_pdf(prodscal, kappa):
@@ -289,8 +227,10 @@ def test_distrib():
     plt.show()
 
 
-def create_voisins_villeschoisies(Nb, ficVille='os_11villes.csv'):
-    np.random.seed(32)
+def create_voisins_villeschoisies(Nb=10, ficVille='os_11villes.csv', outfic="os_emplacements_voisins_ville.csv", affiche=False, **kwargs):
+    ficVille=os.path.join(this_file_path, ficVille)
+    outfic=os.path.join(this_file_path, outfic)
+    np.random.seed(kwargs.get('graine', 32))
 
     fic_communes=os.path.join(this_file_path,"villes_villages.txt")
     with open(fic_communes, 'r') as f:
@@ -308,12 +248,14 @@ def create_voisins_villeschoisies(Nb, ficVille='os_11villes.csv'):
     nomvillefic=villes[villes_choisies[0]]['name']
     villes_choisies.sort()
     liste_emplacements=[]
-    plt.subplot(projection='3d')
+    if affiche:
+        plt.subplot(projection='3d')
     for gid, (prenom, idville) in enumerate(zip(prenoms_sel, villes_choisies)):
         latlonrad=zone_randomgen(*villes_pos[idville], dmax_km=700, dmin_km=50)
         lat, lon = np.degrees(latlonrad)
-        plt.plot(*xyz(*latlonrad), '.')
-        plt.plot(*xyz(*villes_pos[idville]), '.', color='k')
+        if affiche:
+            plt.plot(*xyz(*latlonrad), '.')
+            plt.plot(*xyz(*villes_pos[idville]), '.', color='k')
         #altitude normal law around 200m+/-
         altitude_above_msl=np.random.rayleigh(1.6)*100-30#aucune idée si c'est vrai, mais ça fera l'affaire
         liste_emplacements.append({
@@ -324,9 +266,10 @@ def create_voisins_villeschoisies(Nb, ficVille='os_11villes.csv'):
             "elevation_m": altitude_above_msl, #altitude, meters
             "maitre": idville
         })
-    plt.show()
+    if affiche:
+        plt.show()
     #raise Exception("data not written, comment out this exception to generate emplacements")
-    with open(os.path.join(this_file_path,f"os_{Nb}emplacements_{len(villes)}{nomvillefic}.csv"), 'w') as f:
+    with open(os.path.join(this_file_path,outfic), 'w') as f:
         champs = ['gid', 'name', 'latitude_degrees', 'longitude_degrees', 'elevation_m', 'maitre']
         ecrivain = csv.DictWriter(f, fieldnames=champs)
         ecrivain.writeheader()
@@ -336,7 +279,7 @@ if __name__ =='__main__':
     #create_users_randomGlobe(100)
     #test_distrib()
     #create_users_randomGlobe(250)
-    #create_users_villesGlobe(1000)
+    create_users_villeschoisies(1000, ficVille='cities_by_estimated_2025_pop_300k_UN.csv')
     #create_users_villeschoisies(1000)
     create_voisins_villeschoisies(100)
 

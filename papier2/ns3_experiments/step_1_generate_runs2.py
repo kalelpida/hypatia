@@ -181,10 +181,10 @@ class main_step1:
                     f_out.write("{:d},{:d},{:d},{:f},{:d},{:d},{},{}\n".format(*vals))
         
         #write the commodity list in an easy place for path generation with mcnf
-        with open("../satellite_networks_state/commodites.temp", "w") as f:
-            f.write(str(list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion))))
-        #local_shell.write_file("../satellite_networks_state/commodites.temp", list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion)))
-
+        #uncomment if no better way, patch mcnf code and dont forget to clean files at the end
+        #with open(f"../satellite_networks_state/commodites{os.getpid()}.temp", "w") as f:
+        #    f.write(str(list(zip([elt[0] for elt in list_from_to],[elt[1] for elt in list_from_to],udp_list_flow_size_proportion))))
+        
 
     def config_ns3_properties(self, protocol_chosen_name, params):
         # Net DeviceQueues
