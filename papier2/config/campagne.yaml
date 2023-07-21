@@ -1,4 +1,4 @@
-test3: #nom de la campagne
+test: #nom de la campagne
   graine: [0]
   constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
   duree: [ 6 ] #en s
@@ -9,7 +9,7 @@ test3: #nom de la campagne
   threads: [ 4 ]
   desactive-impairs: [ True ]
   debit-ifs: [ {'ue':2, 'sol':350, 'isl':60, 'satues':80, 'satgw':40}, {'ue':2, 'sol':200, 'isl':60, 'satues':80, 'satgw':80}   ] #Mb/s 
-  logs-actifs: [ ['rx', 'drop', 'tx', 'coms'] ] #('rx', 'tx', 'drop', 'coms', 'ping') # 'drop' callbacks are now effective with Traffic Control (just hope it wont crash) 
+  logs-actifs: [ ['rx', 'drop', 'tx', 'coms' ] ] #('rx', 'tx', 'drop', 'qqd', 'coms', 'ping') # 'drop' callbacks are now effective with Traffic Control (just hope it wont crash) 
   estimDelai: [{"isl": 5.5, 'gsl': 40, 'extremite': 30 }] # délai dans la file d'attente
   # Théoriquement pour 1 flux TCP, le buffer doit avoir une capacité de RTT * débit_sortie_interface (thumb's rule). S'il y a beaucoup de flux, on peut diviser par sqrt(nb_flux)
 
@@ -84,7 +84,7 @@ info-campagne:
     - routes
     - "casse liens sat"
     #- "analyse theorique" #not sure it still works. should be adapted or removed
-    #- simulation
+    - simulation
   
   processus: 4 #number of experiments in parallel
   parallelise: True #False helps to debug

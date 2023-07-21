@@ -12,6 +12,7 @@ def build(bld):
         "model/specie.cc",
         "model/states-error-model.cc",
         "model/trace-journal.cc",
+        "model/trace-etats.cc",
         "helper/device-factory-helper.cc"
     ]
 
@@ -24,6 +25,7 @@ def build(bld):
         "model/states-error-model.h",
         "model/specie.h",
         "model/trace-journal.h",
+        "model/trace-etats.h",
         "helper/device-factory-helper.h"
     ]
 

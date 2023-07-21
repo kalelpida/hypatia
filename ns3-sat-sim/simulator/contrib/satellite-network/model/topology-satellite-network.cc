@@ -156,7 +156,10 @@ namespace ns3 {
         *m_tx_stream->GetStream() << "instant,uid,noeud,typeObj,dst,dstObj,horodtg,commId,seqNum,offset,taille,dureePaquet,TCP,retour,info" << std::endl;
         m_rx_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/link.rx");
         *m_rx_stream->GetStream() << "instant,uid,noeud,typeObj,horodtg,commId,seqNum,offset,taille,dureePaquet,TCP,retour,info" << std::endl;
-        
+
+        m_q_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/queues.stat");
+        *m_q_stream->GetStream() << "instant,noeud,typeObj,numIf,infoIf,tailleMax_unite,unite,taille_unite,recu,perdu" << std::endl;
+
         // Initialize satellites
         ReadSatellites();
         std::cout << "  > Number of satellites........ " << m_nodesByType["satellite"].GetN() << std::endl;
@@ -187,8 +190,11 @@ namespace ns3 {
         m_enable_tx_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_tx_log", "true"));
         m_enable_rx_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_rx_log", "true"));
         m_enable_drop_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_drop_log", "true"));
+        m_enable_q_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_qqd_log", "true"));
         m_cbparams.m_log_condition_NodeId.minNodeId = std::stoul(m_basicSimulation->GetConfigParamOrDefault("satellite_network_min_node_log", std::to_string(GetNumSatellites())));
-        
+        m_qlog_condition_NodeId.minNodeId = std::stoul(m_basicSimulation->GetConfigParamOrDefault("satellite_network_min_node_qlog", std::to_string(GetNumSatellites())));
+        m_qlog_update_interval = Time(m_basicSimulation->GetConfigParamOrDefault("qlog_update_interval","100ms"));
+
         ReadLinks();
 
         // ARP caches
@@ -504,6 +510,14 @@ namespace ns3 {
                 TCLogDrop(c.Get(0), netDevices.Get(0), "ISL-tc");
                 TCLogDrop(c.Get(1), netDevices.Get(1), "ISL-tc");
             }
+            if (m_enable_q_log){
+                if (c.Get(0)->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
+                    setupQlog(m_q_stream, c.Get(0), netDevices.Get(0), TypeId::LookupByName("ns3::PointToPointLaserNetDevice"), m_qlog_update_interval, "ISL");
+                }
+                if (c.Get(1)->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
+                    setupQlog(m_q_stream, c.Get(1), netDevices.Get(1), TypeId::LookupByName("ns3::PointToPointLaserNetDevice"), m_qlog_update_interval, "ISL");
+                }
+            }
 
             counter += 1;
         }
@@ -539,6 +553,9 @@ namespace ns3 {
                 }
                 if (m_enable_tx_log) {devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "GSL-tx")); }
                 if (m_enable_rx_log) {devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "GSL-rx")); }
+                if (m_enable_q_log && (nodes.Get(i)->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId)){
+                    setupQlog(m_q_stream, nodes.Get(i), devices.Get(0), TypeId::LookupByName("ns3::GSLNetDevice"), m_qlog_update_interval, "GSL");
+                }
             }
         }
         std::cout << "    >> Finished install GSL interfaces (interfaces, network devices, one shared channel)" << std::endl;
@@ -641,6 +658,14 @@ namespace ns3 {
                         p2pDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-channelError"));
                     }
                 }
+                if (m_enable_q_log){
+                    if (n1->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
+                        setupQlog(m_q_stream, n1, p2pDevices.Get(0), TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "TL");
+                    }
+                    if (n2->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
+                        setupQlog(m_q_stream, n2, p2pDevices.Get(1), TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "TL");
+                    }
+                }
             }
         }
         std::cout << "    >> TL interfaces are setup" << std::endl;
@@ -703,6 +728,14 @@ namespace ns3 {
                         pyraDevs.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-channelError"));
                         //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
                         pyraDevs.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-channelError"));
+                    }
+                }
+                if (m_enable_q_log){
+                    if (n1->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
+                        setupQlog(m_q_stream, n1, pyraDevs.Get(0), TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "PyL");
+                    }
+                    if (n2->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
+                        setupQlog(m_q_stream, n2, pyraDevs.Get(1), TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "PyL");
                     }
                 }
                 

@@ -295,6 +295,7 @@ def main():
     for nom_campagne, campagne in dico_campagne.items():
         print("nom: ", nom_campagne)
         cd=info_exp.get('campagnedir').format(nom_campagne=nom_campagne)
+        os.makedirs(cd, exist_ok=True)
         cles_variantes=[cle for cle, vals in campagne.items() if len(vals)>1]
         cles_variantes.sort(key= lambda x : sum(x in vals for vals in rend_inutile.values()))#les cles les moins contraignantes en bout de liste
 

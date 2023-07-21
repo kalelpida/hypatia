@@ -249,7 +249,7 @@ class main_step1:
             replace_in_lines(lignes,     "enable_pingmesh_scheduler=false", pingmesh)
         
         #configure logs
-        logs_bool=set(('RX', 'TX', 'DROP'))
+        logs_bool=set(('RX', 'TX', 'DROP', "QQD"))
         for elt in self.logs_actifs&logs_bool:
             replace_in_lines(lignes,     f"ENABLE_{elt}_LOG", 'true')
         for elt in logs_bool-self.logs_actifs:

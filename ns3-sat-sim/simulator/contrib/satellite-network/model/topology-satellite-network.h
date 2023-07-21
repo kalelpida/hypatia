@@ -68,6 +68,7 @@
 #include "point-to-point-tracen-remote-channel.h"
 
 #include "ns3/trace-journal.h"
+#include "ns3/trace-etats.h"
 
 #include <memory> //for shared_ptr
 namespace ns3 {
@@ -163,15 +164,19 @@ namespace ns3 {
         std::map< std::string, std::map<std::string, std::string>> m_tc_nodetype_attributemap;
 
         bool m_enable_isl_utilization_tracking;
-        bool m_enable_tx_log, m_enable_rx_log, m_enable_drop_log;
+        bool m_enable_tx_log, m_enable_rx_log, m_enable_drop_log, m_enable_q_log;
         int64_t m_isl_utilization_tracking_interval_ns;
         std::vector<std::string> m_nodespecies;
 
         Ptr<OutputStreamWrapper> m_drop_stream; //!< stream where to log drop events
         Ptr<OutputStreamWrapper> m_tx_stream; //!< stream where to log transmission events
         Ptr<OutputStreamWrapper> m_rx_stream; //!< stream where to log receive events
+        Ptr<OutputStreamWrapper> m_q_stream; //!< stream where to log q stats
 
         cbparams m_cbparams;
+        acceptNodeObj m_qlog_condition_NodeId;
+        Time m_qlog_update_interval;
+
         std::string m_current_link_filename;
         std::map<std::string, std::string> m_channelparams;
         std::map<std::string, std::map<std::string, std::string>> m_paramaps;
