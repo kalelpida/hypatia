@@ -22,7 +22,7 @@ test: #nom de la campagne
   # { 'nom': "tcp"}
   # { 'nom': 'udp', 'debut_ms': [1, 4],'duree_ms': 'min,max'
   protocoles:
-    - test: {nom: udp, debut_ms: [0, 100], duree_ms: 'max', ratio: 2, debit: 2}
+    - test: {nom: tcp, debut_ms: [0, 100], duree_ms: 'max', ratio: 2, debit: 2}
     #- grp0: {nom: tcp, debut_ms: [0, 100], duree_ms: 'max', nb: 100, debit: 2 }
     #  grp1: {nom: tcp, debut_ms: [20000, 20100], duree_ms: 'max', nb: 100, debit: 2}
      # grp2: {nom: tcp, debut_ms: [20000, 20100], duree_ms: 'max', nb: 50, debit: 2}

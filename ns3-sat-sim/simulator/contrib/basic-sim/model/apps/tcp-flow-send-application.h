@@ -34,6 +34,9 @@
 #include "ns3/ipv4.h"
 #include "ns3/trace-helper.h"
 
+#include <deque>
+#include <iostream>
+
 namespace ns3 {
 
 class Address;
@@ -102,12 +105,14 @@ private:
   void SocketClosedError(Ptr<Socket> socket);
   void CwndChange(uint32_t, uint32_t newCwnd);
   void RttChange (Time, Time newRtt);
-  void RtoChange(Time, Time newRto);
+  //void RtoChange(Time, Time newRto);
   void InsertProgressLog (int64_t timestamp, int64_t progress_byte);
   
-  Ptr<OutputStreamWrapper> m_prog_stream;
-  Ptr<OutputStreamWrapper> m_cwnd_stream;
-  Ptr<OutputStreamWrapper> m_rtt_stream;
+  /*keeping log files opened generates many fd and we could reach process limits (ulimit -n). To avoid that, save data in queues and temporarily empty it in the log file*/
+  size_t m_bufSize;
+  std::deque<std::tuple<uint64_t, int64_t, uint32_t>> m_prog_buf; 
+  std::deque<std::tuple<uint64_t, int64_t, int64_t>> m_cwnd_buf;
+  std::deque<std::tuple<uint64_t, int64_t, int64_t>> m_rtt_buf;
 
 };
 

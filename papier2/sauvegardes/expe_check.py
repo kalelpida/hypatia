@@ -30,7 +30,7 @@ def lectExpResParams(glob, pack):
             ficfini=os.path.join(ssglob.path, "logs_ns3", "finished.txt")
             if os.path.isfile(ficfini):
                 with open(ficfini, 'r') as f:
-                    echec=False
+                    echec= echec if f.readline().startswith("No") else False
     return [params, echec]
 
 with open(os.path.join(dossier, "variations.txt"), 'r') as f:
@@ -49,16 +49,66 @@ for cle in variations:
     liste.append(infrliste)
 ens_total=set(itertools.product(*liste))
 
-p=ThreadPool(10)
-results=p.starmap(lectExpResParams, itertools.zip_longest(os.scandir(dossier), [], fillvalue=(variations, dico_vals)))
-exp_lues={a[0]: a[1] for a in results if a is not None}
+with ThreadPool(10) as p:
+    results=p.starmap(lectExpResParams, itertools.zip_longest(os.scandir(dossier), [], fillvalue=(variations, dico_vals)))
+results=list(filter(lambda item: item is not None, results))
+"experiences lancées"
+lancees=set([x[0] for x in results])
+nonlancees=ens_total-lancees
+if len(nonlancees)<len(lancees):
+    print("\n\nExperiences non lancées: ", "\n".join([repr(x) for x in sorted(nonlancees)]),"\n:Experiences non lancées")
+else:
+    print("\n\nExperiences lancées: ", "\n".join([repr(x) for x in sorted(lancees)]), "\n:Experiences lancées")
 
-print("\n\nExperiences non lancées: ", "\n".join([repr(x) for x in sorted(ens_total-set(exp_lues))]))
-
-print("\n\nExpériences échouées")
-for params, echec in exp_lues.items():
+print("\n\nExpériences échouées:")
+aumoinsunechec=False
+for params, echec in results:
     if echec:
         print(os.path.basename(echec), params)
+        aumoinsunechec=True
+if not aumoinsunechec:
+    print("pas d'échec relevé")
+
+supprimes=[]
+if aumoinsunechec:
+    poubelle=f"{dossier}_echouees"
+    rep=input(f"Déplacer les expériences vers {poubelle} ? (o/N)")
+    if rep.lower()[0]=='o':
+        os.makedirs(poubelle, exist_ok=True)
+        for _, echec in results:
+            if echec:
+                print(os.path.join(dossier, echec), '  ---->>  ', os.path.join(poubelle, echec))
+                os.replace(os.path.join(dossier, echec), os.path.join(poubelle, echec))
+                supprimes.append(echec)
+        print("Déplacement terminé")
+
+print("\n\nduplicats:")
+expedic={}
+duplicats=False
+for x, dos in results:
+    if dos in supprimes:
+        continue
+    if x in expedic:
+        expedic[x].append(dos)
+        duplicats=True
+    else:
+        expedic[x]=[dos]
+if not duplicats:
+    print("aucun relevé qui n'ait pas été supprimé")
+else:
+    poubelle=f"{dossier}_duplicats"
+    rep=input(f"Déplacer les duplicats vers {poubelle} ? (o/N)")
+    deplace=(rep.lower()[0]=='o')
+    if deplace:
+        os.makedirs(poubelle, exist_ok=True)
+    for params, doss in expedic.items():
+        if len(doss)>1:
+            print(params, doss)
+            if deplace:
+                for dup in doss[1:]:
+                    print(os.path.join(dossier, dup), '  ---->>  ', os.path.join(poubelle, dup))
+                    os.replace(os.path.join(dossier, dup), os.path.join(poubelle, dup))
+
 
 print("\n\nExplication des valeurs:")
 for c,v in dico_vals.items():
