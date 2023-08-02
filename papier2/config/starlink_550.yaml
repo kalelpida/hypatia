@@ -32,8 +32,9 @@ NICE_NAME: "Starlink-550"
 
 # STARLINK 550
 #TODO: consider shell as an object
-satellite: {}
-  #just for buffer conf
+satellite: 
+  log: [ "qqd", "drop" ]
+
 ECCENTRICITY: 0.0000001  # Circular orbits are zero, but pyephem does not permit 0, so lowest possible value
 ARG_OF_PERIGEE_DEGREE: 0.0
 PHASE_DIFF: True
@@ -60,6 +61,7 @@ gateway:
   positions: os_Lille # ground_stations_cities_sorted_by_estimated_2025_pop_top_100_basic: 100 biggest cities, Hypatia base file; ground_stations_cities_by_estimated_2025_pop_300k_UN: +300k cities, United Nations estimate
   nombre: 1 #random, give IDs and place them, or set it in config?
   minElevation: 20 #degrees above horizon
+  log: [ "qqd", "drop" ]
 
 ue:
   positions: os_1villes_starlink550 #villesGlobe_starlink550 #os_1villes_starlink550 #randomGlobe_starlink550 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
@@ -71,6 +73,7 @@ ue:
   ficVille: os_Lille.csv
   affiche: False #mettre à True pour voir (vite fait) les positions générées
   #graine: 8 #changer les positions générées
+  log: [ "qqd", "drop", "rx", "tx" ]
   
 server:
   positions: os_1voisinLille
@@ -80,6 +83,7 @@ server:
   dependances: [ gateway ] #generate gateway file before this one
   genparams: [ ficVille ]
   ficVille : os_Lille.csv
+  log: [ "qqd", "drop", "rx", "tx" ]
 
 
 
