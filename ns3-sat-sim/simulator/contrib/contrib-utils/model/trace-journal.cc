@@ -90,6 +90,17 @@ static void getPacketFlux(Ptr<const Packet> p, mapflow_t *conversion, resAnalyse
             TcpHeader tcpheader;
             analysePacket.isTCP = true;
             tcpheader.Deserialize(item.current);
+
+
+            TcpHeader::TcpOptionList tcp_option_list = tcpheader.GetOptionList();
+            for (auto it = tcp_option_list.rbegin (); it != tcp_option_list.rend (); ++it){
+            if ((*it)->GetKind () == TcpOption::TS)
+                {
+                Ptr<const TcpOptionTS> ts = DynamicCast<const TcpOptionTS>(*it);
+                analysePacket.timestamp=ts->GetTimestamp();
+                }
+            }
+
             idSource.SetPort(tcpheader.GetSourcePort());
             idDest.SetPort(tcpheader.GetDestinationPort());
 
@@ -148,7 +159,6 @@ static void getPacketFlux(Ptr<const Packet> p, mapflow_t *conversion, resAnalyse
 void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> src_node, Ptr<const Node> dst_node,  Ptr<const Packet> packet, const Time& txTime)
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
-    if (cbparams_val->m_log_condition_NodeId.minNodeId <= std::max(src_node->GetId(), dst_node->GetId())){
     resAnalysePacket analysePacket = {true, false, false, 0, 0, 0, 0, 0};
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
@@ -160,14 +170,12 @@ void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val,
     } else {
         *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << ",,,," ",,,," ",,,," "," << std::endl;
     }
-    }
 }
 
 void PacketEventTracerSimple(Ptr<OutputStreamWrapper> stream, cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> node, Ptr<const Packet> packet, const Time& rxTime)
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     // Extract burst identifier and packet sequence number
-    if (cbparams_val->m_log_condition_NodeId.minNodeId <= node->GetId()){
     resAnalysePacket analysePacket = {true, false, false, 0, 0, 0, 0, 0};
     getPacketFlux(packet, cbparams_val->m_conversion, analysePacket);
     // Log precise timestamp received of the sequence packet if needed
@@ -177,7 +185,6 @@ void PacketEventTracerSimple(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
     *stream->GetStream() << "," << analysePacket.isTCP << "," << analysePacket.isReverse << "," << infodrop << std::endl;
     } else {
         *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << ",,,," ",,,," ",,," << std::endl;
-    }
     }
 }
 

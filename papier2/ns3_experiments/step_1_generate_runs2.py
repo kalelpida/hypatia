@@ -35,19 +35,13 @@ local_shell = exputil.LocalShell()
 # get parameters (set by hypatia/papier2/paper2.sh)
 # expected parameters: debitISL constellation_file duration[s] timestep[ms] isls? Ground_stations? algorithm number_of_threads
 class main_step1:
-    def __init__(self, list_from_to):
+    def __init__(self, list_from_to, dico_params, cstl_dico):
         self.list_from_to=list_from_to
+        self.dico_params=dico_params
+        self.cstl_dico=cstl_dico
+        self.comslogs_actifs=dico_params.get('coms-log-actifs', {})
 
-
-        config_file=f"../config/temp{os.getpid()}.campagne.yaml" #sys.argv[1]
-        with open(config_file, 'r') as f:
-            dico_params=yaml.load(f, Loader=yaml.Loader)
-        constel_fic=dico_params.get('constellation')
-        constel_fic=f"../config/temp{os.getpid()}."+constel_fic+".yaml"
-        with open(constel_fic, 'r') as f:
-            self.cstl_dico=yaml.load(f, Loader=yaml.Loader)
-
-        graine=dico_params.pop('graine')
+        graine=dico_params.get('graine')
         self.obj_reference=self.cstl_dico["ENDPOINTS"][0]
         debit_reference=float('inf')
         for lien in self.cstl_dico['LINKS']:
@@ -79,7 +73,7 @@ class main_step1:
         tcp_vals=[]
         udp_vals=[]
         all_protocols_name=[]
-
+        self.list_coms_metadata=[]#name of each commodity group
         for nom_groupe, groupe in sorted(groupes.items()):
             #protocol_chosen=dico_params['protocoles']
             reference_rate = float(groupe.get("debit", debit_reference))# target sending rate in Mb/s
@@ -108,12 +102,11 @@ class main_step1:
             #debit will be capped at debit_reference
 
             protocol_chosen_name=groupe['nom']
-            self.logs_actifs=dico_params.get('logs-actifs', [])
-
             
             extra_parameters = groupe.get('extra_parameters', "")
             metadata=nom_groupe+groupe.get("metadata", "")
-
+            for i in range(offset_commodite, fin_groupe_commodites):
+                self.list_coms_metadata.append(metadata)
             # tcp_flow_schedule.csv
             if "tcp" == protocol_chosen_name:
                 """
@@ -234,26 +227,44 @@ class main_step1:
         replace_in_lines(lignes,     "[LIENS]", str(noms_liens))
         replace_in_lines(lignes,     "[PARAMS-LIENS]", "\n".join(paramliens))
 
-        self.logs_actifs=set([elt.upper() for elt in self.logs_actifs])
-        if 'COMS' in self.logs_actifs:
-            commodities_set='set(' + ', '.join(str(i) for i in range(len(self.list_from_to))) + ')'
-            replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-LOG]", commodities_set)
+        self.comslogs_actifs={cle.upper():val for cle, val in self.comslogs_actifs.items()}
+        if 'COMS' in self.comslogs_actifs:
+            groupes_actifs=None if self.comslogs_actifs['COMS']==None else self.comslogs_actifs['COMS'].get('subsets', None)
+            if groupes_actifs==None:
+                groupes_actifs=set(self.list_coms_metadata)
+            if groupes_actifs:
+                commodities_set='set(' + ', '.join(str(i) for i in range(len(self.list_from_to)) if self.list_coms_metadata[i] in groupes_actifs) + ')'
+                replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-LOG]", commodities_set)
         else:
             replace_in_lines(lignes,     "[SET-OF-COMMODITY-PAIRS-LOG]", 'set()')
-        if 'PING' in self.logs_actifs:
+        if 'PING' in self.comslogs_actifs:
             #create the ping meshgrid with all commodities in the required format: "set(0->1, 5->6)"
             #x=np.unique(np.array(self.list_from_to).flatten())
             #liste=[[u, 756] for u in x]+[[756, u] for u in x]
-            commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for x in self.list_from_to) + ')'
-            pingmesh="enable_pingmesh_scheduler=true\npingmesh_interval_ns=1000000000\npingmesh_endpoint_pairs="+commodities_set
-            replace_in_lines(lignes,     "enable_pingmesh_scheduler=false", pingmesh)
+            groupes_actifs=None if self.comslogs_actifs['PING']==None else self.comslogs_actifs['PING'].get('subset', None)
+            if groupes_actifs==None:
+                groupes_actifs=set(self.list_coms_metadata)
+            if groupes_actifs:
+                commodities_set='set(' + ', '.join(f"{x[0]}->{x[1]}" for i,x in enumerate(self.list_from_to) if self.list_coms_metadata[i] in groupes_actifs) + ')'
+                pingmesh="enable_pingmesh_scheduler=true\npingmesh_interval_ns=1000000000\npingmesh_endpoint_pairs="+commodities_set
+                replace_in_lines(lignes,     "enable_pingmesh_scheduler=false", pingmesh)
         
-        #configure logs
-        logs_bool=set(('RX', 'TX', 'DROP', "QQD"))
-        for elt in self.logs_actifs&logs_bool:
-            replace_in_lines(lignes,     f"ENABLE_{elt}_LOG", 'true')
-        for elt in logs_bool-self.logs_actifs:
-            replace_in_lines(lignes,     f"ENABLE_{elt}_LOG", 'false')
+        #sélection des objets à suivre par type de log
+        logs_noeuds={ logtype:[] for logtype in ('RX', 'TX', 'DROP', "QQD")}
+        for obj in ['satellite']+self.cstl_dico['TYPES_OBJETS_SOL']:
+            for logtype in self.cstl_dico[obj].get('log',[]):
+                logs_noeuds[logtype.upper()].append(obj)
+        
+        for elt in logs_noeuds:
+            set_noeuds_str='set(' + ', '.join(logs_noeuds[elt]) + ')'
+            replace_in_lines(lignes,     f"ENABLE_{elt}_LOG", set_noeuds_str)
+        
+        #props-ns3
+        #paramètres à activer dans certains cas
+        props_ns3=self.dico_params.get('props-ns3',{})
+        if len(logs_noeuds['QQD']) and (u:=props_ns3.get('qlog_update_interval', False)):
+            lignes.append(f"qlog_update_interval={u}\n")
+        
         with open(run_dir + "/config_ns3.properties", 'w') as f:
             f.writelines(lignes)
         return run_dir

@@ -26,12 +26,12 @@ def lectExpResParams(glob, pack):
         if re.match("temp\\d+\.campagne\.yaml", ssglob.name):
             params=tuple(lectExparams(ssglob.path, cles_variantes, dico_simplivals))
         elif ssglob.name.startswith('run_loaded'):
-            echec=glob.name
+            echec=True
             ficfini=os.path.join(ssglob.path, "logs_ns3", "finished.txt")
             if os.path.isfile(ficfini):
                 with open(ficfini, 'r') as f:
-                    echec= echec if f.readline().startswith("No") else False
-    return [params, echec]
+                    echec= f.readline().startswith("No")
+    return [params, echec, glob.name]
 
 with open(os.path.join(dossier, "variations.txt"), 'r') as f:
     variations=eval(f.readline())
@@ -62,9 +62,9 @@ else:
 
 print("\n\nExpériences échouées:")
 aumoinsunechec=False
-for params, echec in results:
+for params, echec, dos in results:
     if echec:
-        print(os.path.basename(echec), params)
+        print(os.path.basename(dos), params)
         aumoinsunechec=True
 if not aumoinsunechec:
     print("pas d'échec relevé")
@@ -75,24 +75,24 @@ if aumoinsunechec:
     rep=input(f"Déplacer les expériences vers {poubelle} ? (o/N)")
     if rep.lower()[0]=='o':
         os.makedirs(poubelle, exist_ok=True)
-        for _, echec in results:
+        for _, echec, expdos in results:
             if echec:
-                print(os.path.join(dossier, echec), '  ---->>  ', os.path.join(poubelle, echec))
-                os.replace(os.path.join(dossier, echec), os.path.join(poubelle, echec))
+                print(os.path.join(dossier, expdos), '  ---->>  ', os.path.join(poubelle, expdos))
+                os.replace(os.path.join(dossier, expdos), os.path.join(poubelle, expdos))
                 supprimes.append(echec)
         print("Déplacement terminé")
 
 print("\n\nduplicats:")
 expedic={}
 duplicats=False
-for x, dos in results:
-    if dos in supprimes:
+for x, echec, expdos in results:
+    if echec and expdos in supprimes:
         continue
     if x in expedic:
-        expedic[x].append(dos)
+        expedic[x].append(expdos)
         duplicats=True
     else:
-        expedic[x]=[dos]
+        expedic[x]=[expdos]
 if not duplicats:
     print("aucun relevé qui n'ait pas été supprimé")
 else:

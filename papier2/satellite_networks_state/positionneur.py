@@ -5,7 +5,7 @@ from .input_data.constants import *
 class Positionneur():
     def __init__(self, constel: str, dico_constel: dict) -> None:
         regeneres=set()
-        liste=dico_constel["TYPES_OBJETS_SOL"]
+        liste=dico_constel["TYPES_OBJETS_SOL"].copy()
         stopBoucle=iter(range(1,100))
         while liste and next(stopBoucle):
             nom_obj_sol=liste.pop(0)

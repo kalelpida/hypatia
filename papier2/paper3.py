@@ -107,7 +107,7 @@ class Experiences():
         ### Create commodities, prepare ns experiment
         if "commodites" in self.actions:
             os.chdir("ns3_experiments")
-            main_step1(list_from_to)
+            main_step1(list_from_to, self.courante, self.dico_cstl)
             os.chdir(basedir)
 
         #create routing table
@@ -250,6 +250,9 @@ def exec_campagne(campagne, nom_campagne, info_experience, info_campagne):
 
     fini = False
     campagne['nom_campagne'] = [nom_campagne]
+    campagne['coms-log-actifs']= [info_campagne.get('coms-logs',{})]
+    campagne['props-ns3']=[info_campagne.get('props-ns3',{})]
+
     exp=Experiences(campagne, liste_actions, rend_inutile, evals)
     exp.paramExperience()
     exp.actions=set(liste_actions)
@@ -269,6 +272,9 @@ def exec_campagne(campagne, nom_campagne, info_experience, info_campagne):
     return os.getpid()
 
 def divise_campagnes(campagne, cles, nbprocs):
+    # diviser la campagne en sous-campagnes, en fonction du nombre de processus max.
+    # les clés triées permettent de minimiser le nombre d'actions avant la simulation elle-même. 
+    # Dans le cas d'expériences courtes et beaucoup de processeurs, pour aller plus vite il vaudrait mieux diviser jusqu'à avoir des campagnes à expérience unique 
     sous_campagnes=[campagne]
     while len(cles) and nbprocs>len(sous_campagnes):
         cle=cles.pop(0)
@@ -302,18 +308,15 @@ def main():
         with open(os.path.join(cd,'variations.txt'), "w") as f:
                 f.write(str(cles_variantes))
         subprocess.check_call(["cp", '-t', cd, nomfic_campagne]) #finally save campagne config itself
-        sous_campagnes=divise_campagnes(campagne, cles_variantes, nb_processus)
-
-        sous_campagnes_infos=[(x, nom_campagne, info_exp, info_campagne) for x in sous_campagnes]
+        
 
         if info_campagne.get('parallelise', True):
+            sous_campagnes=divise_campagnes(campagne, cles_variantes, nb_processus)
+            sous_campagnes_infos=[(x, nom_campagne, info_exp, info_campagne) for x in sous_campagnes]
             with Pool(nb_processus) as p:
                 print(p.starmap(exec_campagne, sous_campagnes_infos))
         else:
-            for ss_cpgn in sous_campagnes_infos:
-                exec_campagne(*ss_cpgn)
-        
-        
+            exec_campagne(campagne, nom_campagne, info_exp, info_campagne)
             
 
 if __name__ == '__main__':

@@ -11,16 +11,10 @@
 
 namespace ns3 {
 
-    struct structacceptNodeObj { 
-        unsigned int minNodeId; 
-    };
-
     typedef std::map<std::pair<InetSocketAddress,Ipv4Address>, uint64_t> mapflow_t;
-    typedef struct structacceptNodeObj acceptNodeObj;
 
     struct structCbParams{
         mapflow_t *m_conversion;
-        acceptNodeObj m_log_condition_NodeId;
         Ptr<const Node> log_node;
     };
     

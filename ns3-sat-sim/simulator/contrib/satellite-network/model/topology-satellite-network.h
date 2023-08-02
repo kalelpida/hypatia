@@ -164,7 +164,7 @@ namespace ns3 {
         std::map< std::string, std::map<std::string, std::string>> m_tc_nodetype_attributemap;
 
         bool m_enable_isl_utilization_tracking;
-        bool m_enable_tx_log, m_enable_rx_log, m_enable_drop_log, m_enable_q_log;
+        std::set<std::string> m_enabled_tx_log, m_enabled_rx_log, m_enabled_drop_log, m_enabled_q_log;
         int64_t m_isl_utilization_tracking_interval_ns;
         std::vector<std::string> m_nodespecies;
 
@@ -174,7 +174,6 @@ namespace ns3 {
         Ptr<OutputStreamWrapper> m_q_stream; //!< stream where to log q stats
 
         cbparams m_cbparams;
-        acceptNodeObj m_qlog_condition_NodeId;
         Time m_qlog_update_interval;
 
         std::string m_current_link_filename;

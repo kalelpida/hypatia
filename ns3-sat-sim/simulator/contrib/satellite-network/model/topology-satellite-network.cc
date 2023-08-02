@@ -158,7 +158,7 @@ namespace ns3 {
         *m_rx_stream->GetStream() << "instant,uid,noeud,typeObj,horodtg,commId,seqNum,offset,taille,dureePaquet,TCP,retour,info" << std::endl;
 
         m_q_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/queues.stat");
-        *m_q_stream->GetStream() << "instant,noeud,typeObj,numIf,infoIf,tailleMax_unite,unite,taille_unite,recu,perdu" << std::endl;
+        *m_q_stream->GetStream() << "instant,noeud,typeObj,numIf,infoIf,tailleMax_unite,unite,taille_unite,recu_o,perdu_o" << std::endl;
 
         // Initialize satellites
         ReadSatellites();
@@ -187,12 +187,10 @@ namespace ns3 {
             m_isl_utilization_tracking_interval_ns = parse_positive_int64(m_basicSimulation->GetConfigParamOrFail("isl_utilization_tracking_interval_ns"));
         }
         // Utilization tracking settings
-        m_enable_tx_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_tx_log", "true"));
-        m_enable_rx_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_rx_log", "true"));
-        m_enable_drop_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_drop_log", "true"));
-        m_enable_q_log = parse_boolean(m_basicSimulation->GetConfigParamOrDefault("enable_qqd_log", "true"));
-        m_cbparams.m_log_condition_NodeId.minNodeId = std::stoul(m_basicSimulation->GetConfigParamOrDefault("satellite_network_min_node_log", std::to_string(GetNumSatellites())));
-        m_qlog_condition_NodeId.minNodeId = std::stoul(m_basicSimulation->GetConfigParamOrDefault("satellite_network_min_node_qlog", std::to_string(GetNumSatellites())));
+        m_enabled_tx_log = parse_set_string(m_basicSimulation->GetConfigParamOrDefault("enabled_tx_log", "set()"));
+        m_enabled_rx_log = parse_set_string(m_basicSimulation->GetConfigParamOrDefault("enabled_rx_log", "set()"));
+        m_enabled_drop_log = parse_set_string(m_basicSimulation->GetConfigParamOrDefault("enabled_drop_log", "set()"));
+        m_enabled_q_log = parse_set_string(m_basicSimulation->GetConfigParamOrDefault("enabled_qqd_log", "set()"));
         m_qlog_update_interval = Time(m_basicSimulation->GetConfigParamOrDefault("qlog_update_interval","100ms"));
 
         ReadLinks();
@@ -481,12 +479,11 @@ namespace ns3 {
                 m_islNetDevices.Add(netDevices.Get(1));
                 m_islFromTo.push_back(std::make_pair(sat1_id, sat0_id));
             }
-            if (m_enable_rx_log){
+            if (m_enabled_rx_log.find(c.Get(0)->GetObject<Specie>()->GetName())!=m_enabled_rx_log.end()){
                 netDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "ISL-rx"));
-                //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
                 netDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "ISL-rx"));
             }
-            if (m_enable_tx_log){
+            if (m_enabled_tx_log.find(c.Get(0)->GetObject<Specie>()->GetName())!=m_enabled_tx_log.end()){
                 netDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "ISL-tx"));
                 netDevices.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "ISL-tx"));
                 /*
@@ -496,12 +493,13 @@ namespace ns3 {
             }
 
             // Tracking
-            if (m_enable_drop_log){
+            bool active_tracklinkDrops= std::regex_search(line, match, trackLinkDrops);
+            if (m_enabled_drop_log.find(c.Get(0)->GetObject<Specie>()->GetName())!=m_enabled_drop_log.end()){
                 //const std::string str_sat0 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat0_id);//could be a buffer overflow as well as a disabled link
                 netDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-bufOvflwLinkErr"));
                 //const std::string str_sat1 = format_string("bufOvflwLinkErr-ISL-Sat%" PRId64, sat1_id);
                 netDevices.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-bufOvflwLinkErr"));
-                if (std::regex_search(line, match, trackLinkDrops)){
+                if (active_tracklinkDrops){
                     //const std::string str_sat0 = format_string("channelError-ISL-Sat%" PRId64, sat0_id);
                     netDevices.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "ISL-channelError"));
                     //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
@@ -510,13 +508,9 @@ namespace ns3 {
                 TCLogDrop(c.Get(0), netDevices.Get(0), "ISL-tc");
                 TCLogDrop(c.Get(1), netDevices.Get(1), "ISL-tc");
             }
-            if (m_enable_q_log){
-                if (c.Get(0)->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
-                    setupQlog(m_q_stream, c.Get(0), netDevices.Get(0), TypeId::LookupByName("ns3::PointToPointLaserNetDevice"), m_qlog_update_interval, "ISL");
-                }
-                if (c.Get(1)->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
-                    setupQlog(m_q_stream, c.Get(1), netDevices.Get(1), TypeId::LookupByName("ns3::PointToPointLaserNetDevice"), m_qlog_update_interval, "ISL");
-                }
+            if (m_enabled_q_log.find(c.Get(0)->GetObject<Specie>()->GetName())!=m_enabled_drop_log.end()){
+                setupQlog(m_q_stream, c.Get(0), netDevices.Get(0), TypeId::LookupByName("ns3::PointToPointLaserNetDevice"), m_qlog_update_interval, "ISL");
+                setupQlog(m_q_stream, c.Get(1), netDevices.Get(1), TypeId::LookupByName("ns3::PointToPointLaserNetDevice"), m_qlog_update_interval, "ISL");
             }
 
             counter += 1;
@@ -544,18 +538,20 @@ namespace ns3 {
         devices.Add(gsl_helper.Install(nodes));
         // Add callbacks. Dirty to set it here but easier than in the gsl_helper
         // uint32_t nb_sats = GetNumSatellites();
-        if (m_enable_rx_log || m_enable_tx_log || m_enable_drop_log){
-            for (uint32_t i=0; i< devices.GetN(); i++)
+        for (uint32_t i=0; i< devices.GetN(); i++)
             {
-                if (m_enable_drop_log) {
+                if (m_enabled_drop_log.find(nodes.Get(i)->GetObject<Specie>()->GetName())!=m_enabled_drop_log.end()) {
                     devices.Get(i)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "GSL-bufOvflwLinkErr")); 
                     TCLogDrop(devices.Get(i)->GetNode(), devices.Get(i), "GSL-tc");
                 }
-                if (m_enable_tx_log) {devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "GSL-tx")); }
-                if (m_enable_rx_log) {devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "GSL-rx")); }
-                if (m_enable_q_log && (nodes.Get(i)->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId)){
-                    setupQlog(m_q_stream, nodes.Get(i), devices.Get(0), TypeId::LookupByName("ns3::GSLNetDevice"), m_qlog_update_interval, "GSL");
+                if (m_enabled_tx_log.find(nodes.Get(i)->GetObject<Specie>()->GetName())!=m_enabled_tx_log.end()) {
+                    devices.Get(i)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "GSL-tx")); 
                 }
+                if (m_enabled_rx_log.find(nodes.Get(i)->GetObject<Specie>()->GetName())!=m_enabled_rx_log.end()) {
+                    devices.Get(i)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "GSL-rx"));
+                }
+                if (m_enabled_q_log.find(nodes.Get(i)->GetObject<Specie>()->GetName())!=m_enabled_q_log.end()){
+                    setupQlog(m_q_stream, nodes.Get(i), devices.Get(i), TypeId::LookupByName("ns3::GSLNetDevice"), m_qlog_update_interval, "GSL");
             }
         }
         std::cout << "    >> Finished install GSL interfaces (interfaces, network devices, one shared channel)" << std::endl;
@@ -638,32 +634,25 @@ namespace ns3 {
                 m_ipv4_helper.NewNetwork();
 
                 // Tracking
-                if (m_enable_rx_log){
-                    p2pDevices.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
-                    p2pDevices.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
-                }
-                if (m_enable_tx_log){
-                    p2pDevices.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
-                    p2pDevices.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
-                }
-                if (m_enable_drop_log){
-                    p2pDevices.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
-                    p2pDevices.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
-                    TCLogDrop(n1, p2pDevices.Get(0), "TL-tc");
-                    TCLogDrop(n2, p2pDevices.Get(1), "TL-tc");
-                    if (std::regex_search(line, match, trackLinkDrops)){
-                        //const std::string str_sat0 = format_string("channelError-ISL-Sat%" PRId64, sat0_id);
-                        p2pDevices.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-channelError"));
-                        //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
-                        p2pDevices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-channelError"));
+                bool active_trackLinkDrops = std::regex_search(line, match, trackLinkDrops);
+                for (auto dev= p2pDevices.Begin(); dev != p2pDevices.End (); ++dev){
+                    Ptr<Node> n=(*dev)->GetNode();
+                    if (m_enabled_rx_log.find(n->GetObject<Specie>()->GetName())!=m_enabled_rx_log.end()){
+                        (*dev)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
                     }
-                }
-                if (m_enable_q_log){
-                    if (n1->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
-                        setupQlog(m_q_stream, n1, p2pDevices.Get(0), TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "TL");
+                    if (m_enabled_tx_log.find(n->GetObject<Specie>()->GetName())!=m_enabled_tx_log.end()){
+                        (*dev)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
                     }
-                    if (n2->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
-                        setupQlog(m_q_stream, n2, p2pDevices.Get(1), TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "TL");
+                    if (m_enabled_drop_log.find(n->GetObject<Specie>()->GetName())!=m_enabled_drop_log.end()){
+                        (*dev)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
+                        TCLogDrop(n, *dev, "TL-tc");
+                        if (active_trackLinkDrops){
+                            //const std::string str_sat0 = format_string("channelError-ISL-Sat%" PRId64, sat0_id);
+                            (*dev)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-channelError"));
+                        }
+                    }
+                    if (m_enabled_q_log.find(n->GetObject<Specie>()->GetName())!=m_enabled_q_log.end()){
+                        setupQlog(m_q_stream, n1, *dev, TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "TL");
                     }
                 }
             }
@@ -710,35 +699,26 @@ namespace ns3 {
                 m_ipv4_helper.Assign(pyraDevs);
                 m_ipv4_helper.NewNetwork();
                 // Tracking
-                if (m_enable_rx_log){
-                    pyraDevs.Get(0)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "PyL-rx"));
-                    pyraDevs.Get(1)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "PyL-rx"));
-                }
-                if (m_enable_tx_log){
-                    pyraDevs.Get(0)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "PyL-tx"));
-                    pyraDevs.Get(1)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "PyL-tx"));
-                }
-                if (m_enable_drop_log){
-                    pyraDevs.Get(0)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-bufOvflwLinkErr"));
-                    pyraDevs.Get(1)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-bufOvflwLinkErr"));
-                    TCLogDrop(n1, pyraDevs.Get(0), "PyL-tc");
-                    TCLogDrop(n2, pyraDevs.Get(1), "PyL-tc");
-                    if (std::regex_search(line, match, trackLinkDrops)){
-                        //const std::string str_sat0 = format_string("channelError-ISL-Sat%" PRId64, sat0_id);
-                        pyraDevs.Get(0)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-channelError"));
-                        //const std::string str_sat1 = format_string("channelError-ISL-Sat%" PRId64, sat1_id);
-                        pyraDevs.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "PyL-channelError"));
+                bool active_trackLinkDrops = std::regex_search(line, match, trackLinkDrops);
+                for (auto dev= pyraDevs.Begin(); dev != pyraDevs.End (); ++dev){
+                    Ptr<Node> n=(*dev)->GetNode();
+                    if (m_enabled_rx_log.find(n->GetObject<Specie>()->GetName())!=m_enabled_rx_log.end()){
+                        (*dev)->TraceConnectWithoutContext("MacRx", MakeBoundCallback (&PacketEventTracerSimple, m_rx_stream, &m_cbparams, "TL-rx"));
+                    }
+                    if (m_enabled_tx_log.find(n->GetObject<Specie>()->GetName())!=m_enabled_tx_log.end()){
+                        (*dev)->TraceConnectWithoutContext("PhyTxBegin", MakeBoundCallback (&PacketEventTracer, m_tx_stream, &m_cbparams, "TL-tx"));
+                    }
+                    if (m_enabled_drop_log.find(n->GetObject<Specie>()->GetName())!=m_enabled_drop_log.end()){
+                        (*dev)->TraceConnectWithoutContext("MacTxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-bufOvflwLinkErr"));
+                        TCLogDrop(n, *dev, "TL-tc");
+                        if (active_trackLinkDrops){
+                            (*dev)->TraceConnectWithoutContext("PhyRxDrop", MakeBoundCallback (&PacketEventTracerReduit, m_drop_stream, &m_cbparams, "TL-channelError"));
+                        }
+                    }
+                    if (m_enabled_q_log.find(n->GetObject<Specie>()->GetName())!=m_enabled_q_log.end()){
+                        setupQlog(m_q_stream, n1, *dev, TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "TL");
                     }
                 }
-                if (m_enable_q_log){
-                    if (n1->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
-                        setupQlog(m_q_stream, n1, pyraDevs.Get(0), TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "PyL");
-                    }
-                    if (n2->GetId() > m_cbparams.m_log_condition_NodeId.minNodeId){
-                        setupQlog(m_q_stream, n2, pyraDevs.Get(1), TypeId::LookupByName("ns3::PointToPointTracenNetDevice"), m_qlog_update_interval, "PyL");
-                    }
-                }
-                
             }
         }
         std::cout << "    >> PyL interfaces are setup" << std::endl;
@@ -904,5 +884,4 @@ namespace ns3 {
             }
         }
     }
-
 }

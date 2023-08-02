@@ -1,16 +1,15 @@
 test: #nom de la campagne
   graine: [0]
-  constellation: [ tas_700 ] # name will be inflated from files chosen in this directory
+  constellation: [ kuiper_630 ] # name will be inflated from files chosen in this directory
   duree: [ 6 ] #en s
   pas: [2000] #en ms
-  deteriorISL: [ { sel: topUtil10, errModel: "recvErrRate:0.01-interval:2000,4000ms"}, { sel: topUtil10, errModel: "recvErrRate:0.1-interval:2000,4000ms"} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
+  deteriorISL: [ {} ] #{ sel: topUtil10, errModel: "recvErrRate:0.01-interval:2000,4000ms"}, { sel: topUtil10, errModel: "recvErrRate:0.1-interval:2000,4000ms"} ] #, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5-interval:15000,21000ms"}, { sel: topUtil50, errModel: "gilbertElliottMdl-brstRate:0.001-brstSize:5-interval:15000,21000ms"} ] #, { sel: topUtil10, errModel: "gilbertElliottMdl-brstRate:0.01-brstSize:5" } ] 
   nb-UEs-sol: [ 100 ]
   algo: [ "algorithm_penal_gsl" ]
   threads: [ 4 ]
   desactive-impairs: [ True ]
-  debit-ifs: [ {'ue':2, 'sol':350, 'isl':60, 'satues':80, 'satgw':40}, {'ue':2, 'sol':200, 'isl':60, 'satues':80, 'satgw':80}   ] #Mb/s 
-  logs-actifs: [ ['rx', 'drop', 'tx', 'coms' ] ] #('rx', 'tx', 'drop', 'qqd', 'coms', 'ping') # 'drop' callbacks are now effective with Traffic Control (just hope it wont crash) 
-  estimDelai: [{"isl": 5.5, 'gsl': 40, 'extremite': 30 }] # délai dans la file d'attente
+  debit-ifs: [ {'ue':4, 'sol':350, 'isl':60, 'satues':80, 'satgw':40} ] #, {'ue':4, 'sol':200, 'isl':60, 'satues':80, 'satgw':80}   ] #Mb/s 
+  estimDelai: [{"isl": 5.5, 'gsl': 40, 'server': 30, "ue": 80 }] # délai dans la file d'attente
   # Théoriquement pour 1 flux TCP, le buffer doit avoir une capacité de RTT * débit_sortie_interface (thumb's rule). S'il y a beaucoup de flux, on peut diviser par sqrt(nb_flux)
 
   ##------------------
@@ -22,7 +21,8 @@ test: #nom de la campagne
   # { 'nom': "tcp"}
   # { 'nom': 'udp', 'debut_ms': [1, 4],'duree_ms': 'min,max'
   protocoles:
-    - test: {nom: tcp, debut_ms: [0, 100], duree_ms: 'max', ratio: 2, debit: 2}
+    - test: {nom: udp, debut_ms: [0, 500], duree_ms: 'max', ratio: 1.5, debit: 4}
+      test2: {nom: tcp, debut_ms: [0, 500], duree_ms: 'max', ratio: 0.5, debit: 4}
     #- grp0: {nom: tcp, debut_ms: [0, 100], duree_ms: 'max', nb: 100, debit: 2 }
     #  grp1: {nom: tcp, debut_ms: [20000, 20100], duree_ms: 'max', nb: 100, debit: 2}
      # grp2: {nom: tcp, debut_ms: [20000, 20100], duree_ms: 'max', nb: 50, debit: 2}
@@ -69,8 +69,17 @@ info-campagne:
     #inutile d'effectuer l'action si la cle changeante est
     "casse liens sat": [ "protocoles", "srvTrafficControl", "debit-ifs", "desactive-impairs", "estimDelai"]
     "routes": [ "protocoles", "srvTrafficControl", "debit-ifs", "desactive-impairs", "estimDelai"]
+  
+  coms-logs: # statistics on some groups of commodities
+    # if 'ping' is not present below, no ping will be performed. If it is present with None/empty argument, it will be done.
+    # arguments are names of commodities groups (see protocol field)
+    ping: {subset: []} #arguments: based on commodities names.
+    coms:  # Empty arguments=None means all commodities will have detailed logs. Only useful for TCP, generates rtt, cwnd and progress logs
 
-  mrpropre: #à la fin de la campagne
+  props-ns3: #  directly sent parameters to ns3 properties
+    qlog_update_interval: "100ms"
+
+  mrpropre: #fichiers supprimés à la fin de la campagne
     "satellite_networks_state/gen_data" : ".*_{pid}"
     satellite_networks_state/input_data : "os_.*_{pid}.csv"
     ns3_experiments/runs: "run_loaded_tm_pairing_for_\\d+s_with_.*_.*_{pid}"
@@ -87,4 +96,4 @@ info-campagne:
     - simulation
   
   processus: 4 #number of experiments in parallel
-  parallelise: True #False helps to debug
+  parallelise: False #False helps to debug
