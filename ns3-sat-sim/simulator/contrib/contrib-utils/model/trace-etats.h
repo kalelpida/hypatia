@@ -6,6 +6,7 @@
 #include "ns3/net-device.h"
 #include "ns3/output-stream-wrapper.h"
 #include "ns3/queue-disc.h"
+#include "ns3/data-rate.h"
 
 
 namespace ns3 {
