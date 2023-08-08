@@ -11,14 +11,14 @@ namespace ns3 {
 
 void PktQloopingStats(Ptr<OutputStreamWrapper> stream, const pktQloparams& loparams_val){
     Ptr<Queue<Packet>> q=loparams_val.queue;
-    if (q->GetTotalReceivedBytes()>0){// dont log queue which did not get any packet during interval
+    if (q->GetTotalReceivedBytes()>0 || q->GetTotalDroppedBytes() > 0 || q->GetNPackets() > 0){// dont log queue which did not get any packet during interval
         *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << loparams_val.nodeId << ","  << loparams_val.specie << "," << loparams_val.ifnum << "," << loparams_val.infoIf << ",";
         if (q->GetMaxSize().GetUnit () == QueueSizeUnit::PACKETS){
             *stream->GetStream() << q->GetMaxSize().GetValue() << ",pkt," << q->GetNPackets();
         } else {
             *stream->GetStream() << q->GetMaxSize().GetValue() << ",oct," << q->GetNBytes(); 
         }
-        *stream->GetStream() << "," << q->GetTotalReceivedBytes() << "," << q->GetTotalDroppedBytes() << std::endl;
+        *stream->GetStream() << "," << loparams_val.debit.CalculateBytesTxTime(q->GetNBytes()).GetNanoSeconds() << "," << q->GetTotalReceivedBytes() << "," << q->GetTotalDroppedBytes() << std::endl;
         loparams_val.queue->ResetStatistics();
     }
     Simulator::Schedule(loparams_val.delai_capture, &PktQloopingStats, stream, loparams_val);
@@ -31,16 +31,16 @@ void QDiscloopingStats(Ptr<OutputStreamWrapper> stream, const qDiscloparams lprm
     //std::cout << "::    ancienne    ::";
     //lprms.qd_stats.Print(std::cout);
     //std::cout << "\n\n" << std::endl;
-    if (qds.nTotalReceivedBytes > lprms.qd_stats.nTotalReceivedBytes){// dont log queue which did not get any packet during interval
+    if (qds.nTotalReceivedBytes > lprms.qd_stats.nTotalReceivedBytes || qds.nTotalDroppedBytes > lprms.qd_stats.nTotalDroppedBytes || qds.nTotalSentBytes > lprms.qd_stats.nTotalSentBytes){// dont log queue which did not get any packet during interval
         *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << lprms.nodeId << ","  << lprms.specie << "," << lprms.ifnum << "," << lprms.infoIf << ",";
         if (lprms.qd->GetMaxSize().GetUnit () == QueueSizeUnit::PACKETS){
                 *stream->GetStream() << lprms.qd->GetMaxSize().GetValue() << ",pkt," << lprms.qd->GetNPackets();
             } else {
                 *stream->GetStream() << lprms.qd->GetMaxSize().GetValue() << ",oct," << lprms.qd->GetNBytes() ; 
             }
-        *stream->GetStream() << "," << qds.nTotalReceivedBytes - lprms.qd_stats.nTotalReceivedBytes << "," << qds.nTotalDroppedBytes - lprms.qd_stats.nTotalDroppedBytes << std::endl;
+        *stream->GetStream() << "," << lprms.debit.CalculateBytesTxTime(lprms.qd->GetNBytes()).GetNanoSeconds() << "," << qds.nTotalReceivedBytes - lprms.qd_stats.nTotalReceivedBytes << "," << qds.nTotalDroppedBytes - lprms.qd_stats.nTotalDroppedBytes << std::endl;
     }
-    Simulator::Schedule(lprms.delai_capture, &QDiscloopingStats, stream, qDiscloparams({lprms.nodeId, lprms.specie, lprms.ifnum, lprms.infoIf, lprms.qd, qds, lprms.delai_capture}));
+    Simulator::Schedule(lprms.delai_capture, &QDiscloopingStats, stream, qDiscloparams({lprms.nodeId, lprms.specie, lprms.ifnum, lprms.infoIf, lprms.qd, qds, lprms.delai_capture, lprms.debit}));
 
 }
 
@@ -59,12 +59,14 @@ void setupQlog(Ptr<OutputStreamWrapper> stream, Ptr<Node> node, Ptr<NetDevice> b
     } else {
         NS_ABORT_MSG("Non recognised netdevice on node num" << node->GetId() << " specie "<< node->GetObject<Specie>()->GetName() << " interface " <<base_ndev->GetIfIndex());
     }
-    PktQloopingStats(stream, {node->GetId(), node->GetObject<Specie>()->GetName(), base_ndev->GetIfIndex(), link, qp, time_interval });
+    DataRateValue drval;
+    base_ndev->GetAttribute("DataRate", drval);
+    PktQloopingStats(stream, {node->GetId(), node->GetObject<Specie>()->GetName(), base_ndev->GetIfIndex(), link, qp, time_interval,  drval.Get()});
     Ptr<TrafficControlLayer> tc = node->GetObject<TrafficControlLayer>();
     if (tc){
         Ptr<QueueDisc> qd = tc->GetRootQueueDiscOnDevice(base_ndev);
         if (qd){
-            QDiscloopingStats(stream, qDiscloparams({node->GetId(), node->GetObject<Specie>()->GetName(), base_ndev->GetIfIndex(), link+"-tc", qd, qd->GetStats(), time_interval }));
+            QDiscloopingStats(stream, qDiscloparams({node->GetId(), node->GetObject<Specie>()->GetName(), base_ndev->GetIfIndex(), link+"-tc", qd, qd->GetStats(), time_interval, drval.Get() }));
         }
     }
 }

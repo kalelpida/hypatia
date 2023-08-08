@@ -158,7 +158,7 @@ namespace ns3 {
         *m_rx_stream->GetStream() << "instant,uid,noeud,typeObj,horodtg,commId,seqNum,offset,taille,dureePaquet,TCP,retour,info" << std::endl;
 
         m_q_stream = asciiTraceHelper.CreateFileStream (m_basicSimulation->GetLogsDir() + "/queues.stat");
-        *m_q_stream->GetStream() << "instant,noeud,typeObj,numIf,infoIf,tailleMax_unite,unite,taille_unite,recu_o,perdu_o" << std::endl;
+        *m_q_stream->GetStream() << "instant,noeud,typeObj,numIf,infoIf,tailleMax_unite,unite,taille_unite,attente_ns,recu_o,perdu_o" << std::endl;
 
         // Initialize satellites
         ReadSatellites();

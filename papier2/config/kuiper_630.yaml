@@ -67,7 +67,7 @@ ue:
   positions: os_1villes_kuiper630 #villesGlobe_kuiper630 #os_1villes_kuiper630 #randomGlobe_kuiper630 : randomGlobe= universel sur Terre, _{constellation_file_name.replace('_', '')} = à portée de la constellation . villesGlobe: Kent distribution around big cities
   minElevation: 20 #degrees above horizon
   nombre: $config/nb-UEs-sol #voir dans config
-  estimDelai: $config/estimDelai/extremite #special for  extremities of the connection.
+  estimDelai: $config/estimDelai/ue #special for  extremities of the connection.
   generateur: create_users_villeschoisies # fonction de génération de position. pas de génération de position si absente. Sinon un nouveau fichier 'positions' sera généré
   genparams: [ ficVille, minElevation, affiche ] # cles des paramètres à passer au générateur, en plus de la constellation et du nombre.
   ficVille: os_Lille.csv
@@ -78,7 +78,7 @@ ue:
 server:
   positions: os_1voisinLille
   nombre: 1
-  estimDelai: $config/estimDelai/extremite #special for  extremities of the connection.
+  estimDelai: $config/estimDelai/server #special for  extremities of the connection.
   generateur: create_voisins_villeschoisies
   dependances: [ gateway ] #generate gateway file before this one
   genparams: [ ficVille ]
@@ -88,11 +88,11 @@ server:
 
 
 LINKS:
-    - ["isl", {"satellite": { 'DataRate': "DataRate~$config/debit-if-isl/Mbps"}}, {"limiteDist": True, "detraque": $config/deteriorISL, "estimDelai": $config/estimDelai/isl }] #interfaces between satellites, to be used together with the "plus grid"
-    - ["gsl", { "satellite": { 'DataRate': "DataRate~$config/debit-if-gsl/satellite/Mbps"}, "ue": { 'DataRate': "DataRate~$config/debit-if-gsl/ue/Mbps" }}, {"limiteDist": True, "penalite_s": 10, "estimDelai": $config/estimDelai/gsl }] # although the ue has only 1 interface, it only makes 1 connection, so it does not need to choose the closest sat
-    - ["gsl", { "satellite": { 'DataRate': "DataRate~$config/debit-if-gsl/satellite/Mbps"}, "gateway": { 'DataRate': "DataRate~$config/debit-if-gsl/gateway/Mbps", maxSatellites: 5 }}, {"limiteDist": True, "penalite_s": 10, "estimDelai": $config/estimDelai/isl }] # in reality, the gateway has a limited number of interfaces, and connects many users. To maximize bandwidth (not implemented here), we select the 5 closest satellites
+    - ["isl", {"satellite": { 'DataRate': "DataRate~$config/debit-ifs/isl/Mbps"}}, {"limiteDist": True, "detraque": $config/deteriorISL, "estimDelai": $config/estimDelai/isl }] #interfaces between satellites, to be used together with the "plus grid"
+    - ["gsl", { "satellite": { 'DataRate': "DataRate~$config/debit-ifs/satues/Mbps"}, "ue": { 'DataRate': "DataRate~$config/debit-ifs/ue/Mbps" }}, {"limiteDist": True, "penalite_s": 10, "estimDelai": $config/estimDelai/gsl }] # although the ue has only 1 interface, it only makes 1 connection, so it does not need to choose the closest sat
+    - ["gsl", { "satellite": { 'DataRate': "DataRate~$config/debit-ifs/satgw/Mbps"}, "gateway": { 'DataRate': "DataRate~$config/debit-ifs/sol/Mbps", maxSatellites: 5 }}, {"limiteDist": True, "penalite_s": 10, "estimDelai": $config/estimDelai/isl }] # in reality, the gateway has a limited number of interfaces, and connects many users. To maximize bandwidth (not implemented here), we select the 5 closest satellites
     # GSL
-    - ["tl", { "server": { 'DataRate': "DataRate~$config/debit-if-gsl/gateway/Mbps", $config/srvTrafficControl}, "gateway": { 'DataRate': "DataRate~$config/debit-if-gsl/gateway/Mbps"}}, {"Delay": "Time~5ms", "estimDelai": 5}] # gateway
+    - ["tl", { "server": { 'DataRate': "DataRate~$config/debit-ifs/sol/Mbps", $config/srvTrafficControl}, "gateway": { 'DataRate': "DataRate~$config/debit-ifs/sol/Mbps"}}, {"Delay": "Time~5ms", "estimDelai": 5}] # gateway
     #- "tl", {agg_max_bandwidth: 1}, 1 #one-one, with 1 server
 
 

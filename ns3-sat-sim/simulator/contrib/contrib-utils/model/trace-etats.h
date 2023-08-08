@@ -17,6 +17,7 @@ namespace ns3 {
         std::string infoIf;
         Ptr<Queue<Packet>> queue;
         Time delai_capture;
+        DataRate debit;
     };
 
     struct structLoopParamsBis{
@@ -27,6 +28,7 @@ namespace ns3 {
         Ptr<QueueDisc> qd;
         const QueueDisc::Stats qd_stats;
         Time delai_capture;
+        DataRate debit;
     };
     
     typedef struct structLoopParams pktQloparams;
