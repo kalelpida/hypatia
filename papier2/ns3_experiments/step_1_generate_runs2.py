@@ -43,10 +43,10 @@ class main_step1:
 
         graine=dico_params.get('graine')
         self.obj_reference=self.cstl_dico["ENDPOINTS"][0]
-        debit_reference=float('inf')
+        debit_autorise=float('inf')
         for lien in self.cstl_dico['LINKS']:
             if self.obj_reference in lien[1]:
-                debit_reference = min(debitMbps(lien[1][self.obj_reference]['DataRate']), debit_reference)
+                debit_autorise = min(debitMbps(lien[1][self.obj_reference]['DataRate']), debit_autorise)
         nb_obj_ref = self.cstl_dico[self.obj_reference]['nombre']
 
         #true_gsl_max_data_rate_megabit_per_s = data_rate_megabit_per_s*100 # used to generate bursty traffic. maybe admission control from the ground will change that 
@@ -76,7 +76,8 @@ class main_step1:
         self.list_coms_metadata=[]#name of each commodity group
         for nom_groupe, groupe in sorted(groupes.items()):
             #protocol_chosen=dico_params['protocoles']
-            reference_rate = float(groupe.get("debit", debit_reference))# target sending rate in Mb/s
+            reference_rate = float(groupe.get("debit", 0.5*debit_autorise))# target sending rate in Mb/s
+            assert debit_autorise > reference_rate > 0
             try:
                 groupe_nb_commodites = int(groupe['nb'])
             except Exception:
@@ -97,10 +98,8 @@ class main_step1:
             durees_prevues[offset_commodite:fin_groupe_commodites]=value_or_random(duree, groupe_nb_commodites, minmax=[np.full(groupe_nb_commodites, duree_min_ms), (int(duration_s*1e9)-list_start_time[offset_commodite:fin_groupe_commodites])//int(1e6)])
             assert all(list_start_time+durees_prevues<=duration_s*1e9)
 
-            tcp_list_flow_size_byte[offset_commodite:fin_groupe_commodites] = (durees_prevues[offset_commodite:fin_groupe_commodites]*reference_rate/8e3).astype(int)
-            udp_list_flow_size_proportion[offset_commodite:fin_groupe_commodites]=0.3*reference_rate+np.random.exponential(0.7*reference_rate, size=groupe_nb_commodites) #udp : sending rate * randomization, in Mb/s
-            #debit will be capped at debit_reference
-
+            #udp_list_flow_size_proportion[offset_commodite:fin_groupe_commodites]=0.3*reference_rate+np.random.exponential(0.7*reference_rate, size=groupe_nb_commodites) #udp : sending rate * randomization, in Mb/s
+            
             protocol_chosen_name=groupe['nom']
             
             extra_parameters = groupe.get('extra_parameters', "")
@@ -109,6 +108,7 @@ class main_step1:
                 self.list_coms_metadata.append(metadata)
             # tcp_flow_schedule.csv
             if "tcp" == protocol_chosen_name:
+                tcp_list_flow_size_byte[offset_commodite:fin_groupe_commodites] = (durees_prevues[offset_commodite:fin_groupe_commodites]*reference_rate/8e3).astype(int)
                 """
                 Write schedule to file.
 
@@ -135,13 +135,17 @@ class main_step1:
 
             # udp_burst_schedule.csv
             elif "udp" == protocol_chosen_name:
+                k_proportion=1.33 # famille de distribution beta formant une "bosse" de la pdf autour de reference_rate. Plus k est grand, plus la bosse est prononcée.
+                udp_list_flow_size_proportion[offset_commodite:fin_groupe_commodites]=np.random.beta(k_proportion*debit_autorise/(debit_autorise-reference_rate), k_proportion*debit_autorise/reference_rate, size=groupe_nb_commodites)*debit_autorise
+                assert all(udp_list_flow_size_proportion[offset_commodite: fin_groupe_commodites] < debit_autorise )
+                assert all(udp_list_flow_size_proportion[offset_commodite: fin_groupe_commodites] > 0 )
                 for i in range(offset_commodite, fin_groupe_commodites):
                     if self.desactive_impairs and i%2:
                         continue
                     udp_vals.append((i,
                                 list_from_to[i][0],
                                 list_from_to[i][1],
-                                min(udp_list_flow_size_proportion[i], 0.999*debit_reference),
+                                udp_list_flow_size_proportion[i],
                                 list_start_time[i],
                                 durees_prevues[i],
                                 extra_parameters,

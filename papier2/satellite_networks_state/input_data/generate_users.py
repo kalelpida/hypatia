@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import os, sys, csv
 import yaml
 from .constants import *
-import scipy
 
 PROTECTION_DEG=7 # marge pour les zones non couvertes
 
