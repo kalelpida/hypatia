@@ -77,7 +77,6 @@ class main_step1:
         for nom_groupe, groupe in sorted(groupes.items()):
             #protocol_chosen=dico_params['protocoles']
             reference_rate = float(groupe.get("debit", 0.5*debit_autorise))# target sending rate in Mb/s
-            assert debit_autorise > reference_rate > 0
             try:
                 groupe_nb_commodites = int(groupe['nb'])
             except Exception:
@@ -93,7 +92,7 @@ class main_step1:
             duree_min_ms=min(1000, int(0.5*1e3*duration_s))
             list_start_time[offset_commodite:fin_groupe_commodites]=np.linspace(start=0, stop=decalage, num=groupe_nb_commodites, endpoint=True) if list_start_time_param is None else value_or_random(list_start_time_param, groupe_nb_commodites, minmax=[0, duration_s*1e3-duree_min_ms])
 
-            #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [0, max]
+            #by defaut, lasts for the whole experiment, else fixed duration, otherwise random between [duree_min_ms, max]
             duree=groupe.get('duree_ms', 'min,max')
             durees_prevues[offset_commodite:fin_groupe_commodites]=value_or_random(duree, groupe_nb_commodites, minmax=[np.full(groupe_nb_commodites, duree_min_ms), (int(duration_s*1e9)-list_start_time[offset_commodite:fin_groupe_commodites])//int(1e6)])
             assert all(list_start_time+durees_prevues<=duration_s*1e9)
@@ -135,6 +134,7 @@ class main_step1:
 
             # udp_burst_schedule.csv
             elif "udp" == protocol_chosen_name:
+                assert debit_autorise > reference_rate > 0
                 k_proportion=1.33 # famille de distribution beta formant une "bosse" de la pdf autour de reference_rate. Plus k est grand, plus la bosse est prononcée.
                 udp_list_flow_size_proportion[offset_commodite:fin_groupe_commodites]=np.random.beta(k_proportion*debit_autorise/(debit_autorise-reference_rate), k_proportion*debit_autorise/reference_rate, size=groupe_nb_commodites)*debit_autorise
                 assert all(udp_list_flow_size_proportion[offset_commodite: fin_groupe_commodites] < debit_autorise )

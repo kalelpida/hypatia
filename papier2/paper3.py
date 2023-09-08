@@ -288,19 +288,28 @@ def divise_campagnes(campagne, cles, nbprocs):
                 sous_campagnes.append(nvl_ss_cpgn)
     return sous_campagnes
 
+def options_campagne(nom_campagne, info_exp):
+    cd=info_exp.get('campagnedir').format(nom_campagne=nom_campagne)
+    if not os.path.exists(cd):
+        return nom_campagne, cd
+    print(nom_campagne , "existe déjà. Continuer (o/N)?")
+    z=input()
+    if z.lower().startswith('n') or not len(z):
+    	exit(0) 
+    return nom_campagne, cd
+        
 def main():
     with open(nomfic_campagne, 'r') as f:
         dico_campagne=yaml.load(f, Loader=yaml.Loader)
 
     info_exp=dico_campagne.pop('info-experience',{}) 
 
-    info_campagne=dico_campagne.pop('info-campagne',{}) 
+    info_campagne=dico_campagne.pop('info-campagne',{})
     rend_inutile=info_campagne.get('actions-inutiles-si',{})
     nb_processus=info_campagne.get('processus', 1)
 
     for nom_campagne, campagne in dico_campagne.items():
-        print("nom: ", nom_campagne)
-        cd=info_exp.get('campagnedir').format(nom_campagne=nom_campagne)
+        nom_campagne, cd = options_campagne(nom_campagne, info_exp)
         os.makedirs(cd, exist_ok=True)
         cles_variantes=[cle for cle, vals in campagne.items() if len(vals)>1]
         cles_variantes.sort(key= lambda x : sum(x in vals for vals in rend_inutile.values()))#les cles les moins contraignantes en bout de liste

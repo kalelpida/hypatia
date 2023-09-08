@@ -52,7 +52,7 @@ ens_total=set(itertools.product(*liste))
 with ThreadPool(10) as p:
     results=p.starmap(lectExpResParams, itertools.zip_longest(os.scandir(dossier), [], fillvalue=(variations, dico_vals)))
 results=list(filter(lambda item: item is not None, results))
-"experiences lancées"
+
 lancees=set([x[0] for x in results])
 nonlancees=ens_total-lancees
 if len(nonlancees)<len(lancees):
@@ -98,7 +98,7 @@ if not duplicats:
 else:
     poubelle=f"{dossier}_duplicats"
     rep=input(f"Déplacer les duplicats vers {poubelle} ? (o/N)")
-    deplace=(rep.lower()[0]=='o')
+    deplace=len(rep) and (rep.lower()[0]!='n')
     if deplace:
         os.makedirs(poubelle, exist_ok=True)
     for params, doss in expedic.items():

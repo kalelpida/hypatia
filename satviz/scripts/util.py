@@ -26,7 +26,7 @@ import ephem
 import math
 
 
-def read_city_details(city_details_list, city_detail_file):
+def read_city_details(city_details_list, city_detail_file, offset=0):
     """
     Reads city-wise details
     :param city_details_list: List to be populated
@@ -36,13 +36,33 @@ def read_city_details(city_details_list, city_detail_file):
     lines = [line.rstrip('\n') for line in open(city_detail_file)]
     for i in range(len(lines)):
         val = lines[i].split(",")
-        city_details_list[int(val[0])] = {
+        city_details_list[int(val[0])+offset] = {
             "name": val[1],
             "lat_deg": val[2],
             "long_deg": val[3],
             "alt_km": 0
         }
     return city_details_list
+
+def read_ground_objects_file(city_detail_file, offset=0):
+    """
+    Reads city-wise details
+    :param city_details_list: List to be populated
+    :param city_detail_file: Input file
+    :return: city_details_list
+    """
+    city_details={}
+    with open(city_detail_file) as f:
+        lines=f.readlines()
+    for l in lines:
+        val = l.rstrip('\n').split(",")
+        city_details[int(val[0])+offset] = {
+            "name": val[1],
+            "lat_deg": val[2],
+            "long_deg": val[3],
+            "alt_km": 0
+        }
+    return city_details
 
 
 def generate_sat_obj_list(
