@@ -394,7 +394,7 @@ TcpFlowSendApplication::FinalizeDetailedLogs() {
         CwndChange(0, m_current_cwnd_byte);
         outstream = asciiTraceHelper.CreateFileStream (m_baseLogsDir + "/" + format_string("tcp_flow_%" PRIu64 "_cwnd.csv", m_tcpFlowId));
         saveData(outstream->GetStream(), m_cwnd_buf);
-        RttChange(Time("0ms"), Time(std::to_string(m_current_rtt_ns)+"ns"));
+        //RttChange(Time("0ms"), Time(std::to_string(m_current_rtt_ns)+"ns"));
         outstream = asciiTraceHelper.CreateFileStream (m_baseLogsDir + "/" + format_string("tcp_flow_%" PRIu64 "_rtt.csv", m_tcpFlowId));
         saveData(outstream->GetStream(), m_rtt_buf);
         InsertProgressLog(timestamp, GetAckedBytes());

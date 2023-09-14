@@ -101,7 +101,7 @@ class MainNetHelper:
         total_nb_devsol=sum(self.cstl_config[obj]['nombre'] for obj in self.cstl_config['TYPES_OBJETS_SOL'])
         network_links={}
         self.interfaces={}
-        interfaces_number={i:0 for i in range(self.cstl_config['NB_SATS']+total_nb_devsol)}# device:next_nb_of_interface
+        interfaces_number={i:1 for i in range(self.cstl_config['NB_SATS']+total_nb_devsol)}# device:next_nb_of_interface. lo interface has number 0.
         gsl_devs=set()
         for i,lien in enumerate(self.cstl_config['LINKS']):
             type_lien, objets, proprietes_lien= lien
@@ -112,8 +112,7 @@ class MainNetHelper:
                     os.path.join(self.output_generated_data_dir, self.confdirname, nom_lien+".txt"),
                     self.NUM_ORBS,
                     self.NUM_SATS_PER_ORB,
-                    interfaces_number,
-                    isl_shift=0
+                    interfaces_number
                 )
                 self.interfaces.update(nvelles_interfaces)
                 if proprietes_lien.get("limiteDist", False):
@@ -268,7 +267,7 @@ class MainNetHelper:
                 f_itfs.writelines(lignes)
             
 
-def generate_plus_grid_isls(output_filename_isls, n_orbits, n_sats_per_orbit, interfaces_number, isl_shift):
+def generate_plus_grid_isls(output_filename_isls, n_orbits, n_sats_per_orbit, interfaces_number, idx_offset=0):
     """
     Generate plus grid ISL file.
 
@@ -277,6 +276,7 @@ def generate_plus_grid_isls(output_filename_isls, n_orbits, n_sats_per_orbit, in
     :param n_sats_per_orbit:        Number of satellites per orbit
     :param isl_shift:               ISL shift between orbits (e.g., if satellite id in orbit is X,
                                     does it also connect to the satellite at X in the adjacent orbit)
+                                    Removed, can be handled more easily with orbits definitions.
     :param idx_offset:              Index offset (e.g., if you have multiple shells)
     """
 
@@ -285,27 +285,55 @@ def generate_plus_grid_isls(output_filename_isls, n_orbits, n_sats_per_orbit, in
     
     nvelles_interfaces={}
     list_isls = []
+    
+    # the following ensures that in-orbit interfaces are allocated first
+
+    #1er satellite de chaque orbite
     for i in range(n_orbits):
-        for j in range(n_sats_per_orbit):
-            sat = i * n_sats_per_orbit + j
+        # connect with sat below
+        sat = i * n_sats_per_orbit +idx_offset
+        sat_same_orbit = sat + n_sats_per_orbit-1
 
-            # Link to the next in the orbit
-            sat_same_orbit = i * n_sats_per_orbit + ((j + 1) % n_sats_per_orbit)
-            sat_adjacent_orbit = ((i + 1) % n_orbits) * n_sats_per_orbit + ((j + isl_shift) % n_sats_per_orbit)
-
+        list_isls.append((sat, sat_same_orbit, 's'))
+        nvelles_interfaces[(sat, sat_same_orbit)] = interfaces_number[sat]
+        nvelles_interfaces[(sat_same_orbit, sat)] = interfaces_number[sat_same_orbit]
+        interfaces_number[sat] += 1
+        interfaces_number[sat_same_orbit] += 1
+    
+    for j in range(n_sats_per_orbit-1+ idx_offset, idx_offset, -1):
+        for i in range(n_orbits):
             # Same orbit
+            sat = i * n_sats_per_orbit + j 
+            sat_same_orbit = i * n_sats_per_orbit + (j - 1) #satellite below
+
             list_isls.append((sat, sat_same_orbit, 's'))
             nvelles_interfaces[(sat, sat_same_orbit)] = interfaces_number[sat]
             nvelles_interfaces[(sat_same_orbit, sat)] = interfaces_number[sat_same_orbit]
             interfaces_number[sat] += 1
             interfaces_number[sat_same_orbit] += 1
+        
+        for i in range(n_orbits):
+            # Adjacent orbit 
+            sat = i * n_sats_per_orbit + j 
+            sat_adjacent_orbit = ((i + 1) % n_orbits) * n_sats_per_orbit + j #satellite on the right
 
-            # Adjacent orbit
             list_isls.append((sat, sat_adjacent_orbit, 'a'))
             nvelles_interfaces[(sat, sat_adjacent_orbit)] = interfaces_number[sat]
             nvelles_interfaces[(sat_adjacent_orbit, sat)] = interfaces_number[sat_adjacent_orbit]
             interfaces_number[sat] += 1
             interfaces_number[sat_adjacent_orbit] += 1
+    
+    #1er satellite de chaque orbite
+    for i in range(n_orbits):
+        # connect with right satellite
+        sat = i * n_sats_per_orbit + idx_offset
+        sat_adjacent_orbit = ((i + 1) % n_orbits) * n_sats_per_orbit + idx_offset
+
+        list_isls.append((sat, sat_adjacent_orbit, 'a'))
+        nvelles_interfaces[(sat, sat_adjacent_orbit)] = interfaces_number[sat]
+        nvelles_interfaces[(sat_adjacent_orbit, sat)] = interfaces_number[sat_adjacent_orbit]
+        interfaces_number[sat] += 1
+        interfaces_number[sat_adjacent_orbit] += 1
     
     with open(output_filename_isls, 'w') as f:
         for (a, b, val) in list_isls:
