@@ -133,9 +133,16 @@ namespace ns3 {
 
     TopologySatelliteNetwork::TopologySatelliteNetwork(Ptr<BasicSimulation> basicSimulation, const Ipv4RoutingHelper& ipv4RoutingHelper) {
         m_basicSimulation = basicSimulation;
-        m_cbparams.m_conversion = new mapflow_t();
+        m_cbparams.mapflow = new mapflow_t();
+        m_cbparams.mapnode = new mapnode_t();
         ReadConfig();
         Build(ipv4RoutingHelper);
+    }
+
+    TopologySatelliteNetwork::~TopologySatelliteNetwork()
+    {
+        delete m_cbparams.mapflow;
+        delete m_cbparams.mapnode;
     }
 
     void TopologySatelliteNetwork::ReadConfig() {
@@ -194,7 +201,8 @@ namespace ns3 {
         m_qlog_update_interval = Time(m_basicSimulation->GetConfigParamOrDefault("qlog_update_interval","100ms"));
 
         ReadLinks();
-
+        
+        RegisterNodes();
         // ARP caches
         std::cout << "  > Populating ARP caches" << std::endl;
         PopulateArpCaches();
@@ -869,18 +877,35 @@ namespace ns3 {
         return m_endpoints;
     }
 
-    void TopologySatelliteNetwork::RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> triplet, uint64_t flowId){
-        (*(m_cbparams.m_conversion))[triplet]=flowId;
+    void TopologySatelliteNetwork::RegisterFlow(std::pair<InetSocketAddress,InetSocketAddress> quadruplet, uint64_t flowId){
+        //std::cout << "registered flow " << flowId << " from " << quadruplet.first.GetIpv4() << " to " << quadruplet.second.GetIpv4() << std::endl;
+        (*(m_cbparams.mapflow))[quadruplet]=flowId;
+    }
+
+    void TopologySatelliteNetwork::RegisterNodes(){
+        Ipv4InterfaceAddress iaddr;
+        for (NodeContainer::Iterator n= m_allNodes.Begin(); n!=m_allNodes.End(); ++n){
+            ns3::Ptr<Ipv4> ipv4obj = (*n)->GetObject<Ipv4>();
+            for (uint32_t i = 0; i < ipv4obj->GetNInterfaces (); i++){
+                for (uint32_t j = 0; j < ipv4obj->GetNAddresses (i); j++){
+                    iaddr = ipv4obj->GetAddress (i, j);
+                    if (iaddr.GetScope () != Ipv4InterfaceAddress::LINK ){
+                        (*(m_cbparams.mapnode))[iaddr.GetLocal ()]=(*n);
+                    }
+                }
+            }
+        }
+        (*(m_cbparams.mapnode))[Ipv4Address::GetZero()]=Ptr<Node>(); // handle syn case, when the ip address has still not been set.
+       
     }
 
     void TopologySatelliteNetwork::TCLogDrop(Ptr<Node> noeud, Ptr<NetDevice> netdev, const std::string& err_str){
         m_temp_tc = noeud->GetObject<TrafficControlLayer>();
         if (m_temp_tc){
-            std::shared_ptr<cbparams> loc_cbparams = std::make_shared<cbparams>(m_cbparams);
-            loc_cbparams->log_node = noeud;
+            m_cbparams.log_node = noeud;
             m_temp_qd = m_temp_tc->GetRootQueueDiscOnDevice(netdev);
             if (m_temp_qd){
-                m_temp_qd->TraceConnectWithoutContext("Drop", MakeBoundCallback (&QitEventTracerReduit, m_drop_stream, loc_cbparams, err_str));
+                m_temp_qd->TraceConnectWithoutContext("Drop", MakeBoundCallback (&QitEventTracerReduit, m_drop_stream, &m_cbparams, err_str));
             }
         }
     }

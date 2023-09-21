@@ -11,10 +11,12 @@
 
 namespace ns3 {
 
-    typedef std::map<std::pair<InetSocketAddress,Ipv4Address>, uint64_t> mapflow_t;
-
+    typedef std::map<std::pair<InetSocketAddress,InetSocketAddress>, uint64_t> mapflow_t;
+    typedef std::map<Ipv4Address, Ptr<const Node>> mapnode_t;
+    
     struct structCbParams{
-        mapflow_t *m_conversion;
+        mapflow_t *mapflow;
+        mapnode_t *mapnode;
         Ptr<const Node> log_node;
     };
     
@@ -23,7 +25,7 @@ namespace ns3 {
     void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> src_node, Ptr<const Node> dst_node,  Ptr<const Packet> packet, const Time& txTime);
     void PacketEventTracerSimple(Ptr<OutputStreamWrapper> stream, cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> node, Ptr<const Packet> packet, const Time& rxTime);
     void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams_val, const std::string& infodrop, Ptr<const Node> node, Ptr<const Packet> packet);
-    void QitEventTracerReduit(Ptr<OutputStreamWrapper> stream, std::shared_ptr<cbparams> cbparams_val, const std::string& infodrop, Ptr<QueueDiscItem const> qit);
+    void QitEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams_val, const std::string& infodrop, Ptr<QueueDiscItem const> qit);
 
 }   
 #endif

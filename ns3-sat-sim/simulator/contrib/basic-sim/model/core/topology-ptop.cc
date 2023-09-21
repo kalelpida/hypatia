@@ -701,5 +701,5 @@ Ptr<PointToPointNetDevice> TopologyPtop::GetNetDeviceForLink(std::pair<int64_t, 
     return m_link_to_net_device.at(link);
 }
 
-void TopologyPtop::RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> , uint64_t){;}
+void TopologyPtop::RegisterFlow(std::pair<InetSocketAddress,InetSocketAddress> quadruplet, uint64_t commId){;}
 }

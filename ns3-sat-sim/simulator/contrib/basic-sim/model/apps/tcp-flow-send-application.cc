@@ -164,22 +164,10 @@ void TcpFlowSendApplication::StartApplication(void) { // Called at time specifie
                 NS_FATAL_ERROR("Failed to bind socket");
             }
         }
-        Address localAddrPort;
-        m_socket->GetSockName(localAddrPort);
-        InetSocketAddress saddr = InetSocketAddress::ConvertFrom(localAddrPort);
-        int nbifs = GetNode()->GetObject<Ipv4>()->GetNInterfaces();
-        int nbaddrs;
-        for (auto ifnum=1; ifnum<nbifs; ifnum++){
-            //la lo n'est pas prise en compte. Un même objet peut avoir plusieurs interfaces et répondre à plusieurs addresses par interface
-            //how to check multicast?
-            nbaddrs = GetNode()->GetObject<Ipv4>()->GetNAddresses(ifnum);
-            for (auto addrnum=0; addrnum<nbaddrs; addrnum++){
-                saddr.SetIpv4(GetNode()->GetObject<Ipv4>()->GetAddress(ifnum, addrnum).GetLocal());
-                m_topology->RegisterFlow(std::pair<InetSocketAddress, Ipv4Address>(saddr, InetSocketAddress::ConvertFrom(m_peer).GetIpv4()) , m_tcpFlowId);
-            }
-        }
         
-        // Connect, no receiver
+        // Connect, no receiverAddress localAddrPort;
+        // before I was registering here any flow that could possibly exist between the source and the destination
+        // knowing the IP destination, we can create a flow entry for every IP address on every interface (except 0)
         m_socket->Connect(m_peer);
         m_socket->ShutdownRecv();
 
@@ -264,7 +252,9 @@ void TcpFlowSendApplication::SendData(void) {
 void TcpFlowSendApplication::ConnectionSucceeded(Ptr <Socket> socket) {
     NS_LOG_FUNCTION(this << socket);
     NS_LOG_LOGIC("TcpFlowSendApplication Connection succeeded");
-    m_connected = true;
+    m_connected = true;Address localAddrPort;
+    socket->GetSockName(localAddrPort);
+    m_topology->RegisterFlow(std::pair<InetSocketAddress, InetSocketAddress>(InetSocketAddress::ConvertFrom(localAddrPort), InetSocketAddress::ConvertFrom(m_peer)) , m_tcpFlowId);
     SendData();
 }
 

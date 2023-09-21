@@ -81,13 +81,15 @@ namespace ns3 {
         // Constructors
         static TypeId GetTypeId (void);
         TopologySatelliteNetwork(Ptr<BasicSimulation> basicSimulation, const Ipv4RoutingHelper& ipv4RoutingHelper);
+        ~TopologySatelliteNetwork();
 
         // Inherited accessors
         const NodeContainer& GetNodes();
         int64_t GetNumNodes();
         bool IsValidEndpoint(int64_t node_id);
         const std::set<int64_t>& GetEndpoints();
-        void RegisterFlow(std::pair<InetSocketAddress,Ipv4Address> triplet, uint64_t flowId);
+        void RegisterFlow(std::pair<InetSocketAddress,InetSocketAddress> quadruplet, uint64_t flowId);
+        void RegisterNodes();
 
         // Additional accessors
         uint32_t GetNumSatellites();
