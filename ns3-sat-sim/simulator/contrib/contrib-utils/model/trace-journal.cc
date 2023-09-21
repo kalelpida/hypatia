@@ -36,6 +36,14 @@ static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams* cbparams_va
     static TypeId tidipheader = Ipv4Header::GetTypeId();
     static TypeId tidudpheader = UdpHeader::GetTypeId();
 
+    // initalize result struct
+    analysePacket.isTCP = false;
+    analysePacket.isReverse=false;
+    analysePacket.dataOffset=0;
+    analysePacket.timestamp=0;
+    analysePacket.idseq = 0;
+    analysePacket.dataSize=0;
+
     auto it = p->BeginItem ();
     Ipv4Header ipheader;
     InetSocketAddress idSource((uint16_t)0);
@@ -58,13 +66,10 @@ static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams* cbparams_va
         NS_ABORT_MSG("incomplete packet");
         return NiveauDeReponse::RIEN;
     }
-    item = it.Next ();
+    item = it.Next ();  
     if (item.tid == tidudpheader){
-        analysePacket.isTCP = false;
-        analysePacket.isReverse=false; // there is no way back in UDP
-        analysePacket.dataOffset=0;
-        analysePacket.timestamp=0;
         // that's UDP
+        
         /*
         UdpHeader udpheader;
         udpheader.Deserialize(item.current);
@@ -72,6 +77,7 @@ static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams* cbparams_va
         std::get<1>(idDest) = udpheader.GetDestinationPort();
         */
         
+        // analysePaquet.isReverse= false;  // there is no way back in standard UDP
         if (! it.HasNext()){
             p->Print(std::cerr);
             NS_ABORT_MSG("incomplete packet");
@@ -120,7 +126,7 @@ static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams* cbparams_va
         for (auto paire : conversionref){
             if ( paire.first == quadruplet){
                 analysePacket.idcomm = paire.second;
-                analysePacket.isReverse = false;
+                // analysePacket.isReverse = false;
                 trouve=true;
                 break;
             } else if (paire.first == quadruplet_reverse){
@@ -152,11 +158,9 @@ static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams* cbparams_va
         // update data info carried by the packet
         if (it.HasNext()){
             item = it.Next();
-            NS_ASSERT_MSG(item.type == PacketMetadata::Item::ItemType::PAYLOAD, "not an usual Hypatia UDP packet");
+            NS_ASSERT_MSG(item.type == PacketMetadata::Item::ItemType::PAYLOAD, "not an usual Hypatia TCP packet");
             analysePacket.dataOffset = item.currentTrimedFromStart;
             analysePacket.dataSize = item.currentSize;
-        } else {
-            analysePacket.dataSize = 0;
         }
         while (it.HasNext()){
             item = it.Next();
@@ -217,6 +221,8 @@ void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
     //This function is used to log losses.
     resAnalysePacket analysePacket;
     // Log precise timestamp received of the sequence packet if needed
+
+    
     switch (getPacketInfos(packet, cbparams_val, analysePacket))
     {
     case NiveauDeReponse::TRANSPORT:
