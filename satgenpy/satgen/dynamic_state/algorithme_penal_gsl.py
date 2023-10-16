@@ -137,8 +137,7 @@ def algorithm_penal_gsl(
                 for ndsrc, nddst in zip(chemin[:-1], chemin[1:]):
                     duree+=full_net_graph_penalised[ndsrc][nddst]["delai"]
                     #poids+=full_net_graph_penalised[ndsrc][nddst]["weight"]
-            
-            f_chem.write(f"{paire},{duree},{chemin}\n")
+            iftxs=[]
             for curr, suiv in zip(chemin[:-1], chemin[1:]):
                 next_hop_decision=(-1, -1, -1)
                 if (curr, suiv) in interfaces:
@@ -166,6 +165,10 @@ def algorithm_penal_gsl(
                         next_hop_decision[1],
                         next_hop_decision[2]
                     ))
+                iftxs.append(next_hop_decision[1])
+            if any(map(lambda x:x==-1, iftxs)):
+                iftxs=[]
+            f_chem.write(f"{paire},{duree},{chemin},{iftxs}\n")
     if is_last:
         with open(output_filename+".temp", "w+") as f_out:
             f_out.write(str(fstate))

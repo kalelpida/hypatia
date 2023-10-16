@@ -205,8 +205,8 @@ class MainNetHelper:
                 lignes=f.readlines()
             locdico={}
             for ligne in lignes:
-                paire, duree, chemin = eval(ligne)
-                locdico[tuple(paire)]=(duree, chemin)
+                paire, duree, chemin, ifs = eval(ligne)
+                locdico[tuple(paire)]=(duree, chemin, ifs)
             dico_t_chemins[instant]=locdico
         
         for numlien, lien in enumerate(self.cstl_config['LINKS']):
@@ -245,7 +245,7 @@ class MainNetHelper:
                 if not (borne_inf<=cle<borne_sup):
                     continue
                 
-                for paire, (delai, chemin) in dico.items():
+                for paire, (delai, chemin, ifs) in dico.items():
                     for curr, suiv in zip(chemin[:-1], chemin[1:]):
                         a,b=sorted((curr, suiv))
                         if itf_connects((a, b)):
