@@ -28,7 +28,7 @@ typedef struct structresAnalysePacket resAnalysePacket;
 
 enum NiveauDeReponse { RIEN, IP, TRANSPORT };
 
-static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams* cbparams_val, resAnalysePacket& analysePacket){
+static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams& cbparams_val, resAnalysePacket& analysePacket){
     // Extract burst identifier and packet sequence number if UDP
     // Otherwise get flow identifier from packet sequence number
     static TypeId tidInteret= IdSeqHeader::GetTypeId();
@@ -55,9 +55,9 @@ static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams* cbparams_va
         if (item.tid == tidipheader){
             ipheader.Deserialize(item.current);
             idSource.SetIpv4(ipheader.GetSource());
-            analysePacket.srcNode = (*cbparams_val->mapnode).at(ipheader.GetSource()); 
+            analysePacket.srcNode = (*cbparams_val.mapnode).at(ipheader.GetSource()); 
             idDest.SetIpv4(ipheader.GetDestination());
-            analysePacket.dstNode = (*cbparams_val->mapnode).at(ipheader.GetDestination());
+            analysePacket.dstNode = (*cbparams_val.mapnode).at(ipheader.GetDestination());
             break;
         }
     }
@@ -119,7 +119,7 @@ static NiveauDeReponse getPacketInfos(Ptr<const Packet> p, cbparams* cbparams_va
         uint8_t tcpflags =tcpheader.GetFlags ();
 
         // update commodity number
-        const mapflow_t conversionref = *cbparams_val->mapflow;
+        const mapflow_t conversionref = *cbparams_val.mapflow;
         bool trouve=false;
         auto quadruplet = std::make_pair(idSource, idDest);
         auto quadruplet_reverse = std::make_pair(idDest, idSource);
@@ -181,7 +181,7 @@ void PacketEventTracer(Ptr<OutputStreamWrapper> stream,  cbparams* cbparams_val,
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     resAnalysePacket analysePacket;
     // Log precise timestamp received of the sequence packet if needed
-    switch (getPacketInfos(packet, cbparams_val, analysePacket))
+    switch (getPacketInfos(packet, *cbparams_val, analysePacket))
     {
     case NiveauDeReponse::TRANSPORT:
         *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << "," << src_node->GetId() << "," << src_node->GetObject<Specie>()->GetName() << ",";
@@ -201,7 +201,7 @@ void PacketEventTracerSimple(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
 {
     resAnalysePacket analysePacket;
     // Log precise timestamp received of the sequence packet if needed
-    switch (getPacketInfos(packet, cbparams_val, analysePacket))
+    switch (getPacketInfos(packet, *cbparams_val, analysePacket))
     {
     case NiveauDeReponse::TRANSPORT:
         *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.timestamp; // we only know the node receiving/where the error occurs
@@ -223,7 +223,7 @@ void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
     // Log precise timestamp received of the sequence packet if needed
 
     
-    switch (getPacketInfos(packet, cbparams_val, analysePacket))
+    switch (getPacketInfos(packet, *cbparams_val, analysePacket))
     {
     case NiveauDeReponse::TRANSPORT:
         *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << packet->GetUid() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.timestamp; // we only know the node receiving/where the error occurs
@@ -238,7 +238,7 @@ void PacketEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams* cbparams
     }
 }
 
-void QitEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams * cbparams_val, const std::string &evenement, Ptr<QueueDiscItem const> qit)
+void QitEventTracerReduit(Ptr<OutputStreamWrapper> stream, std::shared_ptr<cbparams> cbparams_val, const std::string &evenement, Ptr<QueueDiscItem const> qit)
 {
     //NS_LOG_UNCOND("RxDrop at " << Simulator::Now().GetSeconds());
     // Extract burst identifier and packet sequence number
@@ -250,7 +250,7 @@ void QitEventTracerReduit(Ptr<OutputStreamWrapper> stream, cbparams * cbparams_v
     mempcpy(&qitcpy, &(*qit), sizeof(Ipv4QueueDiscItem));
     qitcpy.AddHeader();
     // Log precise timestamp received of the sequence packet if needed
-    switch (getPacketInfos(qitcpy.GetPacket(), cbparams_val, analysePacket))
+    switch (getPacketInfos(qitcpy.GetPacket(), *cbparams_val, analysePacket))
     {
     case NiveauDeReponse::TRANSPORT:
         *stream->GetStream() << Simulator::Now().GetNanoSeconds() << "," << qitcpy.GetPacket()->GetUid() << "," << node->GetId() << ","  << node->GetObject<Specie>()->GetName() << "," << analysePacket.timestamp; // we only know the node receiving/where the error occurs

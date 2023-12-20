@@ -902,10 +902,11 @@ namespace ns3 {
     void TopologySatelliteNetwork::TCLogDrop(Ptr<Node> noeud, Ptr<NetDevice> netdev, const std::string& err_str){
         m_temp_tc = noeud->GetObject<TrafficControlLayer>();
         if (m_temp_tc){
-            m_cbparams.log_node = noeud;
             m_temp_qd = m_temp_tc->GetRootQueueDiscOnDevice(netdev);
             if (m_temp_qd){
-                m_temp_qd->TraceConnectWithoutContext("Drop", MakeBoundCallback (&QitEventTracerReduit, m_drop_stream, &m_cbparams, err_str));
+                std::shared_ptr<cbparams> nd_params = std::make_shared<cbparams>(m_cbparams);
+                nd_params->log_node = noeud;
+                m_temp_qd->TraceConnectWithoutContext("Drop", MakeBoundCallback (&QitEventTracerReduit, m_drop_stream, nd_params, err_str));
             }
         }
     }
